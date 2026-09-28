@@ -29,8 +29,11 @@ export const Route = createFileRoute("/_app/settings")({
 
 function SettingsPage() {
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Settings</h1>
+    <div className="mx-auto flex max-w-3xl flex-col gap-8">
+      <div>
+        <h1 className="font-display text-4xl">Settings</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Manage who can access this dashboard.</p>
+      </div>
       <AllowedUsersCard />
     </div>
   );

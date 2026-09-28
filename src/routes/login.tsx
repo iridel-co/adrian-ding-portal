@@ -35,7 +35,7 @@ function LoginPage() {
     <div className="flex min-h-svh items-center justify-center p-6">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>{APP_NAME}</CardTitle>
+          <CardTitle className="font-display text-3xl font-normal">{APP_NAME}</CardTitle>
           <CardDescription>Sign in with your Google account to continue.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">

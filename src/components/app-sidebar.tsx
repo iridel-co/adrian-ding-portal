@@ -38,7 +38,7 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="px-2 py-1.5 text-sm font-semibold">{APP_NAME}</div>
+        <div className="px-2 py-1 font-display text-2xl">{APP_NAME}</div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -107,9 +107,9 @@ function UserMenu({ user }: { user: SidebarUser }) {
 
 function UserAvatar({ user }: { user: SidebarUser }) {
   return (
-    <Avatar className="size-8 rounded-lg">
-      {user.image && <AvatarImage src={user.image} alt={user.name} />}
-      <AvatarFallback className="rounded-lg">{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+    <Avatar className="size-8 rounded-md after:rounded-md">
+      {user.image && <AvatarImage className="rounded-md" src={user.image} alt={user.name} />}
+      <AvatarFallback className="rounded-md">{user.name.charAt(0).toUpperCase()}</AvatarFallback>
     </Avatar>
   );
 }

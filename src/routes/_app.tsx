@@ -1,6 +1,7 @@
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { ThemeSwitcher } from "@/components/theme";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { getAuthUserQueryOptions } from "@/lib/auth.queries";
 
@@ -21,10 +22,11 @@ function AppLayout() {
     <SidebarProvider>
       <AppSidebar user={user} />
       <SidebarInset>
-        <header className="flex h-12 items-center border-b px-4">
+        <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background px-4">
           <SidebarTrigger />
+          <ThemeSwitcher />
         </header>
-        <main className="flex-1 p-6">
+        <main className="flex-1 px-4 py-8 md:px-8">
           <Outlet />
         </main>
       </SidebarInset>
