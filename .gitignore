@@ -1,0 +1,13 @@
+node_modules
+.env
+.env.*
+!.env.example
+.output
+.nitro
+.tanstack
+.vercel
+.wrangler
+dist
+*.log
+.DS_Store
+.dev.vars
