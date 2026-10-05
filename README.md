@@ -23,9 +23,29 @@ pnpm dev               # http://localhost:3000
 
 Nobody is on the allowlist at first. Put your email in `ADMIN_EMAILS` (comma-separated), sign in, then add everyone else from Settings. Emails in `ADMIN_EMAILS` are always allowed and can't be removed from the UI.
 
+### Image uploads (Cloudflare R2)
+
+1. Create an R2 bucket and turn on public access (a custom domain or the `r2.dev` URL)
+2. Create an R2 API token with "Object Read & Write" on that bucket
+3. Fill the `R2_*` values in `.env`
+4. Add this CORS rule to the bucket (R2 > bucket > Settings > CORS policy), with your portal URLs:
+
+```json
+[
+  {
+    "AllowedOrigins": ["http://localhost:3000", "https://<portal-domain>"],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["Content-Type"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+The browser uploads files straight to R2 with a short-lived signed URL. The app starts without the `R2_*` values, but uploads fail until they are set.
+
 ## Database
 
-- Schema: `src/db/schema.ts`
+- Schema: `src/db/schema/` (one file per area, re-exported from `index.ts`)
 - After changing it: `pnpm db:generate`, then `pnpm db:migrate`
 
 ## Deploy
