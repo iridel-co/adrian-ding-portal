@@ -100,7 +100,6 @@ type TermSelectProps = {
   onChange: (term: PickedTerm | null) => void;
 };
 
-/* Picks one active term, or none. */
 export function TermSelect({ id, kind, value, onChange }: TermSelectProps) {
   const terms = useQuery(termsQueryOptions({ kind }));
   const options = terms.data ?? [];

@@ -30,7 +30,6 @@ type TermsManagerProps = {
   placeholder: string;
 };
 
-/* Add, rename, reorder, archive and restore the terms of one managed list. */
 export function TermsManager({
   kind,
   title,

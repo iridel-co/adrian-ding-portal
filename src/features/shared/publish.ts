@@ -2,7 +2,6 @@ import type { z } from "zod";
 
 import { CmsValidationError } from "@/features/shared/errors";
 
-/* Field labels shown when a publish check fails, keyed by field name. */
 export type FieldLabels = Record<string, string>;
 
 /* Lists the fields that fail the publish schema, by label. Empty when the item can be published. */

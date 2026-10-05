@@ -16,7 +16,6 @@ type ContentListPageProps = {
   children: ReactNode;
 };
 
-/* The frame for every content list: heading, main action, filters and the list itself. */
 export function ContentListPage({
   title,
   description,

@@ -38,7 +38,6 @@ type EditorShellProps = {
 
 const DEFAULT_LIVE_NOTE = "This item is live. Changes show on the site when you save.";
 
-/* The frame for every content editor: header, status menu, save button and two columns. */
 export function EditorShell({
   title,
   back,

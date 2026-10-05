@@ -12,7 +12,6 @@ type VenueSuggestInputProps = {
   placeholder?: string;
 };
 
-/* A text input that suggests venue names or cities used before. */
 export function VenueSuggestInput({
   id,
   field,

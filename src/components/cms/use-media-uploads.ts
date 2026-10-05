@@ -19,7 +19,6 @@ type Options = {
   onUploaded?: (media: UploadedMedia) => void;
 };
 
-/* Tracks a batch of image uploads, each with its own progress, error and retry. */
 export function useMediaUploads({ onUploaded }: Options = {}) {
   const [uploads, setUploads] = useState<MediaUpload[]>([]);
 

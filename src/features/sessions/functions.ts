@@ -46,7 +46,6 @@ export const $setSessionStatus = createServerFn({ method: "POST" })
   .validator(statusInput)
   .handler(({ data, context }) => setSessionStatus(getDb(), context.user, data));
 
-/* Venue names or cities already used on sessions and workshop defaults. */
 export const $listVenueSuggestions = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .validator(suggestionInput)
