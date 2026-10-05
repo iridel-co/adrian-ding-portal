@@ -11,10 +11,15 @@ export type SocialLink = {
   url: string;
 };
 
+export const STAT_PAGES = ["home", "about", "corporate", "inquiry"] as const;
+
+export type StatPage = (typeof STAT_PAGES)[number];
+
 export type ProfileStat = {
   value: string;
   label: string;
   description?: string;
+  pages: StatPage[];
 };
 
 export type TimelineEntry = {
@@ -32,12 +37,14 @@ export type Credential = {
 
 export const SITE_PROFILE_ID = "main";
 
-/* The single row that holds the bio, contact details, stats, timeline and credentials. */
+/* The single row that holds the bio, hero copy, contact details, stats, timeline and credentials. */
 export const siteProfile = pgTable(
   "site_profile",
   {
     id: text("id").primaryKey().default(SITE_PROFILE_ID),
     headline: text("headline").default("").notNull(),
+    tagline: text("tagline").default("").notNull(),
+    roles: stringList("roles"),
     shortBio: text("short_bio").default("").notNull(),
     longBio: stringList("long_bio"),
     portraitMediaId: uuid("portrait_media_id").references(() => media.id, {
@@ -45,6 +52,9 @@ export const siteProfile = pgTable(
     }),
     emails: stringList("emails"),
     phone: text("phone").default("").notNull(),
+    footerTopics: stringList("footer_topics"),
+    corporatePrimerVideoUrl: text("corporate_primer_video_url"),
+    corporatePrimerBlurb: text("corporate_primer_blurb").default("").notNull(),
     socialLinks: jsonb("social_links").$type<SocialLink[]>().default([]).notNull(),
     stats: jsonb("stats").$type<ProfileStat[]>().default([]).notNull(),
     timeline: jsonb("timeline").$type<TimelineEntry[]>().default([]).notNull(),
