@@ -1,6 +1,15 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
-import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
+import {
+  BookOpen,
+  Building2,
+  CalendarDays,
+  ChevronsUpDown,
+  Images,
+  LogOut,
+  Settings,
+  Tags
+} from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -17,6 +26,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -32,7 +42,24 @@ type SidebarUser = {
 };
 
 /* Add new pages here. */
-const NAV_ITEMS = [{ title: "Settings", to: "/settings", icon: Settings }] as const;
+const NAV_GROUPS = [
+  {
+    label: "Content",
+    items: [
+      { title: "Workshops", to: "/content/workshops", icon: BookOpen },
+      { title: "Sessions", to: "/content/sessions", icon: CalendarDays },
+      { title: "Media", to: "/content/media", icon: Images }
+    ]
+  },
+  {
+    label: "Settings",
+    items: [
+      { title: "Access", to: "/settings/access", icon: Settings },
+      { title: "Tags", to: "/settings/tags", icon: Tags },
+      { title: "Industries", to: "/settings/industries", icon: Building2 }
+    ]
+  }
+] as const;
 
 export function AppSidebar({ user }: { user: SidebarUser }) {
   return (
@@ -41,22 +68,25 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
         <div className="px-2 py-1 font-display text-2xl">{APP_NAME}</div>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {NAV_ITEMS.map((item) => (
-                <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton asChild>
-                    <Link to={item.to} activeProps={{ "data-active": true }}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {NAV_GROUPS.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton asChild>
+                      <Link to={item.to} activeProps={{ "data-active": true }}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
       <SidebarFooter>
         <UserMenu user={user} />
