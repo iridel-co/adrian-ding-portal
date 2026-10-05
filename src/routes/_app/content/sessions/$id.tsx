@@ -24,15 +24,15 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { formatDateRange } from "@/lib/cms/format";
-import { allowedSessionTransitions, type SessionStatus } from "@/lib/cms/session-status";
+import { formatDateRange } from "@/features/shared/format";
+import { allowedSessionTransitions, type SessionStatus } from "@/features/sessions/status";
 import {
   $setSessionStatus,
   $updateSession,
   type SessionDetail,
   sessionQueryOptions
-} from "@/lib/cms/sessions.functions";
-import { errorMessage } from "@/lib/cms/error-message";
+} from "@/features/sessions/functions";
+import { errorMessage } from "@/features/shared/error-message";
 
 export const Route = createFileRoute("/_app/content/sessions/$id")({
   loader: ({ context, params }) =>

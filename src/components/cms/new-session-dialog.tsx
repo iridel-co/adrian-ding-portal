@@ -23,9 +23,9 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { $createSession } from "@/lib/cms/sessions.functions";
-import { workshopsQueryOptions } from "@/lib/cms/workshops.functions";
-import { errorMessage } from "@/lib/cms/error-message";
+import { $createSession } from "@/features/sessions/functions";
+import { workshopsQueryOptions } from "@/features/workshops/functions";
+import { errorMessage } from "@/features/shared/error-message";
 
 const DEFAULT_START_TIME = "09:00";
 const DEFAULT_END_TIME = "17:00";

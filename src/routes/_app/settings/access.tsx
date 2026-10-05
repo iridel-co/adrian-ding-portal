@@ -20,7 +20,7 @@ import {
   $removeAllowedEmail,
   allowedEmailsQueryOptions
 } from "@/lib/allowed-emails.functions";
-import { errorMessage } from "@/lib/cms/error-message";
+import { errorMessage } from "@/features/shared/error-message";
 
 export const Route = createFileRoute("/_app/settings/access")({
   head: () => ({ meta: [{ title: "Access" }] }),

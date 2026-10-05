@@ -20,11 +20,11 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatDateRange, formatTimeRange } from "@/lib/cms/format";
-import { formatPesos } from "@/lib/cms/money";
-import type { SessionStatus } from "@/lib/cms/session-status";
-import { sessionsQueryOptions } from "@/lib/cms/sessions.functions";
-import { workshopsQueryOptions } from "@/lib/cms/workshops.functions";
+import { formatDateRange, formatTimeRange } from "@/features/shared/format";
+import { formatPesos } from "@/features/shared/money";
+import type { SessionStatus } from "@/features/sessions/status";
+import { sessionsQueryOptions } from "@/features/sessions/functions";
+import { workshopsQueryOptions } from "@/features/workshops/functions";
 
 const searchSchema = z.object({
   workshopId: z.uuid().optional(),

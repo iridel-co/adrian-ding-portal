@@ -1,13 +1,14 @@
 import { z } from "zod";
 
+import { contentStatus } from "@/db/schema";
 import {
   capacitySchema,
   centavosSchema,
   nonEmptyList,
   optionalHttpsUrl,
   stringListSchema
-} from "@/lib/cms/field-schemas";
-import type { FieldLabels } from "@/lib/cms/publish";
+} from "@/features/shared/field-schemas";
+import type { FieldLabels } from "@/features/shared/publish";
 
 export const COURSE_CODE_PATTERN = /^[A-Z0-9]{2,8}$/;
 
@@ -79,3 +80,28 @@ export const WORKSHOP_FIELD_LABELS: FieldLabels = {
   outcomes: "At least one outcome",
   curriculum: "At least one curriculum item"
 };
+
+export const statusFilterSchema = z.enum(["active", ...contentStatus.enumValues]);
+
+export const listInput = z.object({
+  status: statusFilterSchema.default("active"),
+  search: z.string().trim().default("")
+});
+
+export const idInput = z.object({
+  id: z.uuid()
+});
+
+export const createInput = z.object({
+  title: z.string().trim().min(1, "Enter a title.")
+});
+
+export const updateInput = z.object({
+  id: z.uuid(),
+  values: workshopSaveSchema
+});
+
+export const statusInput = z.object({
+  id: z.uuid(),
+  status: z.enum(contentStatus.enumValues)
+});

@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import type { MediaUpload } from "@/components/cms/use-media-uploads";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { MEDIA_CONTENT_TYPES } from "@/lib/cms/media-rules";
+import { MEDIA_CONTENT_TYPES } from "@/features/media/rules";
 
 type MediaDropzoneProps = {
   uploads: MediaUpload[];

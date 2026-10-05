@@ -21,15 +21,15 @@ import { useEditorForm } from "@/components/cms/use-editor-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { ContentStatus } from "@/lib/cms/content-status";
-import { formatDateRange } from "@/lib/cms/format";
+import type { ContentStatus } from "@/features/shared/content-status";
+import { formatDateRange } from "@/features/shared/format";
 import {
   $setWorkshopStatus,
   $updateWorkshop,
   type WorkshopDetail,
   workshopQueryOptions
-} from "@/lib/cms/workshops.functions";
-import { errorMessage } from "@/lib/cms/error-message";
+} from "@/features/workshops/functions";
+import { errorMessage } from "@/features/shared/error-message";
 
 export const Route = createFileRoute("/_app/content/workshops/$id")({
   loader: ({ context, params }) =>

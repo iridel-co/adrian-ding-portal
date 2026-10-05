@@ -1,8 +1,8 @@
 import { useCallback, useState } from "react";
 
-import { getMediaFileProblem } from "@/lib/cms/media-rules";
-import { uploadMediaFile } from "@/lib/cms/upload-media";
-import { errorMessage } from "@/lib/cms/error-message";
+import { getMediaFileProblem } from "@/features/media/rules";
+import { uploadMediaFile } from "@/features/media/upload";
+import { errorMessage } from "@/features/shared/error-message";
 
 type UploadedMedia = Awaited<ReturnType<typeof uploadMediaFile>>;
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
-import { slugify } from "@/lib/cms/slug";
+import { slugify } from "@/features/shared/slug";
 
 type SlugFieldProps = {
   id?: string;

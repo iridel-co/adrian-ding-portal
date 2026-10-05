@@ -1,5 +1,5 @@
-import { $confirmMediaUpload, $requestMediaUpload } from "@/lib/cms/media.functions";
-import { getMediaFileProblem, isMediaContentType } from "@/lib/cms/media-rules";
+import { $confirmMediaUpload, $requestMediaUpload } from "@/features/media/functions";
+import { getMediaFileProblem, isMediaContentType } from "@/features/media/rules";
 
 type ImageSize = {
   width: number | null;

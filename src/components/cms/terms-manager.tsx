@@ -19,8 +19,8 @@ import {
   type TaxonomyKind,
   type TaxonomyTerm,
   termsQueryOptions
-} from "@/lib/cms/taxonomy.functions";
-import { errorMessage } from "@/lib/cms/error-message";
+} from "@/features/taxonomy/functions";
+import { errorMessage } from "@/features/shared/error-message";
 
 type TermsManagerProps = {
   kind: TaxonomyKind;

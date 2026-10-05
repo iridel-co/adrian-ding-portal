@@ -17,8 +17,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { $updateMediaAlt, mediaListQueryOptions } from "@/lib/cms/media.functions";
-import { errorMessage } from "@/lib/cms/error-message";
+import { $updateMediaAlt, mediaListQueryOptions } from "@/features/media/functions";
+import { errorMessage } from "@/features/shared/error-message";
 
 export type PickedMedia = {
   id: string;

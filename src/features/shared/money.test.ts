@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { centavosToPesoInput, formatPesos, pesoInputToCentavos } from "@/lib/cms/money";
+import { centavosToPesoInput, formatPesos, pesoInputToCentavos } from "@/features/shared/money";
 
 describe("pesoInputToCentavos", () => {
   it("turns whole pesos into centavos", () => {

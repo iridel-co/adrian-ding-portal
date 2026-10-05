@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isValidSlug, slugify } from "@/lib/cms/slug";
+import { isValidSlug, slugify } from "@/features/shared/slug";
 
 describe("slugify", () => {
   it("turns a title into lowercase words joined by hyphens", () => {

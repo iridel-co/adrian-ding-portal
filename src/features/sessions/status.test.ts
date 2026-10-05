@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { CmsValidationError } from "@/lib/cms/errors";
-import { allowedSessionTransitions, assertSessionTransition } from "@/lib/cms/session-status";
+import { CmsValidationError } from "@/features/shared/errors";
+import { allowedSessionTransitions, assertSessionTransition } from "@/features/sessions/status";
 
 const upcoming = { hasStarted: false, hasEnded: false };
 const started = { hasStarted: true, hasEnded: false };

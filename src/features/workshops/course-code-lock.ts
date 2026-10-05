@@ -1,4 +1,4 @@
-import type { DbOrTx } from "@/lib/cms/db-types";
+import type { DbOrTx } from "@/features/shared/db-types";
 
 /*
   True when the CRM has active registrations for any session of the workshop.

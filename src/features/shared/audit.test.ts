@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { diffChanges } from "@/lib/cms/audit";
+import { diffChanges } from "@/features/shared/audit";
 
 describe("diffChanges", () => {
   it("returns only the fields that changed, with old and new values", () => {

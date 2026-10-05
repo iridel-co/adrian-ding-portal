@@ -1,5 +1,5 @@
 import type { sessionStatus } from "@/db/schema";
-import { CmsValidationError } from "@/lib/cms/errors";
+import { CmsValidationError } from "@/features/shared/errors";
 
 export type SessionStatus = (typeof sessionStatus.enumValues)[number];
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
-import { centavosToPesoInput, pesoInputToCentavos } from "@/lib/cms/money";
+import { centavosToPesoInput, pesoInputToCentavos } from "@/features/shared/money";
 
 type MoneyFieldProps = {
   id?: string;

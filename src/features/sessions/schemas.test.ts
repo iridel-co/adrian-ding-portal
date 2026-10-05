@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sessionSaveSchema } from "@/lib/cms/session-schemas";
+import { sessionSaveSchema } from "@/features/sessions/schemas";
 
 const valid = {
   date: "2026-10-09",

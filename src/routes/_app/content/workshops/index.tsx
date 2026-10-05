@@ -26,9 +26,9 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { formatDate } from "@/lib/cms/format";
-import { $createWorkshop, workshopsQueryOptions } from "@/lib/cms/workshops.functions";
-import { errorMessage } from "@/lib/cms/error-message";
+import { formatDate } from "@/features/shared/format";
+import { $createWorkshop, workshopsQueryOptions } from "@/features/workshops/functions";
+import { errorMessage } from "@/features/shared/error-message";
 
 export const Route = createFileRoute("/_app/content/workshops/")({
   head: () => ({ meta: [{ title: "Workshops" }] }),

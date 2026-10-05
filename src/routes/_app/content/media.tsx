@@ -17,8 +17,8 @@ import {
   $updateMediaAlt,
   type MediaItem,
   mediaListQueryOptions
-} from "@/lib/cms/media.functions";
-import { errorMessage } from "@/lib/cms/error-message";
+} from "@/features/media/functions";
+import { errorMessage } from "@/features/shared/error-message";
 
 export const Route = createFileRoute("/_app/content/media")({
   head: () => ({ meta: [{ title: "Media" }] }),

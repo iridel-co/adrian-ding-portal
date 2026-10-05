@@ -1,5 +1,5 @@
 import { activityLog, type FieldChange } from "@/db/schema";
-import type { DbOrTx } from "@/lib/cms/db-types";
+import type { DbOrTx } from "@/features/shared/db-types";
 
 type ActivityAction = (typeof activityLog.$inferInsert)["action"];
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { errorMessage } from "@/lib/cms/error-message";
+import { errorMessage } from "@/features/shared/error-message";
 
 describe("errorMessage", () => {
   it("shows the first message of a validation issue list", () => {

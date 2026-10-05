@@ -1,5 +1,5 @@
 import type { contentStatus } from "@/db/schema";
-import { CmsValidationError } from "@/lib/cms/errors";
+import { CmsValidationError } from "@/features/shared/errors";
 
 export type ContentStatus = (typeof contentStatus.enumValues)[number];
 

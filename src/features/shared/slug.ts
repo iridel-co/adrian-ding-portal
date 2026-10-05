@@ -1,8 +1,8 @@
 import { and, eq, ne, type SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 
-import type { DbOrTx } from "@/lib/cms/db-types";
-import { CmsValidationError } from "@/lib/cms/errors";
+import type { DbOrTx } from "@/features/shared/db-types";
+import { CmsValidationError } from "@/features/shared/errors";
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 

@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { type TaxonomyKind, termsQueryOptions } from "@/lib/cms/taxonomy.functions";
+import { type TaxonomyKind, termsQueryOptions } from "@/features/taxonomy/functions";
 
 export type PickedTerm = {
   id: string;

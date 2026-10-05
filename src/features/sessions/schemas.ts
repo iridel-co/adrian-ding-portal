@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-import { capacitySchema, centavosSchema, optionalHttpsUrl } from "@/lib/cms/field-schemas";
-import { normalizeTime } from "@/lib/cms/time";
+import { sessionStatus } from "@/db/schema";
+import { capacitySchema, centavosSchema, optionalHttpsUrl } from "@/features/shared/field-schemas";
+import { normalizeTime } from "@/features/shared/time";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^\d{2}:\d{2}(:\d{2})?$/;
@@ -94,3 +95,37 @@ export const SESSION_FIELD_LABELS = {
   venueName: "Venue",
   city: "City"
 };
+
+export const listInput = z.object({
+  when: z.enum(["upcoming", "past", "all"]).default("upcoming"),
+  status: z.enum(["any", ...sessionStatus.enumValues]).default("any"),
+  workshopId: z.uuid().optional(),
+  month: z
+    .string()
+    .regex(/^\d{4}-\d{2}$/)
+    .optional()
+});
+
+export const idInput = z.object({
+  id: z.uuid()
+});
+
+export const createInput = z.object({
+  workshopId: z.uuid(),
+  times: sessionTimesSchema
+});
+
+export const updateInput = z.object({
+  id: z.uuid(),
+  values: sessionSaveSchema
+});
+
+export const statusInput = z.object({
+  id: z.uuid(),
+  status: z.enum(sessionStatus.enumValues)
+});
+
+export const suggestionInput = z.object({
+  field: z.enum(["venueName", "city"]),
+  query: z.string().trim().default("")
+});

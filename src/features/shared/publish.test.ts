@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { CmsValidationError } from "@/lib/cms/errors";
-import { assertPublishable, findMissingFields } from "@/lib/cms/publish";
+import { CmsValidationError } from "@/features/shared/errors";
+import { assertPublishable, findMissingFields } from "@/features/shared/publish";
 
 const publishSchema = z.object({
   title: z.string().min(1),

@@ -2,7 +2,7 @@ import { getTableColumns, isTable } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
 import * as schema from "@/db/schema";
-import { MEDIA_REFERENCES } from "@/lib/cms/media-usage";
+import { MEDIA_REFERENCES } from "@/features/media/usage";
 
 function findMediaColumns() {
   const columns = [];

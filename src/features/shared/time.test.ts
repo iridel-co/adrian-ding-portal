@@ -7,7 +7,7 @@ import {
   manilaLocalToDate,
   manilaToday,
   manilaWallClock
-} from "@/lib/cms/time";
+} from "@/features/shared/time";
 
 const session = {
   date: "2026-10-09",

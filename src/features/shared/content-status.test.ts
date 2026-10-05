@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { assertContentTransition, contentStatusAction } from "@/lib/cms/content-status";
-import { CmsValidationError } from "@/lib/cms/errors";
+import { assertContentTransition, contentStatusAction } from "@/features/shared/content-status";
+import { CmsValidationError } from "@/features/shared/errors";
 
 describe("assertContentTransition", () => {
   it("allows publishing a draft", () => {

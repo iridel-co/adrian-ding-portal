@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useId } from "react";
 
 import { Input } from "@/components/ui/input";
-import { venueSuggestionsQueryOptions } from "@/lib/cms/sessions.functions";
+import { venueSuggestionsQueryOptions } from "@/features/sessions/functions";
 
 type VenueSuggestInputProps = {
   id?: string;

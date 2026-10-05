@@ -9,7 +9,7 @@ import {
   testimonial,
   workshop
 } from "@/db/schema";
-import type { DbOrTx } from "@/lib/cms/db-types";
+import type { DbOrTx } from "@/features/shared/db-types";
 
 export type MediaUsage = {
   entityType: string;

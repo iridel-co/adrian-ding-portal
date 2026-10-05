@@ -5,9 +5,9 @@ import { cn } from "cn";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { formatTime } from "@/lib/cms/format";
-import { sessionsQueryOptions } from "@/lib/cms/sessions.functions";
-import { manilaToday } from "@/lib/cms/time";
+import { formatTime } from "@/features/shared/format";
+import { sessionsQueryOptions } from "@/features/sessions/functions";
+import { manilaToday } from "@/features/shared/time";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAYS_PER_WEEK = 7;
