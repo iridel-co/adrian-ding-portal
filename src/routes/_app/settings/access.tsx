@@ -20,9 +20,10 @@ import {
   $removeAllowedEmail,
   allowedEmailsQueryOptions
 } from "@/lib/allowed-emails.functions";
+import { errorMessage } from "@/features/shared/error-message";
 
-export const Route = createFileRoute("/_app/settings")({
-  head: () => ({ meta: [{ title: "Settings" }] }),
+export const Route = createFileRoute("/_app/settings/access")({
+  head: () => ({ meta: [{ title: "Access" }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(allowedEmailsQueryOptions()),
   component: SettingsPage
 });
@@ -31,7 +32,7 @@ function SettingsPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-8">
       <div>
-        <h1 className="font-display text-4xl">Settings</h1>
+        <h1 className="font-display text-4xl">Access</h1>
         <p className="mt-1 text-sm text-muted-foreground">Manage who can access this dashboard.</p>
       </div>
       <AllowedUsersCard />
@@ -54,7 +55,7 @@ function AllowedUsersCard() {
       toast.success("User added.");
       await refresh();
     },
-    onError: (error) => toast.error(error.message)
+    onError: (error) => toast.error(errorMessage(error))
   });
 
   const removeEmail = useMutation({
@@ -63,7 +64,7 @@ function AllowedUsersCard() {
       toast.success("User removed.");
       await refresh();
     },
-    onError: (error) => toast.error(error.message)
+    onError: (error) => toast.error(errorMessage(error))
   });
 
   return (

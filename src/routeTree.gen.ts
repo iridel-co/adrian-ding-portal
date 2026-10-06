@@ -12,8 +12,16 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
-import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppContentMediaRouteImport } from './routes/_app/content/media'
+import { Route as AppContentTagsRouteImport } from './routes/_app/content/tags'
+import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
+import { Route as AppSettingsAccessRouteImport } from './routes/_app/settings/access'
+import { Route as AppSettingsIndustriesRouteImport } from './routes/_app/settings/industries'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AppContentSessionsIndexRouteImport } from './routes/_app/content/sessions/index'
+import { Route as AppContentSessionsIdRouteImport } from './routes/_app/content/sessions/$id'
+import { Route as AppContentWorkshopsIndexRouteImport } from './routes/_app/content/workshops/index'
+import { Route as AppContentWorkshopsIdRouteImport } from './routes/_app/content/workshops/$id'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -29,9 +37,29 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const AppSettingsRoute = AppSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
+const AppContentMediaRoute = AppContentMediaRouteImport.update({
+  id: '/content/media',
+  path: '/content/media',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppContentTagsRoute = AppContentTagsRouteImport.update({
+  id: '/content/tags',
+  path: '/content/tags',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsAccessRoute = AppSettingsAccessRouteImport.update({
+  id: '/settings/access',
+  path: '/settings/access',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsIndustriesRoute = AppSettingsIndustriesRouteImport.update({
+  id: '/settings/industries',
+  path: '/settings/industries',
   getParentRoute: () => AppRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -39,39 +67,116 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppContentSessionsIndexRoute = AppContentSessionsIndexRouteImport.update({
+  id: '/content/sessions/',
+  path: '/content/sessions/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppContentSessionsIdRoute = AppContentSessionsIdRouteImport.update({
+  id: '/content/sessions/$id',
+  path: '/content/sessions/$id',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppContentWorkshopsIndexRoute =
+  AppContentWorkshopsIndexRouteImport.update({
+    id: '/content/workshops/',
+    path: '/content/workshops/',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppContentWorkshopsIdRoute = AppContentWorkshopsIdRouteImport.update({
+  id: '/content/workshops/$id',
+  path: '/content/workshops/$id',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
-  '/settings': typeof AppSettingsRoute
+  '/content/media': typeof AppContentMediaRoute
+  '/content/tags': typeof AppContentTagsRoute
+  '/settings/access': typeof AppSettingsAccessRoute
+  '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/settings/': typeof AppSettingsIndexRoute
+  '/content/sessions/$id': typeof AppContentSessionsIdRoute
+  '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
+  '/content/sessions/': typeof AppContentSessionsIndexRoute
+  '/content/workshops/': typeof AppContentWorkshopsIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
-  '/settings': typeof AppSettingsRoute
   '/': typeof AppIndexRoute
+  '/content/media': typeof AppContentMediaRoute
+  '/content/tags': typeof AppContentTagsRoute
+  '/settings/access': typeof AppSettingsAccessRoute
+  '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/settings': typeof AppSettingsIndexRoute
+  '/content/sessions/$id': typeof AppContentSessionsIdRoute
+  '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
+  '/content/sessions': typeof AppContentSessionsIndexRoute
+  '/content/workshops': typeof AppContentWorkshopsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
-  '/_app/settings': typeof AppSettingsRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/content/media': typeof AppContentMediaRoute
+  '/_app/content/tags': typeof AppContentTagsRoute
+  '/_app/settings/access': typeof AppSettingsAccessRoute
+  '/_app/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_app/settings/': typeof AppSettingsIndexRoute
+  '/_app/content/sessions/$id': typeof AppContentSessionsIdRoute
+  '/_app/content/workshops/$id': typeof AppContentWorkshopsIdRoute
+  '/_app/content/sessions/': typeof AppContentSessionsIndexRoute
+  '/_app/content/workshops/': typeof AppContentWorkshopsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/settings' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/content/media'
+    | '/content/tags'
+    | '/settings/access'
+    | '/settings/industries'
+    | '/api/auth/$'
+    | '/settings/'
+    | '/content/sessions/$id'
+    | '/content/workshops/$id'
+    | '/content/sessions/'
+    | '/content/workshops/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/settings' | '/' | '/api/auth/$'
+  to:
+    | '/login'
+    | '/'
+    | '/content/media'
+    | '/content/tags'
+    | '/settings/access'
+    | '/settings/industries'
+    | '/api/auth/$'
+    | '/settings'
+    | '/content/sessions/$id'
+    | '/content/workshops/$id'
+    | '/content/sessions'
+    | '/content/workshops'
   id:
     | '__root__'
     | '/_app'
     | '/login'
-    | '/_app/settings'
     | '/_app/'
+    | '/_app/content/media'
+    | '/_app/content/tags'
+    | '/_app/settings/access'
+    | '/_app/settings/industries'
     | '/api/auth/$'
+    | '/_app/settings/'
+    | '/_app/content/sessions/$id'
+    | '/_app/content/workshops/$id'
+    | '/_app/content/sessions/'
+    | '/_app/content/workshops/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -103,11 +208,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/settings': {
-      id: '/_app/settings'
+    '/_app/content/media': {
+      id: '/_app/content/media'
+      path: '/content/media'
+      fullPath: '/content/media'
+      preLoaderRoute: typeof AppContentMediaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/content/tags': {
+      id: '/_app/content/tags'
+      path: '/content/tags'
+      fullPath: '/content/tags'
+      preLoaderRoute: typeof AppContentTagsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings/': {
+      id: '/_app/settings/'
       path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AppSettingsRouteImport
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AppSettingsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings/access': {
+      id: '/_app/settings/access'
+      path: '/settings/access'
+      fullPath: '/settings/access'
+      preLoaderRoute: typeof AppSettingsAccessRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings/industries': {
+      id: '/_app/settings/industries'
+      path: '/settings/industries'
+      fullPath: '/settings/industries'
+      preLoaderRoute: typeof AppSettingsIndustriesRouteImport
       parentRoute: typeof AppRoute
     }
     '/api/auth/$': {
@@ -117,17 +250,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/content/sessions/': {
+      id: '/_app/content/sessions/'
+      path: '/content/sessions'
+      fullPath: '/content/sessions/'
+      preLoaderRoute: typeof AppContentSessionsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/content/sessions/$id': {
+      id: '/_app/content/sessions/$id'
+      path: '/content/sessions/$id'
+      fullPath: '/content/sessions/$id'
+      preLoaderRoute: typeof AppContentSessionsIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/content/workshops/': {
+      id: '/_app/content/workshops/'
+      path: '/content/workshops'
+      fullPath: '/content/workshops/'
+      preLoaderRoute: typeof AppContentWorkshopsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/content/workshops/$id': {
+      id: '/_app/content/workshops/$id'
+      path: '/content/workshops/$id'
+      fullPath: '/content/workshops/$id'
+      preLoaderRoute: typeof AppContentWorkshopsIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
-  AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppContentMediaRoute: typeof AppContentMediaRoute
+  AppContentTagsRoute: typeof AppContentTagsRoute
+  AppSettingsAccessRoute: typeof AppSettingsAccessRoute
+  AppSettingsIndustriesRoute: typeof AppSettingsIndustriesRoute
+  AppSettingsIndexRoute: typeof AppSettingsIndexRoute
+  AppContentSessionsIdRoute: typeof AppContentSessionsIdRoute
+  AppContentWorkshopsIdRoute: typeof AppContentWorkshopsIdRoute
+  AppContentSessionsIndexRoute: typeof AppContentSessionsIndexRoute
+  AppContentWorkshopsIndexRoute: typeof AppContentWorkshopsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
+  AppContentMediaRoute: AppContentMediaRoute,
+  AppContentTagsRoute: AppContentTagsRoute,
+  AppSettingsAccessRoute: AppSettingsAccessRoute,
+  AppSettingsIndustriesRoute: AppSettingsIndustriesRoute,
+  AppSettingsIndexRoute: AppSettingsIndexRoute,
+  AppContentSessionsIdRoute: AppContentSessionsIdRoute,
+  AppContentWorkshopsIdRoute: AppContentWorkshopsIdRoute,
+  AppContentSessionsIndexRoute: AppContentSessionsIndexRoute,
+  AppContentWorkshopsIndexRoute: AppContentWorkshopsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
