@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { TermsManager } from "@/components/cms/terms-manager";
 
-export const Route = createFileRoute("/_app/settings/tags")({
+export const Route = createFileRoute("/_app/content/tags")({
   head: () => ({ meta: [{ title: "Workshop tags" }] }),
   component: TagsPage
 });

@@ -48,14 +48,14 @@ const NAV_GROUPS = [
     items: [
       { title: "Workshops", to: "/content/workshops", icon: BookOpen },
       { title: "Sessions", to: "/content/sessions", icon: CalendarDays },
-      { title: "Media", to: "/content/media", icon: Images }
+      { title: "Media", to: "/content/media", icon: Images },
+      { title: "Tags", to: "/content/tags", icon: Tags }
     ]
   },
   {
     label: "Settings",
     items: [
       { title: "Access", to: "/settings/access", icon: Settings },
-      { title: "Tags", to: "/settings/tags", icon: Tags },
       { title: "Industries", to: "/settings/industries", icon: Building2 }
     ]
   }

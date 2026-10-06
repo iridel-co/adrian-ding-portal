@@ -13,10 +13,10 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppContentMediaRouteImport } from './routes/_app/content/media'
+import { Route as AppContentTagsRouteImport } from './routes/_app/content/tags'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAccessRouteImport } from './routes/_app/settings/access'
 import { Route as AppSettingsIndustriesRouteImport } from './routes/_app/settings/industries'
-import { Route as AppSettingsTagsRouteImport } from './routes/_app/settings/tags'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AppContentSessionsIndexRouteImport } from './routes/_app/content/sessions/index'
 import { Route as AppContentSessionsIdRouteImport } from './routes/_app/content/sessions/$id'
@@ -42,6 +42,11 @@ const AppContentMediaRoute = AppContentMediaRouteImport.update({
   path: '/content/media',
   getParentRoute: () => AppRoute,
 } as any)
+const AppContentTagsRoute = AppContentTagsRouteImport.update({
+  id: '/content/tags',
+  path: '/content/tags',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
@@ -55,11 +60,6 @@ const AppSettingsAccessRoute = AppSettingsAccessRouteImport.update({
 const AppSettingsIndustriesRoute = AppSettingsIndustriesRouteImport.update({
   id: '/settings/industries',
   path: '/settings/industries',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSettingsTagsRoute = AppSettingsTagsRouteImport.update({
-  id: '/settings/tags',
-  path: '/settings/tags',
   getParentRoute: () => AppRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -93,9 +93,9 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/content/media': typeof AppContentMediaRoute
+  '/content/tags': typeof AppContentTagsRoute
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
-  '/settings/tags': typeof AppSettingsTagsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
@@ -107,9 +107,9 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/': typeof AppIndexRoute
   '/content/media': typeof AppContentMediaRoute
+  '/content/tags': typeof AppContentTagsRoute
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
-  '/settings/tags': typeof AppSettingsTagsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/settings': typeof AppSettingsIndexRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
@@ -123,9 +123,9 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_app/': typeof AppIndexRoute
   '/_app/content/media': typeof AppContentMediaRoute
+  '/_app/content/tags': typeof AppContentTagsRoute
   '/_app/settings/access': typeof AppSettingsAccessRoute
   '/_app/settings/industries': typeof AppSettingsIndustriesRoute
-  '/_app/settings/tags': typeof AppSettingsTagsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/content/sessions/$id': typeof AppContentSessionsIdRoute
@@ -139,9 +139,9 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/content/media'
+    | '/content/tags'
     | '/settings/access'
     | '/settings/industries'
-    | '/settings/tags'
     | '/api/auth/$'
     | '/settings/'
     | '/content/sessions/$id'
@@ -153,9 +153,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/'
     | '/content/media'
+    | '/content/tags'
     | '/settings/access'
     | '/settings/industries'
-    | '/settings/tags'
     | '/api/auth/$'
     | '/settings'
     | '/content/sessions/$id'
@@ -168,9 +168,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/_app/'
     | '/_app/content/media'
+    | '/_app/content/tags'
     | '/_app/settings/access'
     | '/_app/settings/industries'
-    | '/_app/settings/tags'
     | '/api/auth/$'
     | '/_app/settings/'
     | '/_app/content/sessions/$id'
@@ -215,6 +215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppContentMediaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/content/tags': {
+      id: '/_app/content/tags'
+      path: '/content/tags'
+      fullPath: '/content/tags'
+      preLoaderRoute: typeof AppContentTagsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/settings/': {
       id: '/_app/settings/'
       path: '/settings'
@@ -234,13 +241,6 @@ declare module '@tanstack/react-router' {
       path: '/settings/industries'
       fullPath: '/settings/industries'
       preLoaderRoute: typeof AppSettingsIndustriesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/settings/tags': {
-      id: '/_app/settings/tags'
-      path: '/settings/tags'
-      fullPath: '/settings/tags'
-      preLoaderRoute: typeof AppSettingsTagsRouteImport
       parentRoute: typeof AppRoute
     }
     '/api/auth/$': {
@@ -284,9 +284,9 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppContentMediaRoute: typeof AppContentMediaRoute
+  AppContentTagsRoute: typeof AppContentTagsRoute
   AppSettingsAccessRoute: typeof AppSettingsAccessRoute
   AppSettingsIndustriesRoute: typeof AppSettingsIndustriesRoute
-  AppSettingsTagsRoute: typeof AppSettingsTagsRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
   AppContentSessionsIdRoute: typeof AppContentSessionsIdRoute
   AppContentWorkshopsIdRoute: typeof AppContentWorkshopsIdRoute
@@ -297,9 +297,9 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppContentMediaRoute: AppContentMediaRoute,
+  AppContentTagsRoute: AppContentTagsRoute,
   AppSettingsAccessRoute: AppSettingsAccessRoute,
   AppSettingsIndustriesRoute: AppSettingsIndustriesRoute,
-  AppSettingsTagsRoute: AppSettingsTagsRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
   AppContentSessionsIdRoute: AppContentSessionsIdRoute,
   AppContentWorkshopsIdRoute: AppContentWorkshopsIdRoute,
