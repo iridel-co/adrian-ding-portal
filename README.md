@@ -13,6 +13,46 @@ pnpm db:migrate
 pnpm dev               # http://localhost:3000
 ```
 
+### CRM test services with Docker Compose
+
+From this directory, start PostgreSQL and the local email capture service:
+
+```sh
+cp .env.crm-test.example .env.crm-test  # only needed on first setup
+docker compose up -d --wait
+node --env-file=.env.crm-test scripts/dev/db.mjs migrate
+```
+
+The test database is `adrian_ding_crm_test` at `127.0.0.1:55432`. Its local-only
+login is `crm_test` / `crm_test_local_only`. The migration helper rejects other
+database hosts, ports, and names. It uses `.env.crm-test` explicitly.
+
+The mail capture endpoint is `http://127.0.0.1:55825/emails`, with a health check
+at `/health`. It saves messages in a Docker volume and sends no real email.
+Future CRM email tests must inject this transport; `CRM_TEST_EMAIL_URL` does not
+redirect application sending by itself. Idempotency memory resets when the mail
+container restarts. `X-CRM-Test-Fail: true` simulates delivery failure.
+
+```sh
+docker compose ps                    # status and health
+docker compose logs -f               # follow logs
+docker compose stop                  # stop both services
+docker compose start                 # start existing containers
+docker compose down                  # remove containers, keep test data
+```
+
+The named volumes preserve PostgreSQL data and captured messages when containers
+are removed. Both published ports bind only to localhost. The containers have no
+automatic restart policy; start them when needed. Docker Desktop also shows the
+services under the `adrian-ding-crm-test` project.
+
+To inspect the database or captured messages:
+
+```sh
+docker compose exec postgres psql -U crm_test -d adrian_ding_crm_test
+docker compose exec mail cat /data/mail-capture.jsonl
+```
+
 ### Google OAuth
 
 1. Create an OAuth client (type "Web application") at https://console.cloud.google.com/apis/credentials
