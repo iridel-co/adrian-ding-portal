@@ -18,7 +18,7 @@ const server = http.createServer(async (req, res) => {
   let body = "";
   for await (const chunk of req) {
     body += chunk;
-    if (Buffer.byteLength(body) > 1048576) {
+    if (Buffer.byteLength(body) > 2097152) {
       res.writeHead(413).end(JSON.stringify({ error: "too_large" }));
       return;
     }

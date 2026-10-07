@@ -6,8 +6,9 @@ import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 
 vi.mock("@tanstack/react-start/server-only", () => ({}));
+vi.mock("./email", () => ({ sendEmailJob: vi.fn() }));
 vi.mock("@/db", () => ({ getDb: () => { throw new Error("Integration tests must inject the isolated database"); } }));
-vi.mock("@/features/media/r2", () => ({ publicMediaUrl: (key: string) => `https://qr.example.com/${key}` }));
+vi.mock("@/features/media/r2", () => ({ publicMediaUrl: (key: string) => `https://qr.example.com/${key}`, readPaymentQr: async () => ({ filename: "payment-qr.png", content: "synthetic-base64", contentType: "image/png" }) }));
 
 import { activityLog, corporateInquiry, crmEmailJob, crmSubmissionKey, media, paymentAccount, registration, relations, taxonomyTerm, user, workshop, workshopSession, workshopTag } from "@/db/schema";
 import { updateSession } from "@/features/sessions/service";
