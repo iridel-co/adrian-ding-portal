@@ -152,14 +152,61 @@ The integration check accepts only 127.0.0.1:55432/adrian_ding_crm_test, applies
 pending migrations there, and creates and removes synthetic fixtures. It checks
 HTTP boundaries, persistence, pending jobs, simultaneous last-seat signups,
 concurrent duplicate keys, accepted-key mismatches, cancelled-key replay,
-transaction rollback, corporate retries, and concurrent CMS edits. It makes no
-provider or R2 calls. Regular unit runs skip database integration unless the
+transaction rollback, corporate retries, and concurrent CMS edits. Email checks
+use synthetic QR bytes and loopback capture; they make no real provider or R2
+calls. Regular unit runs skip database integration unless the
 explicit CRM_INTEGRATION_DATABASE_URL is set to that same guarded database.
 
 The website's current confirmation handoff keeps only some answers and supplies a
-workshop slug, not a scheduled session ID. Ced must send the full payload above
-from the form values. A public session lookup and the final frontend handoff
-remain integration work; no public catalogue route was added in this step.
+workshop slug. Ced must send the full payload from the form values, with the
+scheduled session UUID supplied by the lookup below. The frontend handoff guide
+is [CRM-FRONTEND-HANDOFF.md](CRM-FRONTEND-HANDOFF.md). The web repository is unchanged.
+
+## Public session lookup
+
+`GET /api/workshop-sessions?workshopSlug=<slug>` needs no session cookie or secret.
+It uses the same `SITE_ORIGINS` policy, `Vary: Origin`, and `Cache-Control: no-store`
+as public intake. Its OPTIONS preflight permits GET with no custom request
+headers. Do not send Idempotency-Key or Content-Type on a GET.
+
+```json
+{
+  "items": [{
+    "id": "12345678-abcd-4000-8000-123456789abc",
+    "workshopSlug": "example-workshop",
+    "workshopTitle": "Example workshop",
+    "date": "2030-01-02",
+    "endDate": "2030-01-02",
+    "startTime": "09:00:00",
+    "endTime": "17:00:00",
+    "venueName": "Example venue",
+    "city": "Cebu",
+    "venueMapUrl": null,
+    "priceCentavos": 12345,
+    "priceNote": "",
+    "registrationCutoffAt": null,
+    "available": true
+  }],
+  "hasMore": false,
+  "timeZone": "Asia/Manila"
+}
+```
+
+Only open sessions of the exact published workshop slug, before cutoff and
+start, appear. Sold-out sessions remain visible with `available: false`. Active
+Paid and Unpaid registrations count; cancelled registrations do not. No contact
+details, audit fields, capacity totals, or payment-account details are returned.
+An unknown/unpublished slug or no eligible dates returns an empty list, not a
+private catalogue disclosure.
+
+`limit` is 1–100, default 50; `offset` is 0–100,000, default 0. Results sort by
+date, start time, then UUID. Unknown query fields, missing/blank slugs, slugs over
+200 characters, and invalid pagination return `400 invalid_request`. Blocked
+origins/preflights use the public 403 codes; missing origin configuration or a
+database failure returns `503 lookup_unavailable`. These are implementation
+bounds. Lookup remains available when intake is disabled and requires no email
+or QR credentials. It does not promise that a subsequent registration will be
+accepted: intake rechecks the session, capacity, and its own readiness gate.
 
 ## Email delivery and recovery
 

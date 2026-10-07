@@ -17,6 +17,7 @@ import { isCourseCodeLocked } from "@/features/workshops/course-code-lock";
 import { handleSubmission } from "./http";
 import { authorizeStaff, handleStaffRequest } from "./staff-http";
 import { changeRegistration } from "./staff";
+import { handleSessionLookup } from "./session-lookup";
 import type { CrmEnv } from "@/lib/env";
 
 // Opt in explicitly. DATABASE_URL alone never causes this test to connect.
@@ -337,5 +338,41 @@ describe.skipIf(!isolatedUrl)("CRM intake in isolated Postgres", () => {
     expect(saved.cancelledAt ? saved.paymentStatus === "unpaid" : saved.paymentStatus === "paid").toBe(true);
     const history = await db.select().from(activityLog).where(and(eq(activityLog.entityType, "registration"), eq(activityLog.entityId, row.id)));
     expect(history).toHaveLength(1);
+  });
+
+  it("looks up only published open future sessions, with bounded public fields and sold-out availability", async () => {
+    const now = new Date("2030-01-01T01:00:00Z"); // 09:00 in Manila, exactly the default start.
+    const full = await session(1, { date: "2030-01-02", endDate: "2030-01-02" });
+    const today = await session(1, { startTime: "10:00", registrationCutoffAt: new Date(now.getTime() + 1000) });
+    await session(1, { status: "draft", date: "2030-01-02", endDate: "2030-01-02" });
+    await session(1, { status: "closed", date: "2030-01-02", endDate: "2030-01-02" });
+    await session(1, { status: "cancelled", date: "2030-01-02", endDate: "2030-01-02" });
+    await session(1, { startTime: "11:00", registrationCutoffAt: now });
+    expect((await submit({ ...base, workshopSessionId: full })).status).toBe(202);
+    const [saved] = await registrations(full);
+    await db.update(registration).set({ paymentStatus: "paid" }).where(eq(registration.id, saved.id));
+    const lookup = (query = `workshopSlug=${actorId}`) => handleSessionLookup(new Request(`http://localhost/api/workshop-sessions?${query}`, {
+      headers: { origin: config.SITE_ORIGINS[0] }
+    }), { db, origins: config.SITE_ORIGINS, now });
+    const response = await lookup();
+    expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("no-store");
+    const body = await response.json();
+    expect(body.timeZone).toBe("Asia/Manila"); expect(body.hasMore).toBe(false);
+    expect(body.items.map((row: { id: string }) => row.id)).toEqual([today, full]);
+    expect(body.items[0]).toMatchObject({ workshopSlug: actorId, priceCentavos: 12345, available: true });
+    expect(body.items[1].available).toBe(false);
+    expect(JSON.stringify(body)).not.toContain(base.email);
+    expect(body.items[0]).not.toHaveProperty("capacity"); expect(body.items[0]).not.toHaveProperty("createdBy");
+    const firstPage = await (await lookup(`workshopSlug=${actorId}&limit=1`)).json();
+    expect(firstPage.items[0].id).toBe(today); expect(firstPage.hasMore).toBe(true);
+    const secondPage = await (await lookup(`workshopSlug=${actorId}&limit=1&offset=1`)).json();
+    expect(secondPage.items[0].id).toBe(full); expect(secondPage.hasMore).toBe(false);
+    await db.update(registration).set({ paymentStatus: "unpaid" }).where(eq(registration.id, saved.id));
+    await cancel(saved.id);
+    expect((await (await lookup()).json()).items[1].available).toBe(true);
+    expect((await (await lookup("workshopSlug=unknown-workshop")).json()).items).toEqual([]);
+    await db.update(workshop).set({ status: "draft" }).where(eq(workshop.id, workshopId));
+    try { expect((await (await lookup()).json()).items).toEqual([]); }
+    finally { await db.update(workshop).set({ status: "published" }).where(eq(workshop.id, workshopId)); }
   });
 });

@@ -538,3 +538,36 @@ local capture. All external HTTP is blocked by the harness.
 The next stage is session lookup and the final tested frontend handoff, followed
 by launch-readiness work. Intake remains disabled by default. Production records,
 real R2 objects, and live provider delivery remain untouched.
+
+## Session lookup and handoff, October 7, 2026
+
+`GET /api/workshop-sessions?workshopSlug=<slug>` now supplies scheduled session
+UUIDs, public date/time/venue/price fields, and an availability boolean. It returns
+only published workshop sessions that are open and before cutoff/start in
+Asia/Manila. Sold-out runs remain visible as unavailable. Pagination is bounded;
+no customer, audit, or payment-account details are exposed. Exact-origin CORS
+permits website reads. Lookup works independently of the disabled intake gate
+and email/QR configuration; acceptance still rechecks every reservation.
+
+[CRM-FRONTEND-HANDOFF.md](CRM-FRONTEND-HANDOFF.md) records the actual web form
+integration points, full-field submission, session selection, response handling,
+duplicate/retry semantics, and deployed verification still required. The web
+repository is unchanged; no message was sent to Ced.
+
+Two new unit checks and one Docker check verify origin/query boundaries,
+pagination, public-only fields, published/open/cutoff/start rules, paid seats,
+and availability after cancellation. An existing exact email-retry boundary test
+now uses the database clock, matching the production claim logic and avoiding
+host/Docker clock differences. No delivery logic changed for that test fix.
+
+All 72 unit tests and 18 isolated database tests pass, for 90 distinct checks.
+Typecheck and production build pass. The built server also verifies session
+lookup before submission, unavailable after reservation, and available after
+cancellation alongside public intake, staff sessions/history, and email retry.
+Synthetic fixtures were removed; the test containers were stopped with volumes
+preserved. No production database, real QR, or live provider operation occurred.
+
+The planned local Portal implementation and written frontend handoff are complete.
+Remaining release work is Ced's web integration and controlled deployed checks
+of sender/QR/recipients/schema/platform abuse controls. Intake remains disabled
+by default. Nothing has been pushed or deployed.

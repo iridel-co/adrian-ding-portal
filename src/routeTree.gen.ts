@@ -15,6 +15,7 @@ import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as ApiCorporateInquiriesRouteImport } from './routes/api/corporate-inquiries'
 import { Route as ApiRegistrationsRouteImport } from './routes/api/registrations'
+import { Route as ApiWorkshopSessionsRouteImport } from './routes/api/workshop-sessions'
 import { Route as PreviewWorkshopRouteImport } from './routes/preview/workshop'
 import { Route as AppContentMediaRouteImport } from './routes/_app/content/media'
 import { Route as AppContentTagsRouteImport } from './routes/_app/content/tags'
@@ -55,6 +56,11 @@ const ApiCorporateInquiriesRoute = ApiCorporateInquiriesRouteImport.update({
 const ApiRegistrationsRoute = ApiRegistrationsRouteImport.update({
   id: '/api/registrations',
   path: '/api/registrations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWorkshopSessionsRoute = ApiWorkshopSessionsRouteImport.update({
+  id: '/api/workshop-sessions',
+  path: '/api/workshop-sessions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PreviewWorkshopRoute = PreviewWorkshopRouteImport.update({
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/preview': typeof PreviewRouteWithChildren
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/api/registrations': typeof ApiRegistrationsRoute
+  '/api/workshop-sessions': typeof ApiWorkshopSessionsRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/preview': typeof PreviewRouteWithChildren
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/api/registrations': typeof ApiRegistrationsRoute
+  '/api/workshop-sessions': typeof ApiWorkshopSessionsRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/': typeof AppIndexRoute
   '/content/media': typeof AppContentMediaRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/preview': typeof PreviewRouteWithChildren
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/api/registrations': typeof ApiRegistrationsRoute
+  '/api/workshop-sessions': typeof ApiWorkshopSessionsRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/_app/': typeof AppIndexRoute
   '/_app/content/media': typeof AppContentMediaRoute
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/preview'
     | '/api/corporate-inquiries'
     | '/api/registrations'
+    | '/api/workshop-sessions'
     | '/preview/workshop'
     | '/content/media'
     | '/content/tags'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/preview'
     | '/api/corporate-inquiries'
     | '/api/registrations'
+    | '/api/workshop-sessions'
     | '/preview/workshop'
     | '/'
     | '/content/media'
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/preview'
     | '/api/corporate-inquiries'
     | '/api/registrations'
+    | '/api/workshop-sessions'
     | '/preview/workshop'
     | '/_app/'
     | '/_app/content/media'
@@ -245,6 +257,7 @@ export interface RootRouteChildren {
   PreviewRoute: typeof PreviewRouteWithChildren
   ApiCorporateInquiriesRoute: typeof ApiCorporateInquiriesRoute
   ApiRegistrationsRoute: typeof ApiRegistrationsRoute
+  ApiWorkshopSessionsRoute: typeof ApiWorkshopSessionsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiCrmSplatRoute: typeof ApiCrmSplatRoute
 }
@@ -291,6 +304,13 @@ declare module '@tanstack/react-router' {
       path: '/api/registrations'
       fullPath: '/api/registrations'
       preLoaderRoute: typeof ApiRegistrationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/workshop-sessions': {
+      id: '/api/workshop-sessions'
+      path: '/api/workshop-sessions'
+      fullPath: '/api/workshop-sessions'
+      preLoaderRoute: typeof ApiWorkshopSessionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/preview/workshop': {
@@ -425,6 +445,7 @@ const rootRouteChildren: RootRouteChildren = {
   PreviewRoute: PreviewRouteWithChildren,
   ApiCorporateInquiriesRoute: ApiCorporateInquiriesRoute,
   ApiRegistrationsRoute: ApiRegistrationsRoute,
+  ApiWorkshopSessionsRoute: ApiWorkshopSessionsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiCrmSplatRoute: ApiCrmSplatRoute,
 }
