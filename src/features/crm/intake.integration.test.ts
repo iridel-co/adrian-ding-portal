@@ -10,11 +10,13 @@ vi.mock("./email", () => ({ sendEmailJob: vi.fn() }));
 vi.mock("@/db", () => ({ getDb: () => { throw new Error("Integration tests must inject the isolated database"); } }));
 vi.mock("@/features/media/r2", () => ({ publicMediaUrl: (key: string) => `https://qr.example.com/${key}`, readPaymentQr: async () => ({ filename: "payment-qr.png", content: "synthetic-base64", contentType: "image/png" }) }));
 
-import { activityLog, corporateInquiry, crmEmailJob, crmSubmissionKey, media, paymentAccount, registration, relations, taxonomyTerm, user, workshop, workshopSession, workshopTag } from "@/db/schema";
+import { account, activityLog, corporateInquiry, crmEmailJob, crmSubmissionKey, media, paymentAccount, registration, relations, taxonomyTerm, user, workshop, workshopSession, workshopTag } from "@/db/schema";
 import { updateSession } from "@/features/sessions/service";
 import { updateWorkshop } from "@/features/workshops/service";
 import { isCourseCodeLocked } from "@/features/workshops/course-code-lock";
 import { handleSubmission } from "./http";
+import { authorizeStaff, handleStaffRequest } from "./staff-http";
+import { changeRegistration } from "./staff";
 import type { CrmEnv } from "@/lib/env";
 
 // Opt in explicitly. DATABASE_URL alone never causes this test to connect.
@@ -229,5 +231,111 @@ describe.skipIf(!isolatedUrl)("CRM intake in isolated Postgres", () => {
     const active = (await registrations(id)).filter(row => row.cancelledAt === null);
     expect(active.length).toBeLessThanOrEqual(final.capacity);
     expect(capacityRace.some(result => result.status === "fulfilled")).toBe(true);
+  });
+  it("requires current verified Google staff membership and rejects cross-origin mutations", async () => {
+    const googleId = randomUUID();
+    await db.insert(account).values({ id: googleId, userId: actorId, accountId: actorId, providerId: "google" });
+    const dependencies = { db, userId: actorId, adminEmails: ` ${actor.email.toUpperCase()} `, portalUrl: "http://localhost:3000" };
+    const request = (method = "GET", origin?: string, body?: unknown) => new Request("http://localhost:3000/api/crm/corporate-inquiries", {
+      method, headers: { ...(origin ? { origin } : {}), "content-type": "application/json" }, ...(body ? { body: JSON.stringify(body) } : {})
+    });
+    try {
+      expect((await handleStaffRequest(request(), { ...dependencies, userId: undefined })).status).toBe(401);
+      expect((await handleStaffRequest(request(), { ...dependencies, adminEmails: "" })).status).toBe(403);
+      expect((await handleStaffRequest(request())).status).toBe(503); // No injected DB may reach production.
+      expect((await handleStaffRequest(request(), dependencies)).status).toBe(200);
+      expect((await handleStaffRequest(request("POST", "https://attacker.example", {}), dependencies)).status).toBe(403);
+      expect((await handleStaffRequest(request("POST", undefined, {}), dependencies)).status).toBe(403);
+      expect((await handleStaffRequest(request("GET", "https://attacker.example"), dependencies)).status).toBe(403);
+      await db.update(user).set({ emailVerified: false }).where(eq(user.id, actorId));
+      await expect(authorizeStaff(db, actorId, actor.email)).rejects.toMatchObject({ status: 403 });
+      await db.update(user).set({ emailVerified: true }).where(eq(user.id, actorId));
+      await db.delete(account).where(eq(account.id, googleId));
+      await expect(authorizeStaff(db, actorId, actor.email)).rejects.toMatchObject({ status: 403 });
+    } finally {
+      await db.update(user).set({ emailVerified: true }).where(eq(user.id, actorId));
+      await db.delete(account).where(eq(account.id, googleId));
+    }
+  });
+
+  it("audits payment/cancellation atomically, preserves identity after deletion, and releases the seat", async () => {
+    const id = await session();
+    expect((await submit({ ...base, workshopSessionId: id })).status).toBe(202);
+    const [row] = await registrations(id);
+    const payment = (paymentStatus: "paid" | "unpaid", expectedPaymentStatus: "paid" | "unpaid", reason?: string) =>
+      changeRegistration(db, row.id, actor, { kind: "payment", input: { paymentStatus, expectedPaymentStatus, reason } });
+    expect(await payment("paid", "unpaid")).toEqual({ changed: true });
+    expect(await payment("paid", "unpaid")).toEqual({ changed: false });
+    expect((await jobs(row.id))[0].state).toBe("skipped");
+    await expect(changeRegistration(db, row.id, actor, { kind: "cancel", input: { reason: "Test" } })).rejects.toMatchObject({ status: 409 });
+    await expect(payment("unpaid", "unpaid", "Stale" )).rejects.toMatchObject({ code: "payment_status_changed" });
+    await expect(payment("unpaid", "paid")).rejects.toMatchObject({ code: "reason_required" });
+    await payment("unpaid", "paid", "Payment corrected");
+    // A failed audit must roll back the state change and job updates.
+    await expect(changeRegistration(db, row.id, { ...actor, id: "missing-staff-user" }, { kind: "payment", input: { paymentStatus: "paid", expectedPaymentStatus: "unpaid" } })).rejects.toThrow();
+    expect((await registrations(id))[0].paymentStatus).toBe("unpaid");
+    const removedActor = { id: randomUUID(), name: "Removed staff", email: "removed-staff@example.com" };
+    await db.insert(user).values({ ...removedActor, emailVerified: true });
+    try {
+      await changeRegistration(db, row.id, removedActor, { kind: "cancel", input: { reason: "Seat released" } });
+      expect(await changeRegistration(db, row.id, actor, { kind: "cancel", input: { reason: "Repeated" } })).toEqual({ changed: false });
+      await db.delete(user).where(eq(user.id, removedActor.id));
+      const history = await db.select().from(activityLog).where(and(eq(activityLog.entityType, "registration"), eq(activityLog.entityId, row.id)));
+      expect(history).toHaveLength(3);
+      const cancellation = history.find(entry => entry.changes.cancelledAt);
+      expect(cancellation?.userId).toBeNull();
+      expect(cancellation?.changes.actor.to).toEqual(removedActor);
+      expect((await registrations(id))[0].cancelledBy).toBeNull();
+      expect((await submit({ ...base, workshopSessionId: id, email: `replacement-${base.email}` })).status).toBe(202);
+      await expect(payment("paid", "unpaid")).rejects.toMatchObject({ code: "registration_cancelled" });
+    } finally {
+      await db.delete(activityLog).where(and(eq(activityLog.entityType, "registration"), eq(activityLog.entityId, row.id)));
+      await db.delete(user).where(eq(user.id, removedActor.id));
+    }
+  });
+
+  it("serves bounded staff records/history and rejects forged mutation fields", async () => {
+    const googleId = randomUUID();
+    await db.insert(account).values({ id: googleId, userId: actorId, accountId: actorId, providerId: "google" });
+    const dependencies = { db, userId: actorId, adminEmails: actor.email, portalUrl: "http://localhost:3000", apiKey: "synthetic" };
+    const call = (path: string, method = "GET", body?: unknown) => handleStaffRequest(new Request(`http://localhost:3000/api/crm/${path}`, {
+      method, headers: { origin: dependencies.portalUrl, "content-type": "application/json" }, ...(body ? { body: JSON.stringify(body) } : {})
+    }), dependencies);
+    try {
+      const id = await session(2);
+      await submit({ ...base, workshopSessionId: id });
+      await submit({ ...base, workshopSessionId: id, email: `page-${base.email}` });
+      const [row] = await registrations(id);
+      const page = await (await call(`registrations?workshopSessionId=${id}&limit=1`)).json();
+      expect(page.items).toHaveLength(1); expect(page.hasMore).toBe(true);
+      expect(page.items[0]).not.toHaveProperty("payloadHash"); expect(page.items[0]).not.toHaveProperty("idempotencyKey");
+      expect((await call(`registrations?workshopSessionId=${id}&limit=101`)).status).toBe(400);
+      expect((await call("registrations/bad-id")).status).toBe(400);
+      expect((await call(`registrations/${randomUUID()}`)).status).toBe(404);
+      expect((await call(`registrations/${row.id}/payment`, "PATCH", { paymentStatus: "paid", expectedPaymentStatus: "unpaid", priceCentavos: 1 })).status).toBe(400);
+      expect((await call(`registrations/${row.id}/payment`, "PATCH", { paymentStatus: "paid", expectedPaymentStatus: "unpaid" })).status).toBe(200);
+      const detail = await (await call(`registrations/${row.id}`)).json();
+      expect(detail.paymentStatus).toBe("paid"); expect(detail.history).toHaveLength(1);
+      expect(detail.emailJobs[0]).not.toHaveProperty("payload");
+      expect((await call(`emails/${detail.emailJobs[0].id}/retry`, "POST", {})).status).toBe(200);
+      const leads = await (await call("corporate-inquiries?limit=1")).json();
+      expect(leads.items).toHaveLength(1); expect(leads.items[0].emailJobs).toHaveLength(2);
+      expect(leads.items[0]).not.toHaveProperty("payloadHash");
+    } finally { await db.delete(account).where(eq(account.id, googleId)); }
+  });
+
+  it("serializes racing payment and cancellation so a paid seat cannot be released", async () => {
+    const id = await session();
+    await submit({ ...base, workshopSessionId: id });
+    const [row] = await registrations(id);
+    const results = await Promise.allSettled([
+      changeRegistration(db, row.id, actor, { kind: "payment", input: { paymentStatus: "paid", expectedPaymentStatus: "unpaid" } }),
+      changeRegistration(db, row.id, actor, { kind: "cancel", input: { reason: "Concurrent cancellation" } })
+    ]);
+    expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
+    const [saved] = await registrations(id);
+    expect(saved.cancelledAt ? saved.paymentStatus === "unpaid" : saved.paymentStatus === "paid").toBe(true);
+    const history = await db.select().from(activityLog).where(and(eq(activityLog.entityType, "registration"), eq(activityLog.entityId, row.id)));
+    expect(history).toHaveLength(1);
   });
 });

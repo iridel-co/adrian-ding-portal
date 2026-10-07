@@ -511,4 +511,30 @@ replay without duplicate sends. It blocks all external HTTP. Synthetic database
 fixtures were removed; captured synthetic mail remains in the local volume.
 Production database records, real R2 objects, and live email delivery were untouched.
 
-Staff APIs are next. Intake stays disabled by default.
+## Staff API implementation, October 7, 2026
+
+Staff APIs now provide per-session registration lists, registration detail with
+paginated audit history and email metadata, corporate inquiry lists with email
+metadata, payment changes, unpaid cancellation, and bounded email retry. The
+shared staff handler bypasses session-cookie caching and reads the current
+verified user/Google account and environment email allowlist on every request.
+Mutations require the configured portal origin. Responses are private and exclude
+submission hashes/keys and complete mail payloads.
+
+Payment/cancellation use the existing audit log in the same transaction, retaining
+staff identity snapshots after account deletion. Workshop/session/registration
+locks serialize these edits with seat intake and CMS changes. No-op actions add
+no history. Pending/failed obsolete instructions are skipped; already claimed
+sends retain their outcome. No payment update sends a new email.
+
+Four added Docker checks cover current authorization and CSRF, atomic audit and
+account deletion retention, bounded HTTP reads/validation, and racing payment
+versus cancellation. The suite passes 70 unit tests and 17 isolated database
+checks. Typecheck and the production build pass. A built-server localhost check
+uses synthetic signed session cookies to verify staff routes, revoked
+identity/session denial, payment/cancellation history, and email retry through
+local capture. All external HTTP is blocked by the harness.
+
+The next stage is session lookup and the final tested frontend handoff, followed
+by launch-readiness work. Intake remains disabled by default. Production records,
+real R2 objects, and live provider delivery remain untouched.

@@ -1,4 +1,4 @@
-# CRM public intake contract
+# CRM API contract
 
 Implemented locally on October 6, 2026, with email delivery added on October 7.
 These endpoints save submissions and immutable messages together, then await
@@ -186,9 +186,90 @@ The implementation uses a conservative 23-hour-59-minute window measured from
 the database-recorded first attempt. Attempted jobs beyond that window become
 needs_reconciliation and make no provider call, even when the last failure was
 a rejection. A failed write after provider acceptance leaves the claim recoverable
-with the same key. Staff retry endpoints are the next implementation step.
+with the same key. Staff can use the authenticated retry endpoint below.
 
 Local tests explicitly inject the loopback mail capture transport.
 CRM_TEST_EMAIL_URL never redirects production requests. The local capture keeps
 synthetic messages in its volume; its process-local duplicate-key memory resets
 when the container restarts. No live provider key or R2 object was used in tests.
+
+## Staff endpoints
+
+Every request requires a valid Better Auth session, a currently verified user with
+a linked Google account, and an email in the current `ADMIN_EMAILS` environment
+setting. Database-only CMS allowlisting does not grant CRM access. The session
+cookie cache is bypassed and the current user/account is checked on every request.
+Responses use `Cache-Control: no-store`; they expose no stored request hashes,
+idempotency keys, or complete email payloads.
+
+These APIs belong to the portal. There is no public-site CORS access. Mutations
+require an `Origin` equal to the origin of `BETTER_AUTH_URL`. A missing, `null`,
+or other origin is rejected. Cross-site Fetch Metadata requests are rejected.
+Reads can omit Origin, but reject another origin when supplied. Browser callers
+send the portal session cookie. All mutation bodies are JSON with the same
+64 KiB/five-second read bounds as public intake.
+
+| Method | Path | Result |
+| --- | --- | --- |
+| GET | `/api/crm/registrations?workshopSessionId=<uuid>` | `{ items, hasMore }`, includes paid/unpaid and cancelled registrations for that session |
+| GET | `/api/crm/registrations/<uuid>` | Registration fields plus `emailJobs`, `history`, `historyHasMore` |
+| PATCH | `/api/crm/registrations/<uuid>/payment` | `{ changed: true }` or `{ changed: false }` |
+| POST | `/api/crm/registrations/<uuid>/cancel` | `{ changed: true }` or `{ changed: false }` |
+| GET | `/api/crm/corporate-inquiries` | `{ items, hasMore }`, each inquiry includes `emailJobs` |
+| POST | `/api/crm/emails/<uuid>/retry` | Current email job metadata after a bounded send attempt |
+
+Lists and detail history accept `limit` from 1 to 100, default 50, and `offset`
+from 0 to 100,000, default 0. These are implementation bounds. Rows sort newest
+first, with UUID as a stable tie-breaker. Detail pagination applies to history;
+email jobs are always included. Unknown query parameters are rejected. An empty
+session list is returned when its UUID has no registrations.
+
+Payment example:
+
+```json
+{ "paymentStatus": "paid", "expectedPaymentStatus": "unpaid" }
+```
+
+Paid-to-Unpaid example:
+
+```json
+{ "paymentStatus": "unpaid", "expectedPaymentStatus": "paid", "reason": "Payment was recorded against the wrong registration." }
+```
+
+A reason is required for Paid-to-Unpaid. Optional reasons and cancellation reasons
+are trimmed nonblank text, at most 2,000 characters. A repeated desired status is
+a no-op. Otherwise a mismatched expected status returns `409 payment_status_changed`.
+Payment changes on a cancelled registration return `409 registration_cancelled`.
+No payment-status email is sent.
+
+Cancellation body:
+
+```json
+{ "reason": "Registrant declined to proceed." }
+```
+
+Only Unpaid registrations can be cancelled; Paid returns
+`409 paid_registration_cannot_cancel`. Repeated cancellation is a no-op and keeps
+the original reason/history. Cancellation locks the workshop, session, and
+registration in that order, records history, and releases the seat atomically.
+Payment edits use the same lock order. Failed history writes roll back the change.
+Audit entries preserve old/new values, reason, staff ID/name/email, and time even
+after the staff account is deleted.
+
+Paying or cancelling skips pending/failed payment-instruction jobs. A send already
+claimed by another request may already be with the provider; its result remains
+recordable. Reverting payment does not requeue skipped instructions.
+
+Retry body is `{}`. The response includes job `state`, attempt times/count,
+provider ID, and safe error code. `200` reports the resulting job state, including
+`failed`; it does not promise delivery. Sent/skipped/reconciliation jobs and
+unexpired sending leases are no-ops. Expired attempts use the existing recovery
+window and immutable message/key. A missing provider key returns
+`503 email_unavailable`. Retry does not require public intake to be enabled.
+
+Staff errors use `{ "error": { "code": "..." } }`: `401 authentication_required`,
+`403 staff_access_required` or `origin_not_allowed`, `400 invalid_request` or
+`invalid_id`, `404 registration_not_found`, `email_job_not_found`, or
+`route_not_found`, the `409` conflicts above, and `503 crm_unavailable` for
+unexpected dependency/configuration failures. Body errors reuse the public
+`400`/`408`/`413`/`415` codes. Only authenticated staff receive customer records.
