@@ -1,0 +1,42 @@
+name: adrian-ding-crm-test
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: adrian_ding_crm_test
+      POSTGRES_USER: crm_test
+      POSTGRES_PASSWORD: crm_test_local_only
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  mail:
+    image: node:24-alpine
+    init: true
+    command: ["node", "/app/mail-server.mjs"]
+    environment:
+      MAIL_HOST: 0.0.0.0
+      MAIL_CAPTURE_PATH: /data/mail-capture.jsonl
+    ports:
+      - "127.0.0.1:55825:55825"
+    volumes:
+      - ./scripts/dev/mail-server.mjs:/app/mail-server.mjs:ro
+      - mail-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:55825/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+volumes:
+  postgres-data:
+  mail-data:
