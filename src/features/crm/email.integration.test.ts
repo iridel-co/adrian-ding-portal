@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 
 const { readQr } = vi.hoisted(() => ({ readQr: vi.fn(async () => ({ filename: "payment-qr.png", content: "iVBORw0KGgo=", contentType: "image/png" })) }));
@@ -124,7 +124,10 @@ describe.skipIf(!isolatedUrl)("CRM email delivery in Docker", () => {
 
   it("requires reconciliation for old ambiguous attempts instead of sending again", async () => {
     for (const state of ["sending", "failed"] as const) {
-      const [id] = await createJobs(); const old = new Date(Date.now() - (24 * 60 * 60 - 60) * 1000);
+      const [id] = await createJobs();
+      // Claims use the database clock; the Docker clock can differ from the host.
+      const [{ instant }] = await db.execute<{ instant: string }>(sql`select clock_timestamp() as instant`);
+      const old = new Date(new Date(instant).getTime() - (24 * 60 * 60 - 60) * 1000);
       await db.update(crmEmailJob).set({ state, firstAttemptAt: old, lastAttemptAt: old, attemptCount: 1, leaseExpiresAt: state === "sending" ? old : null }).where(eq(crmEmailJob.id, id));
       const noSend = vi.fn(capture); await sendEmailJob(db, id, config.RESEND_API_KEY, noSend);
       expect(noSend).not.toHaveBeenCalled(); expect((await getJob(id)).state).toBe("needs_reconciliation");

@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as ApiCorporateInquiriesRouteImport } from './routes/api/corporate-inquiries'
 import { Route as ApiRegistrationsRouteImport } from './routes/api/registrations'
+import { Route as ApiWorkshopSessionsRouteImport } from './routes/api/workshop-sessions'
 import { Route as AppContentMediaRouteImport } from './routes/_app/content/media'
 import { Route as AppContentTagsRouteImport } from './routes/_app/content/tags'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
@@ -48,6 +49,11 @@ const ApiCorporateInquiriesRoute = ApiCorporateInquiriesRouteImport.update({
 const ApiRegistrationsRoute = ApiRegistrationsRouteImport.update({
   id: '/api/registrations',
   path: '/api/registrations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWorkshopSessionsRoute = ApiWorkshopSessionsRouteImport.update({
+  id: '/api/workshop-sessions',
+  path: '/api/workshop-sessions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppContentMediaRoute = AppContentMediaRouteImport.update({
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/api/registrations': typeof ApiRegistrationsRoute
+  '/api/workshop-sessions': typeof ApiWorkshopSessionsRoute
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
   '/settings/access': typeof AppSettingsAccessRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/api/registrations': typeof ApiRegistrationsRoute
+  '/api/workshop-sessions': typeof ApiWorkshopSessionsRoute
   '/': typeof AppIndexRoute
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/api/registrations': typeof ApiRegistrationsRoute
+  '/api/workshop-sessions': typeof ApiWorkshopSessionsRoute
   '/_app/': typeof AppIndexRoute
   '/_app/content/media': typeof AppContentMediaRoute
   '/_app/content/tags': typeof AppContentTagsRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/api/corporate-inquiries'
     | '/api/registrations'
+    | '/api/workshop-sessions'
     | '/content/media'
     | '/content/tags'
     | '/settings/access'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/api/corporate-inquiries'
     | '/api/registrations'
+    | '/api/workshop-sessions'
     | '/'
     | '/content/media'
     | '/content/tags'
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/api/corporate-inquiries'
     | '/api/registrations'
+    | '/api/workshop-sessions'
     | '/_app/'
     | '/_app/content/media'
     | '/_app/content/tags'
@@ -220,6 +232,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ApiCorporateInquiriesRoute: typeof ApiCorporateInquiriesRoute
   ApiRegistrationsRoute: typeof ApiRegistrationsRoute
+  ApiWorkshopSessionsRoute: typeof ApiWorkshopSessionsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiCrmSplatRoute: typeof ApiCrmSplatRoute
 }
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       path: '/api/registrations'
       fullPath: '/api/registrations'
       preLoaderRoute: typeof ApiRegistrationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/workshop-sessions': {
+      id: '/api/workshop-sessions'
+      path: '/api/workshop-sessions'
+      fullPath: '/api/workshop-sessions'
+      preLoaderRoute: typeof ApiWorkshopSessionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/content/media': {
@@ -374,6 +394,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ApiCorporateInquiriesRoute: ApiCorporateInquiriesRoute,
   ApiRegistrationsRoute: ApiRegistrationsRoute,
+  ApiWorkshopSessionsRoute: ApiWorkshopSessionsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiCrmSplatRoute: ApiCrmSplatRoute,
 }
