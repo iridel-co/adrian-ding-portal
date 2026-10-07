@@ -119,3 +119,22 @@ With Workers Builds (Git integration), use build command `pnpm build:cf` and dep
 2. Add it to `NAV_ITEMS` in `src/components/app-sidebar.tsx`
 
 Add shadcn components with `pnpm dlx shadcn@latest add <name>`.
+
+### CRM intake implementation
+
+Public POST handlers now save registrations and corporate inquiries with pending
+email jobs. Intake is disabled by default with `CRM_INTAKE_ENABLED=false` while
+email delivery and launch protection remain unfinished. See
+[the public request contract](docs/crm/CRM-API.md) for payloads, request
+keys, responses, and remaining integration work.
+
+Run the guarded Docker integration check from this directory:
+
+```sh
+node --env-file=.env.crm-test scripts/dev/check-crm-intake.mjs
+```
+
+It applies only local test migrations and removes its synthetic fixtures. It
+never sends email or reads live records. Ordinary `pnpm test` runs the HTTP and
+schema unit tests and skips the database integration cases unless explicitly
+configured for the isolated database.

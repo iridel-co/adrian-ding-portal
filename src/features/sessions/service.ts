@@ -1,8 +1,8 @@
 import "@tanstack/react-start/server-only";
-import { and, asc, desc, eq, gt, ilike, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, isNull, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { user, workshop, workshopSession } from "@/db/schema";
+import { registration, user, workshop, workshopSession } from "@/db/schema";
 import {
   type createInput,
   type idInput,
@@ -188,6 +188,7 @@ export async function updateSession(db: DbOrTx, actor: Actor, data: z.infer<type
   const registrationCutoffAt = registrationCutoff ? manilaLocalToDate(registrationCutoff) : null;
 
   await db.transaction(async (tx) => {
+    await tx.select({ id: workshopSession.id }).from(workshopSession).where(eq(workshopSession.id, data.id)).for("update");
     const before = await getSessionRow(tx, data.id);
     if (before.status === "cancelled") {
       throw new CmsValidationError("This session is cancelled and can't change.");
@@ -195,6 +196,10 @@ export async function updateSession(db: DbOrTx, actor: Actor, data: z.infer<type
     if (before.status === "open") {
       assertPublishable(sessionOpenSchema, values, SESSION_FIELD_LABELS);
     }
+
+    const [{ count }] = await tx.select({ count: sql<number>`count(*)::int` }).from(registration)
+      .where(and(eq(registration.workshopSessionId, data.id), isNull(registration.cancelledAt)));
+    if (values.capacity < count) throw new CmsValidationError("Capacity cannot be lower than the active registration count.");
 
     const next = { ...values, registrationCutoffAt };
 
@@ -222,6 +227,7 @@ export async function setSessionStatus(
   data: z.infer<typeof statusInput>
 ) {
   await db.transaction(async (tx) => {
+    await tx.select({ id: workshopSession.id }).from(workshopSession).where(eq(workshopSession.id, data.id)).for("update");
     const before = await getSessionRow(tx, data.id);
     assertSessionTransition(before.status, data.status, {
       hasStarted: hasSessionStarted(before),

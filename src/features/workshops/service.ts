@@ -231,6 +231,8 @@ export async function updateWorkshop(db: DbOrTx, actor: Actor, data: z.infer<typ
   const { tagIds, ...values } = data.values;
 
   await db.transaction(async (tx) => {
+    // Public intake holds this same lock before checking or creating a signup.
+    await tx.select({ id: workshop.id }).from(workshop).where(eq(workshop.id, data.id)).for("update");
     const before = await getWorkshopRow(tx, data.id);
 
     await assertSlugAvailable(tx, {

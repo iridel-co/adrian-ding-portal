@@ -18,5 +18,6 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true
   },
-  plugins: [tanstackStart(), viteReact(), nitro(), tailwindcss()]
+  // Bundle tslib: Nitro's trace otherwise omits its Node import entry file.
+  plugins: [tanstackStart(), viteReact(), nitro({ noExternals: ["tslib"] }), tailwindcss()]
 });

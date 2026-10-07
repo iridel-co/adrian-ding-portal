@@ -13,6 +13,8 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as ApiCorporateInquiriesRouteImport } from './routes/api/corporate-inquiries'
+import { Route as ApiRegistrationsRouteImport } from './routes/api/registrations'
 import { Route as PreviewWorkshopRouteImport } from './routes/preview/workshop'
 import { Route as AppContentMediaRouteImport } from './routes/_app/content/media'
 import { Route as AppContentTagsRouteImport } from './routes/_app/content/tags'
@@ -43,6 +45,16 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const ApiCorporateInquiriesRoute = ApiCorporateInquiriesRouteImport.update({
+  id: '/api/corporate-inquiries',
+  path: '/api/corporate-inquiries',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRegistrationsRoute = ApiRegistrationsRouteImport.update({
+  id: '/api/registrations',
+  path: '/api/registrations',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PreviewWorkshopRoute = PreviewWorkshopRouteImport.update({
   id: '/workshop',
@@ -105,6 +117,8 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
+  '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
+  '/api/registrations': typeof ApiRegistrationsRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
@@ -120,6 +134,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
+  '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
+  '/api/registrations': typeof ApiRegistrationsRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/': typeof AppIndexRoute
   '/content/media': typeof AppContentMediaRoute
@@ -138,6 +154,8 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
+  '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
+  '/api/registrations': typeof ApiRegistrationsRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/_app/': typeof AppIndexRoute
   '/_app/content/media': typeof AppContentMediaRoute
@@ -157,6 +175,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/preview'
+    | '/api/corporate-inquiries'
+    | '/api/registrations'
     | '/preview/workshop'
     | '/content/media'
     | '/content/tags'
@@ -172,6 +192,8 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/preview'
+    | '/api/corporate-inquiries'
+    | '/api/registrations'
     | '/preview/workshop'
     | '/'
     | '/content/media'
@@ -189,6 +211,8 @@ export interface FileRouteTypes {
     | '/_app'
     | '/login'
     | '/preview'
+    | '/api/corporate-inquiries'
+    | '/api/registrations'
     | '/preview/workshop'
     | '/_app/'
     | '/_app/content/media'
@@ -207,6 +231,8 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   PreviewRoute: typeof PreviewRouteWithChildren
+  ApiCorporateInquiriesRoute: typeof ApiCorporateInquiriesRoute
+  ApiRegistrationsRoute: typeof ApiRegistrationsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -239,6 +265,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/api/corporate-inquiries': {
+      id: '/api/corporate-inquiries'
+      path: '/api/corporate-inquiries'
+      fullPath: '/api/corporate-inquiries'
+      preLoaderRoute: typeof ApiCorporateInquiriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/registrations': {
+      id: '/api/registrations'
+      path: '/api/registrations'
+      fullPath: '/api/registrations'
+      preLoaderRoute: typeof ApiRegistrationsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/preview/workshop': {
       id: '/preview/workshop'
@@ -363,6 +403,8 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   PreviewRoute: PreviewRouteWithChildren,
+  ApiCorporateInquiriesRoute: ApiCorporateInquiriesRoute,
+  ApiRegistrationsRoute: ApiRegistrationsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
