@@ -23,6 +23,15 @@ docker compose up -d --wait
 node --env-file=.env.crm-test scripts/dev/db.mjs migrate
 ```
 
+Verify the CRM migration and database rules with synthetic records:
+
+```sh
+node --env-file=.env.crm-test scripts/dev/check-crm-schema.mjs
+```
+
+This applies pending migrations to the test database, checks that existing CMS
+tables and records survive, and cleans up its synthetic records afterward.
+
 The test database is `adrian_ding_crm_test` at `127.0.0.1:55432`. Its local-only
 login is `crm_test` / `crm_test_local_only`. The migration helper rejects other
 database hosts, ports, and names. It uses `.env.crm-test` explicitly.

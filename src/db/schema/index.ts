@@ -1,6 +1,7 @@
 export * from "./activity-log";
 export * from "./auth";
 export * from "./columns";
+export * from "./crm";
 export * from "./faq";
 export * from "./media";
 export * from "./payments";
