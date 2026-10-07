@@ -8,7 +8,7 @@ import { acceptCorporateInquiry, acceptRegistration, IntakeError, type Submissio
 // Implementation bound on actual bytes, independent of individual text limits.
 const MAX_BODY_BYTES = 64 * 1024;
 
-async function readJson(request: Request) {
+export async function readJson(request: Request) {
   if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
     throw new IntakeError(415, "unsupported_content_type");
   }

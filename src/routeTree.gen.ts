@@ -22,6 +22,7 @@ import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/ind
 import { Route as AppSettingsAccessRouteImport } from './routes/_app/settings/access'
 import { Route as AppSettingsIndustriesRouteImport } from './routes/_app/settings/industries'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiCrmSplatRouteImport } from './routes/api/crm/$'
 import { Route as AppContentSessionsIndexRouteImport } from './routes/_app/content/sessions/index'
 import { Route as AppContentSessionsIdRouteImport } from './routes/_app/content/sessions/$id'
 import { Route as AppContentWorkshopsIndexRouteImport } from './routes/_app/content/workshops/index'
@@ -91,6 +92,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCrmSplatRoute = ApiCrmSplatRouteImport.update({
+  id: '/api/crm/$',
+  path: '/api/crm/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppContentSessionsIndexRoute = AppContentSessionsIndexRouteImport.update({
   id: '/content/sessions/',
   path: '/content/sessions/',
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/crm/$': typeof ApiCrmSplatRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/crm/$': typeof ApiCrmSplatRoute
   '/settings': typeof AppSettingsIndexRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
@@ -163,6 +171,7 @@ export interface FileRoutesById {
   '/_app/settings/access': typeof AppSettingsAccessRoute
   '/_app/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/crm/$': typeof ApiCrmSplatRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/_app/content/workshops/$id': typeof AppContentWorkshopsIdRoute
@@ -183,6 +192,7 @@ export interface FileRouteTypes {
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
+    | '/api/crm/$'
     | '/settings/'
     | '/content/sessions/$id'
     | '/content/workshops/$id'
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
+    | '/api/crm/$'
     | '/settings'
     | '/content/sessions/$id'
     | '/content/workshops/$id'
@@ -220,6 +231,7 @@ export interface FileRouteTypes {
     | '/_app/settings/access'
     | '/_app/settings/industries'
     | '/api/auth/$'
+    | '/api/crm/$'
     | '/_app/settings/'
     | '/_app/content/sessions/$id'
     | '/_app/content/workshops/$id'
@@ -234,6 +246,7 @@ export interface RootRouteChildren {
   ApiCorporateInquiriesRoute: typeof ApiCorporateInquiriesRoute
   ApiRegistrationsRoute: typeof ApiRegistrationsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiCrmSplatRoute: typeof ApiCrmSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -329,6 +342,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/crm/$': {
+      id: '/api/crm/$'
+      path: '/api/crm/$'
+      fullPath: '/api/crm/$'
+      preLoaderRoute: typeof ApiCrmSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/content/sessions/': {
       id: '/_app/content/sessions/'
       path: '/content/sessions'
@@ -406,6 +426,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCorporateInquiriesRoute: ApiCorporateInquiriesRoute,
   ApiRegistrationsRoute: ApiRegistrationsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiCrmSplatRoute: ApiCrmSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
