@@ -1,8 +1,8 @@
 # CRM public intake contract
 
-Implemented locally on October 6, 2026. These endpoints save submissions and
-complete pending email messages together. Email delivery is the next step;
-nothing currently sends those jobs. `CRM_INTAKE_ENABLED` defaults to `false`.
+Implemented locally on October 6, 2026, with email delivery added on October 7.
+These endpoints save submissions and immutable messages together, then await
+bounded delivery attempts after commit. `CRM_INTAKE_ENABLED` defaults to `false`.
 Do not enable real intake until delivery, QR verification, and the deployment's
 native request limits and durable abuse protection are ready.
 
@@ -122,8 +122,15 @@ when these routes run, so an incomplete CRM setup does not disable the CMS.
 The explicitly configured payment account must be active and have active PNG,
 JPEG, or WebP QR media with positive size and a usable storage key. The message
 uses the existing publicMediaUrl helper and R2 settings, and requires an HTTPS
-URL. The next delivery step must verify that the URL resolves the intended QR.
-No R2 object or provider request runs during intake.
+URL. Launch verification must still confirm that the public URL resolves the intended QR.
+New registration intake reads the configured R2 QR object before its final save.
+A failed read rejects the request without a registration. The message stores its
+base64 attachment, so retries use the same bytes. The existing publicMediaUrl
+helper still supplies the image URL. No database lock is held during the R2 read
+or provider call; eligibility, capacity, and media metadata are checked again
+before the final save. QR attachments have a 1 MiB bound, a five-second read
+timeout, and size, MIME type, and image-signature checks. The size bound is an
+implementation default.
 
 All accepted keys live in `crm_submission_key`. The original key remains on the
 registration or inquiry. A key lock prevents competing transactions from using
@@ -153,3 +160,35 @@ The website's current confirmation handoff keeps only some answers and supplies 
 workshop slug, not a scheduled session ID. Ced must send the full payload above
 from the form values. A public session lookup and the final frontend handoff
 remain integration work; no public catalogue route was added in this step.
+
+## Email delivery and recovery
+
+A newly saved registration triggers its payment email. A newly saved inquiry
+triggers requester acknowledgment and team notification. Public retries and
+fresh-key duplicate registrations never trigger another send. Provider failure
+after commit still returns 202, preserves the record, and leaves a failed job.
+
+The production sender uses native fetch to Resend with a ten-second timeout and
+the immutable job UUID as its provider key. HTTP payload fields include reply_to
+and base64 attachments. The provider ID and sent time record provider acceptance,
+not inbox delivery. Provider error contents never enter public responses or stored
+error codes.
+
+The internal sendEmailJob operation claims a job in a transaction with a
+60-second lease, then releases the transaction before sending. Another sender
+cannot claim an unexpired lease. Expired leases and failed jobs can retry with
+the same key and message; an attempt counter prevents a late response from
+overwriting a newer attempt. Payment instructions already paid or cancelled
+before claim are skipped. Sent, skipped, and reconciliation jobs are terminal.
+
+[Resend retains duplicate-send keys for 24 hours](https://resend.com/docs/dashboard/emails/idempotency-keys).
+The implementation uses a conservative 23-hour-59-minute window measured from
+the database-recorded first attempt. Attempted jobs beyond that window become
+needs_reconciliation and make no provider call, even when the last failure was
+a rejection. A failed write after provider acceptance leaves the claim recoverable
+with the same key. Staff retry endpoints are the next implementation step.
+
+Local tests explicitly inject the loopback mail capture transport.
+CRM_TEST_EMAIL_URL never redirects production requests. The local capture keeps
+synthetic messages in its volume; its process-local duplicate-key memory resets
+when the container restarts. No live provider key or R2 object was used in tests.

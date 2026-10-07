@@ -133,3 +133,37 @@ A one-line Nitro configuration change bundles tslib because the dependency trace
 omitted its Node import entry, which otherwise caused requests to fail before
 reaching the routes. The temporary server stopped and its fixtures were removed.
 No real provider sends or production database operations occurred.
+
+## Email implementation, October 7, 2026
+
+Email delivery now follows the committed save. The native Resend transport maps
+HTTP fields, uses each immutable job UUID as its duplicate-send key, and applies
+a ten-second send timeout. Atomic claims use a 60-second lease and attempt fencing.
+Failed or interrupted jobs can recover within a conservative 23-hour-59-minute
+window after their first attempt; older attempted messages require reconciliation
+instead of another send. Already paid or cancelled payment instructions are skipped.
+Public replay and duplicate signup do not dispatch jobs again. A failed send never
+undoes a saved submission or changes its accepted acknowledgment.
+
+The configured payment QR is read from R2 outside database locks with a five-second
+timeout and 1 MiB limit, checked for matching type, size, and image signature, and
+saved as a base64 attachment with the immutable message. Final intake rechecks
+availability and media metadata after the read. These limits are implementation
+defaults. Tests use synthetic QR content; launch still requires verification of the
+real QR, sender domain, recipients, deployed schema, and platform abuse controls.
+
+The completed setup, schema, validation, and submission handler work was recorded
+as four separate local commits before this email stage. Documentation needed for
+review is also included under portal/docs/crm because the parent workspace docs
+are outside the portal Git repository. No commits were pushed.
+
+Email verification passed four provider/QR unit tests and six Docker recovery
+tests alongside the existing intake checks. The full unit suite passes 70 tests;
+13 database integration tests pass against Docker, for 83 distinct checks.
+Typecheck and production build pass. A localhost built-server harness also
+verified both real POST routes, three captured sends, saved QR attachments, and
+replay without duplicate sends. It blocks all external HTTP. Synthetic database
+fixtures were removed; captured synthetic mail remains in the local volume.
+Production database records, real R2 objects, and live email delivery were untouched.
+
+Staff APIs are next. Intake stays disabled by default.

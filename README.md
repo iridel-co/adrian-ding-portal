@@ -124,7 +124,7 @@ Add shadcn components with `pnpm dlx shadcn@latest add <name>`.
 
 Public POST handlers now save registrations and corporate inquiries with pending
 email jobs. Intake is disabled by default with `CRM_INTAKE_ENABLED=false` while
-email delivery and launch protection remain unfinished. See
+staff APIs and launch verification remain unfinished. See
 [the public request contract](docs/crm/CRM-API.md) for payloads, request
 keys, responses, and remaining integration work.
 
@@ -135,6 +135,12 @@ node --env-file=.env.crm-test scripts/dev/check-crm-intake.mjs
 ```
 
 It applies only local test migrations and removes its synthetic fixtures. It
-never sends email or reads live records. Ordinary `pnpm test` runs the HTTP and
+only sends synthetic mail to the local capture service and never reads live records. Ordinary `pnpm test` runs the HTTP and
 schema unit tests and skips the database integration cases unless explicitly
 configured for the isolated database.
+
+Email delivery runs after the transaction commits. Failed sends remain recoverable
+with the same message and provider key. QR attachments are snapshotted before save
+without holding database locks. Staff retry endpoints and launch verification remain
+next steps. The guarded check above now includes provider/QR unit checks and local
+email recovery tests; Compose must be running.

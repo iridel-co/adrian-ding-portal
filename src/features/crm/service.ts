@@ -3,7 +3,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 
 import { corporateInquiry, crmEmailJob, crmSubmissionKey, media, paymentAccount, registration, workshop, workshopSession } from "@/db/schema";
 import type { CrmEmailPayload } from "@/db/schema";
-import { publicMediaUrl } from "@/features/media/r2";
+import { publicMediaUrl, readPaymentQr } from "@/features/media/r2";
 import type { DbOrTx } from "@/features/shared/db-types";
 import { formatPesos } from "@/features/shared/money";
 import { hasSessionStarted } from "@/features/shared/time";
@@ -44,64 +44,76 @@ async function lockKey(tx: DbOrTx, key: string, hash: string) {
 
 export async function acceptRegistration(db: DbOrTx, data: RegistrationInput, key: string, config: CrmEnv) {
   const hash = await payloadHash("registration", data);
-  await db.transaction(async tx => {
-    if (await lockKey(tx, key, hash)) return;
-    const [lookup] = await tx.select({ workshopId: workshopSession.workshopId }).from(workshopSession)
-      .where(eq(workshopSession.id, data.workshopSessionId));
-    if (!lookup) throw new IntakeError(409, "session_unavailable");
-    // CMS course-code edits use the same workshop-first ordering. Session
-    // cancellation must follow workshop -> session -> registration too.
-    const [parent] = await tx.select().from(workshop).where(eq(workshop.id, lookup.workshopId)).for("share");
-    const [session] = await tx.select().from(workshopSession).where(eq(workshopSession.id, data.workshopSessionId)).for("update");
-    const now = new Date();
-    if (!parent || !session || session.workshopId !== parent.id || parent.status !== "published" || session.status !== "open"
-      || hasSessionStarted(session, now) || (session.registrationCutoffAt && session.registrationCutoffAt <= now)) {
-      throw new IntakeError(409, "session_unavailable");
-    }
-    const active = and(eq(registration.workshopSessionId, session.id), isNull(registration.cancelledAt));
-    const [existing] = await tx.select({ id: registration.id }).from(registration).where(and(active, eq(registration.email, data.email)));
-    if (existing) {
-      await tx.insert(crmSubmissionKey).values({ key, payloadHash: hash, registrationId: existing.id });
-      return;
-    }
-    const [{ count }] = await tx.select({ count: sql<number>`count(*)::int` }).from(registration).where(active);
-    if (count >= session.capacity) throw new IntakeError(409, "session_unavailable");
+  let qr: { source: typeof media.$inferSelect; attachment: Awaited<ReturnType<typeof readPaymentQr>> } | undefined;
+  for (let pass = 0; pass < 2; pass++) {
+    const result = await db.transaction(async tx => {
+      if (await lockKey(tx, key, hash)) return { jobs: [] as string[] };
+      const [lookup] = await tx.select({ workshopId: workshopSession.workshopId }).from(workshopSession)
+        .where(eq(workshopSession.id, data.workshopSessionId));
+      if (!lookup) throw new IntakeError(409, "session_unavailable");
+      // CMS course-code edits use the same workshop-first ordering. Session
+      // cancellation must follow workshop -> session -> registration too.
+      const [parent] = await tx.select().from(workshop).where(eq(workshop.id, lookup.workshopId)).for("share");
+      const [session] = await tx.select().from(workshopSession).where(eq(workshopSession.id, data.workshopSessionId)).for("update");
+      const now = new Date();
+      if (!parent || !session || session.workshopId !== parent.id || parent.status !== "published" || session.status !== "open"
+        || hasSessionStarted(session, now) || (session.registrationCutoffAt && session.registrationCutoffAt <= now)) {
+        throw new IntakeError(409, "session_unavailable");
+      }
+      const active = and(eq(registration.workshopSessionId, session.id), isNull(registration.cancelledAt));
+      const [existing] = await tx.select({ id: registration.id }).from(registration).where(and(active, eq(registration.email, data.email)));
+      if (existing) {
+        await tx.insert(crmSubmissionKey).values({ key, payloadHash: hash, registrationId: existing.id });
+        return { jobs: [] as string[] };
+      }
+      const [{ count }] = await tx.select({ count: sql<number>`count(*)::int` }).from(registration).where(active);
+      if (count >= session.capacity) throw new IntakeError(409, "session_unavailable");
 
-    const [destination] = await tx.select({ account: paymentAccount, qr: media }).from(paymentAccount)
-      .innerJoin(media, eq(media.id, paymentAccount.qrMediaId))
-      .where(and(eq(paymentAccount.id, config.PAYMENT_ACCOUNT_ID), isNull(paymentAccount.archivedAt), isNull(media.archivedAt)))
-      .for("share");
-    if (!destination || !destination.account.accountName.trim() || !destination.account.accountNumber.trim()
-      || !destination.account.providerName.trim() || !destination.qr.key || destination.qr.sizeBytes <= 0
-      || !["image/png", "image/jpeg", "image/webp"].includes(destination.qr.contentType) || !parent.courseCode) {
-      throw new IntakeError(503, "intake_unavailable");
-    }
-    const qrUrl = publicMediaUrl(destination.qr.key);
-    if (new URL(qrUrl).protocol !== "https:") throw new IntakeError(503, "intake_unavailable");
-    const { consent: _consent, ...answers } = data;
-    const [saved] = await tx.insert(registration).values({ ...answers, idempotencyKey: key, payloadHash: hash,
-      consentAt: now, priceCentavos: session.priceCentavos }).returning({ id: registration.id });
-    const reference = `${parent.courseCode}-${saved.id}`;
-    const text = `Hello ${data.fullName},\n\nYour registration has been saved.\nReference: ${reference}\nWorkshop: ${parent.title}\nDates: ${session.date} to ${session.endDate}\nTime: ${session.startTime} to ${session.endTime} (Asia/Manila)\nVenue: ${session.venueName}, ${session.city}\nAmount: ${formatPesos(session.priceCentavos)}\n\nPay to ${destination.account.providerName}\nAccount name: ${destination.account.accountName}\nAccount number: ${destination.account.accountNumber}\nPayment QR: ${qrUrl}\n\nKeep your reference when sharing payment proof with our team. Your payment is currently unpaid.`;
-    await tx.insert(crmEmailJob).values({ registrationId: saved.id, kind: "payment_instructions",
-      payload: message(config, [data.email], "Your workshop payment instructions", text, qrUrl) });
-    await tx.insert(crmSubmissionKey).values({ key, payloadHash: hash, registrationId: saved.id });
-  });
+      const [destination] = await tx.select({ account: paymentAccount, qr: media }).from(paymentAccount)
+        .innerJoin(media, eq(media.id, paymentAccount.qrMediaId))
+        .where(and(eq(paymentAccount.id, config.PAYMENT_ACCOUNT_ID), isNull(paymentAccount.archivedAt), isNull(media.archivedAt)))
+        .for("share");
+      if (!destination || !destination.account.accountName.trim() || !destination.account.accountNumber.trim()
+        || !destination.account.providerName.trim() || !destination.qr.key || destination.qr.sizeBytes <= 0
+        || !["image/png", "image/jpeg", "image/webp"].includes(destination.qr.contentType) || !parent.courseCode) {
+        throw new IntakeError(503, "intake_unavailable");
+      }
+      if (!qr) return { prepare: destination.qr };
+      if (qr.source.id !== destination.qr.id || qr.source.key !== destination.qr.key
+        || qr.source.sizeBytes !== destination.qr.sizeBytes || qr.source.contentType !== destination.qr.contentType
+        || qr.source.updatedAt.getTime() !== destination.qr.updatedAt.getTime()) throw new IntakeError(503, "intake_unavailable");
+      const qrUrl = publicMediaUrl(destination.qr.key);
+      if (new URL(qrUrl).protocol !== "https:") throw new IntakeError(503, "intake_unavailable");
+      const { consent: _consent, ...answers } = data;
+      const [saved] = await tx.insert(registration).values({ ...answers, idempotencyKey: key, payloadHash: hash,
+        consentAt: now, priceCentavos: session.priceCentavos }).returning({ id: registration.id });
+      const reference = `${parent.courseCode}-${saved.id}`;
+      const text = `Hello ${data.fullName},\n\nYour registration has been saved.\nReference: ${reference}\nWorkshop: ${parent.title}\nDates: ${session.date} to ${session.endDate}\nTime: ${session.startTime} to ${session.endTime} (Asia/Manila)\nVenue: ${session.venueName}, ${session.city}\nAmount: ${formatPesos(session.priceCentavos)}\n\nPay to ${destination.account.providerName}\nAccount name: ${destination.account.accountName}\nAccount number: ${destination.account.accountNumber}\nPayment QR: ${qrUrl}\n\nKeep your reference when sharing payment proof with our team. Your payment is currently unpaid.`;
+      const [job] = await tx.insert(crmEmailJob).values({ registrationId: saved.id, kind: "payment_instructions",
+        payload: { ...message(config, [data.email], "Your workshop payment instructions", text, qrUrl), attachments: [qr.attachment] } }).returning({ id: crmEmailJob.id });
+      await tx.insert(crmSubmissionKey).values({ key, payloadHash: hash, registrationId: saved.id });
+      return { jobs: [job.id] };
+    });
+    if (result.prepare) qr = { source: result.prepare, attachment: await readPaymentQr(result.prepare) };
+    else return result.jobs;
+  }
+  throw new IntakeError(503, "intake_unavailable");
 }
 
 export async function acceptCorporateInquiry(db: DbOrTx, data: CorporateInquiryInput, key: string, config: CrmEnv) {
   const hash = await payloadHash("corporate", data);
-  await db.transaction(async tx => {
-    if (await lockKey(tx, key, hash)) return;
+  return db.transaction(async tx => {
+    if (await lockKey(tx, key, hash)) return [] as string[];
     const { consent: _consent, ...answers } = data;
     const [saved] = await tx.insert(corporateInquiry).values({ ...answers, idempotencyKey: key, payloadHash: hash,
       consentAt: new Date() }).returning({ id: corporateInquiry.id });
     const acknowledgment = `Hello ${data.fullName},\n\nWe received your corporate training inquiry for ${data.company}. Our team will follow up with you.\nReference: ${saved.id}\nProgramme: ${data.program}\nPreferred date: ${data.targetDate}`;
     const details = `Corporate training inquiry\nReference: ${saved.id}\nName: ${data.fullName}\nEmail: ${data.email}\nPhone: ${data.phone}\nCompany: ${data.company}\nRole: ${data.role}\nProgramme: ${data.program}\nAttendees: ${data.attendees}\nPreferred date: ${data.targetDate}\nVenue: ${data.venue}\nContext: ${data.context ?? ""}\nAlso interested in: ${data.alsoInterested.join(", ")}`;
-    await tx.insert(crmEmailJob).values([
+    const jobs = await tx.insert(crmEmailJob).values([
       { corporateInquiryId: saved.id, kind: "corporate_acknowledgment", payload: message(config, [data.email], "We received your training inquiry", acknowledgment) },
       { corporateInquiryId: saved.id, kind: "corporate_notification", payload: message(config, config.CORPORATE_INQUIRY_RECIPIENTS, "New corporate training inquiry", details) }
-    ]);
+    ]).returning({ id: crmEmailJob.id });
     await tx.insert(crmSubmissionKey).values({ key, payloadHash: hash, corporateInquiryId: saved.id });
+    return jobs.map(job => job.id);
   });
 }

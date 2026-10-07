@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { getDb, type Db } from "@/db";
 import { getCrmEnv, getSiteOrigins, type CrmEnv } from "@/lib/env";
+import { sendEmailJob, type EmailTransport } from "./email";
 import { corporateInquirySchema, idempotencyKeySchema, registrationSchema } from "./schemas";
 import { acceptCorporateInquiry, acceptRegistration, IntakeError, type SubmissionKind } from "./service";
 
@@ -38,7 +39,7 @@ async function readJson(request: Request) {
   catch { throw new IntakeError(400, "invalid_json"); }
 }
 
-export async function handleSubmission(request: Request, kind: SubmissionKind, dependencies?: { db: Db; config: CrmEnv }) {
+export async function handleSubmission(request: Request, kind: SubmissionKind, dependencies?: { db: Db; config: CrmEnv; emailTransport?: EmailTransport }) {
   const headers = new Headers({ "Vary": "Origin", "Cache-Control": "no-store" });
   const respond = (status: number, body?: unknown) => {
     if (body !== undefined) headers.set("Content-Type", "application/json");
@@ -68,15 +69,22 @@ export async function handleSubmission(request: Request, kind: SubmissionKind, d
     const invalid = (issues: { path: PropertyKey[] }[]) => respond(400, { error: {
       code: "invalid_submission", fields: [...new Set(issues.map(issue => issue.path.join(".") || "body"))]
     } });
+    let jobs: string[];
+    let db: Db;
     if (kind === "registration") {
       const parsed = registrationSchema.safeParse(body);
       if (!parsed.success) return invalid(parsed.error.issues);
-      await acceptRegistration(dependencies?.db ?? getDb(), parsed.data, key.data, config);
+      db = dependencies?.db ?? getDb();
+      jobs = await acceptRegistration(db, parsed.data, key.data, config);
     } else {
       const parsed = corporateInquirySchema.safeParse(body);
       if (!parsed.success) return invalid(parsed.error.issues);
-      await acceptCorporateInquiry(dependencies?.db ?? getDb(), parsed.data, key.data, config);
+      db = dependencies?.db ?? getDb();
+      jobs = await acceptCorporateInquiry(db, parsed.data, key.data, config);
     }
+    // Persistence already committed. A send/state-write failure must not turn
+    // a saved signup into a failed acknowledgment or lose its recoverable job.
+    await Promise.allSettled(jobs.map(id => sendEmailJob(db, id, config.RESEND_API_KEY, dependencies?.emailTransport)));
     return respond(202, { accepted: true });
   } catch (error) {
     // Never return SQL errors, configuration values, or submitted contact data.
