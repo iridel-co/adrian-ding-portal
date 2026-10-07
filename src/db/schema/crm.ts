@@ -88,6 +88,21 @@ export const corporateInquiry = pgTable("corporate_inquiry", {
   check("corporate_inquiry_programs_array", sql`jsonb_typeof(${table.alsoInterested}) = 'array'`)
 ]);
 
+// Remember every accepted key, including fresh keys for an existing signup.
+// The submission's own key remains its original request identifier.
+export const crmSubmissionKey = pgTable("crm_submission_key", {
+  key: uuid("key").primaryKey(),
+  payloadHash: text("payload_hash").notNull(),
+  registrationId: uuid("registration_id").references(() => registration.id, { onDelete: "restrict" }),
+  corporateInquiryId: uuid("corporate_inquiry_id").references(() => corporateInquiry.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+}, (table) => [
+  index("crm_submission_key_registration_idx").on(table.registrationId),
+  index("crm_submission_key_inquiry_idx").on(table.corporateInquiryId),
+  check("crm_submission_key_one_owner", sql`(${table.registrationId} IS NOT NULL) <> (${table.corporateInquiryId} IS NOT NULL)`),
+  check("crm_submission_key_hash_sha256", sql`${table.payloadHash} ~ '^[0-9a-f]{64}$'`)
+]);
+
 // Persist the complete message at intake. The migration prevents changing its
 // identity or payload. Use the job UUID as the provider idempotency key on retries.
 export const crmEmailJob = pgTable("crm_email_job", {

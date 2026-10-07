@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as ApiCorporateInquiriesRouteImport } from './routes/api/corporate-inquiries'
+import { Route as ApiRegistrationsRouteImport } from './routes/api/registrations'
 import { Route as AppContentMediaRouteImport } from './routes/_app/content/media'
 import { Route as AppContentTagsRouteImport } from './routes/_app/content/tags'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
@@ -36,6 +38,16 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const ApiCorporateInquiriesRoute = ApiCorporateInquiriesRouteImport.update({
+  id: '/api/corporate-inquiries',
+  path: '/api/corporate-inquiries',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRegistrationsRoute = ApiRegistrationsRouteImport.update({
+  id: '/api/registrations',
+  path: '/api/registrations',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppContentMediaRoute = AppContentMediaRouteImport.update({
   id: '/content/media',
@@ -92,6 +104,8 @@ const AppContentWorkshopsIdRoute = AppContentWorkshopsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
+  '/api/registrations': typeof ApiRegistrationsRoute
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
   '/settings/access': typeof AppSettingsAccessRoute
@@ -105,6 +119,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
+  '/api/registrations': typeof ApiRegistrationsRoute
   '/': typeof AppIndexRoute
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
@@ -121,6 +137,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
+  '/api/registrations': typeof ApiRegistrationsRoute
   '/_app/': typeof AppIndexRoute
   '/_app/content/media': typeof AppContentMediaRoute
   '/_app/content/tags': typeof AppContentTagsRoute
@@ -138,6 +156,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/api/corporate-inquiries'
+    | '/api/registrations'
     | '/content/media'
     | '/content/tags'
     | '/settings/access'
@@ -151,6 +171,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/api/corporate-inquiries'
+    | '/api/registrations'
     | '/'
     | '/content/media'
     | '/content/tags'
@@ -166,6 +188,8 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/login'
+    | '/api/corporate-inquiries'
+    | '/api/registrations'
     | '/_app/'
     | '/_app/content/media'
     | '/_app/content/tags'
@@ -182,6 +206,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiCorporateInquiriesRoute: typeof ApiCorporateInquiriesRoute
+  ApiRegistrationsRoute: typeof ApiRegistrationsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -207,6 +233,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/api/corporate-inquiries': {
+      id: '/api/corporate-inquiries'
+      path: '/api/corporate-inquiries'
+      fullPath: '/api/corporate-inquiries'
+      preLoaderRoute: typeof ApiCorporateInquiriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/registrations': {
+      id: '/api/registrations'
+      path: '/api/registrations'
+      fullPath: '/api/registrations'
+      preLoaderRoute: typeof ApiRegistrationsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/content/media': {
       id: '/_app/content/media'
@@ -312,6 +352,8 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiCorporateInquiriesRoute: ApiCorporateInquiriesRoute,
+  ApiRegistrationsRoute: ApiRegistrationsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
