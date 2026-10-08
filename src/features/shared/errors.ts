@@ -5,3 +5,11 @@ export class CmsValidationError extends Error {
     this.name = "CmsValidationError";
   }
 }
+
+/* A requested item doesn't exist or isn't visible to the caller. */
+export class NotFoundError extends Error {
+  constructor(message = "Not found.") {
+    super(message);
+    this.name = "NotFoundError";
+  }
+}

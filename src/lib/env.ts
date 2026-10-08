@@ -44,3 +44,33 @@ export function getR2Env() {
   r2Env ??= r2EnvSchema.parse(process.env);
   return r2Env;
 }
+
+const mediaUrlEnvSchema = r2EnvSchema.pick({ R2_PUBLIC_BASE_URL: true });
+
+let mediaUrlEnv: z.infer<typeof mediaUrlEnvSchema> | undefined;
+
+/* Building image URLs only needs the public base URL, not the upload credentials. */
+export function getMediaUrlEnv() {
+  mediaUrlEnv ??= mediaUrlEnvSchema.parse(process.env);
+  return mediaUrlEnv;
+}
+
+const publicApiEnvSchema = z.object({
+  PUBLIC_SITE_ORIGIN: z
+    .string()
+    .default("")
+    .transform((value) =>
+      value
+        .split(",")
+        .map((origin) => origin.trim().replace(/\/+$/, ""))
+        .filter(Boolean)
+    )
+});
+
+let publicApiEnv: z.infer<typeof publicApiEnvSchema> | undefined;
+
+/* Origins allowed to call /api/public. Empty means any origin. */
+export function getPublicApiEnv() {
+  publicApiEnv ??= publicApiEnvSchema.parse(process.env);
+  return publicApiEnv;
+}
