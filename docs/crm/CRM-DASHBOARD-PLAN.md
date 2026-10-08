@@ -1,6 +1,6 @@
 # Admin registration dashboard
 
-Design interview completed October 7, 2026. Bryan authorized steps 1–2 on October 8.
+Design interview completed October 7, 2026. Bryan authorized steps 1–3 on October 8.
 This document records accepted decisions and implementation progress.
 Deployment remains outside this scope.
 
@@ -162,3 +162,41 @@ Google OAuth or deployed behavior. No real email, QR, production database, or we
 repository operation occurred. Registrant rows are read-only in this stage;
 the side panel/payment actions remain step 3 and reusable demo setup remains
 step 4. Nothing was pushed or deployed.
+
+
+## Step 3 implementation, October 8, 2026
+
+Registrant names now open a side panel with submitted answers, recorded consent,
+saved amount, payment/email status, cancellation details, and paginated history.
+Authorized detail reads reuse the existing staff service. Payment confirmation,
+reversal, cancellation, and email retry use the existing staff HTTP endpoints,
+including their authorization, origin checks, transaction locks, audit records,
+and delivery safeguards. No new payment or email policy was introduced.
+
+Mark Paid confirms the person, workshop date, and saved amount. Reversal and
+unpaid cancellation require a reason. Actions refresh event totals, the list,
+and the selected record. Failed requests retain the panel and entered reason;
+known conflicts reload the record, explain the change, and block another attempt
+until the admin reviews it. Provider rejection remains Failed; acceptance is not
+labelled inbox delivery. Reconciliation jobs have no retry button, and payment
+or cancellation skips obsolete pending/failed payment instructions.
+
+The panel fits a 390px viewport without horizontal overflow. Keyboard users can
+open a registrant with Enter and dismiss the panel/dialog with Escape. Focus
+returns to the initiating button, with Refresh as the fallback after cancellation
+removes the row. Pending actions prevent closing the panel or confirmation dialog.
+
+All 76 unit tests and 20 isolated database checks pass, for 96 distinct checks,
+plus typecheck and build. Three new client checks cover safe conflict messages,
+unavailable/non-JSON responses, and failed provider metadata. Built-server browser
+checks with synthetic verified staff covered confirmation, required reasons,
+history, cancellation totals, a concurrent payment/cancellation conflict with
+retained reason and disabled confirmation, rejected/captured email retry,
+reconciliation restrictions, skipped obsolete email, responsive width, and focus
+restoration after dismissal and successful changes.
+
+Temporary staff/workshop/registration/audit fixtures and servers were cleaned up.
+The Compose test services were stopped with their volumes preserved. No real
+provider delivery, production database operation, web change, push, or deployment
+occurred. Real Google sign-in and deployed behavior were not verified. The
+repeatable local demo and remaining end-to-end verification are step 4.

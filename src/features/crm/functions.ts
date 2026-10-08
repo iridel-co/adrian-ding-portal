@@ -6,7 +6,7 @@ import { getDb } from "@/db";
 import { authMiddleware } from "@/lib/auth.functions";
 import { authorizeStaff } from "./staff-http";
 import { IntakeError } from "./service";
-import { eventDetail, eventListSchema, listEvents, listRegistrations, registrationListSchema } from "./staff";
+import { eventDetail, eventListSchema, listEvents, listRegistrations, registrationListSchema, registrationDetail, pageSchema } from "./staff";
 
 export const $crmAccess = createServerFn({ method: "GET" }).middleware([authMiddleware]).handler(async ({ context }) => {
   setResponseHeader("Cache-Control", "no-store");
@@ -32,6 +32,23 @@ export const $getCrmEvent = createServerFn({ method: "GET" }).middleware([crmMid
 export const $listCrmRegistrations = createServerFn({ method: "GET" }).middleware([crmMiddleware])
   .validator(registrationListSchema.extend({ workshopSessionId: z.uuid() }))
   .handler(({ data }) => listRegistrations(getDb(), data.workshopSessionId, data));
+export const $getCrmRegistration = createServerFn({ method: "GET" }).middleware([crmMiddleware])
+  .validator(pageSchema.extend({ id: z.uuid() }))
+  .handler(async ({ data }) => {
+    const detail = await registrationDetail(getDb(), data.id, data);
+    return { ...detail, history: detail.history.map(entry => ({
+      id: entry.id, createdAt: entry.createdAt,
+      paymentFrom: entry.changes.paymentStatus?.from === "paid" ? "Paid" : "Unpaid",
+      paymentTo: entry.changes.paymentStatus ? entry.changes.paymentStatus.to === "paid" ? "Paid" : "Unpaid" : null,
+      cancelled: !!entry.changes.cancelledAt,
+      reason: typeof entry.changes.reason?.to === "string" ? entry.changes.reason.to : null,
+      actor: z.object({ name: z.string(), email: z.string() }).safeParse(entry.changes.actor?.to).data ?? null
+    })) };
+  });
+
+export const crmRegistrationQueryOptions = (id: string, offset = 0) => queryOptions({
+  queryKey: ["crm", "registration", id, offset], queryFn: ({ signal }) => $getCrmRegistration({ data: { id, offset }, signal }), retry: false
+});
 
 export const crmAccessQueryOptions = () => queryOptions({ queryKey: ["crm", "access"], queryFn: ({ signal }) => $crmAccess({ signal }), retry: false });
 export const crmEventsQueryOptions = (input: z.input<typeof eventListSchema>) => queryOptions({
