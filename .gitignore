@@ -3,6 +3,7 @@ node_modules
 .env.*
 !.env.example
 !.env.crm-test.example
+!.env.crm-demo.example
 .output
 .nitro
 .tanstack

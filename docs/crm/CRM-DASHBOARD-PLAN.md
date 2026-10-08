@@ -1,6 +1,6 @@
 # Admin registration dashboard
 
-Design interview completed October 7, 2026. Bryan authorized steps 1–3 on October 8.
+Design interview completed October 7, 2026. Bryan authorized steps 1–4 on October 8.
 This document records accepted decisions and implementation progress.
 Deployment remains outside this scope.
 
@@ -200,3 +200,50 @@ The Compose test services were stopped with their volumes preserved. No real
 provider delivery, production database operation, web change, push, or deployment
 occurred. Real Google sign-in and deployed behavior were not verified. The
 repeatable local demo and remaining end-to-end verification are step 4.
+
+
+## Step 4 implementation, October 8, 2026
+
+The repeatable local demo is implemented in `scripts/dev/crm-demo.mjs`, with a
+committed environment example and [manual testing guide](CRM-DASHBOARD-DEMO.md).
+It seeds upcoming and past/closed events plus 55 synthetic registrations covering
+Unpaid, Paid, Cancelled, pending/failed email, email review, and an off-page search
+example. Seeding again preserves exercised records. Reset removes only demo data,
+including its jobs, receipts, and history, and preserves other workshops, staff
+accounts, and captured mail. It refuses non-demo registration cleanup.
+
+The demo uses the existing Compose database and captured-mail service. The guarded
+launcher runs the built Portal at `http://localhost:3108` with a Node-only mail
+preload that redirects provider requests to local capture. It refuses other
+database addresses, connection overrides, remote Portal origins, real email keys,
+and enabled public intake. Simulated rejection is an optional launcher setting.
+Normal application builds, authentication, and provider transport are unchanged.
+The port avoids another local application already using port 3000.
+
+Demo setup creates no staff accounts, sessions, or login shortcuts. Manual use
+requires a development Google client with the documented localhost callback and
+an environment-allowlisted account, through normal sign-in and authorization.
+The manual guide covers starting, seeding, payment/reversal/cancellation, search,
+filters, history, retries/rejection/review, concurrent changes, access removal,
+mail inspection, reset, and stopping Compose while preserving its volumes.
+
+All 76 unit tests, 20 isolated backend database checks, and four new demo checks
+pass, for 100 distinct checks, plus typecheck and build. New checks cover startup
+and transport guards, local capture without forwarding a provider key, simulated
+rejection, idempotent seeding, off-page data, preserved exercised records, refusal
+to delete non-demo registrations, scoped reset, and receipt/history cleanup.
+
+Built-server browser checks used the actual demo launcher with temporary synthetic
+staff sessions and the normal authorization checks. They covered sample totals,
+pagination and whole-event email search, rejection followed by captured retry,
+one captured message, two-tab payment/cancellation conflict with preserved reason,
+required reversal reason, audit history, cancellation seat totals/filtering,
+revoked access with no CRM navigation or customer records, past/closed empty
+sessions, blocked reconciliation retry, and mobile keyboard behavior.
+
+The demo was reset to fresh examples after verification. Temporary staff sessions,
+verification tabs, and Portal server were removed; Compose services were stopped
+with their data volumes preserved. Real Google OAuth, live mail/QR services, and
+deployed behavior remain unverified. No production database, schema, public web,
+provider delivery, push, or deployment operation occurred. All four dashboard
+implementation steps are complete; publishing and deployment remain separate.
