@@ -36,6 +36,7 @@ import {
   sessionQueryOptions
 } from "@/features/sessions/functions";
 import { errorMessage } from "@/features/shared/error-message";
+import { crmAccessQueryOptions } from "@/features/crm/functions";
 
 export const Route = createFileRoute("/_app/content/sessions/$id")({
   loader: ({ context, params }) =>
@@ -100,6 +101,7 @@ function SessionEditorPage() {
 }
 
 function SessionEditor({ detail }: { detail: SessionDetail }) {
+  const crmAccess = useQuery(crmAccessQueryOptions());
   const queryClient = useQueryClient();
   const { session } = detail;
   const { values, setField, isDirty, markSaved } = useEditorForm(toForm(detail));
@@ -190,6 +192,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
         preview={previewModel && <PreviewButton model={previewModel} />}
         aside={
           <FormSection title="Workshop">
+            {crmAccess.data === true && <Link to="/registrations/$id" params={{ id: session.id }} className="text-sm font-medium hover:underline">Manage registrants</Link>}
             <Link
               to="/content/workshops/$id"
               params={{ id: detail.workshop.id }}
@@ -329,8 +332,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel this session?</AlertDialogTitle>
             <AlertDialogDescription>
-              Registration closes for good. The CRM notifies everyone who registered. You can't
-              undo this.
+              Registration closes for good. Registrants are not automatically notified. You can't undo this.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
 import {
   BookOpen,
@@ -8,7 +8,8 @@ import {
   Images,
   LogOut,
   Settings,
-  Tags
+  Tags,
+  Users
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -34,6 +35,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_NAME } from "@/config";
 import { authClient } from "@/lib/auth-client";
+import { crmAccessQueryOptions } from "@/features/crm/functions";
 
 type SidebarUser = {
   name: string;
@@ -62,12 +64,19 @@ const NAV_GROUPS = [
 ] as const;
 
 export function AppSidebar({ user }: { user: SidebarUser }) {
+  const crmAccess = useQuery(crmAccessQueryOptions());
   return (
     <Sidebar>
       <SidebarHeader>
         <div className="px-2 py-1 font-display text-2xl">{APP_NAME}</div>
       </SidebarHeader>
       <SidebarContent>
+        {crmAccess.data === true && <SidebarGroup>
+          <SidebarGroupLabel>Manage</SidebarGroupLabel>
+          <SidebarGroupContent><SidebarMenu><SidebarMenuItem><SidebarMenuButton asChild>
+            <Link to="/registrations" activeProps={{ "data-active": true }}><Users /><span>Registrations</span></Link>
+          </SidebarMenuButton></SidebarMenuItem></SidebarMenu></SidebarGroupContent>
+        </SidebarGroup>}
         {NAV_GROUPS.map((group) => (
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>

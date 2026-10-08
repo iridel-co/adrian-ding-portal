@@ -19,6 +19,8 @@ import { Route as ApiWorkshopSessionsRouteImport } from './routes/api/workshop-s
 import { Route as PreviewWorkshopRouteImport } from './routes/preview/workshop'
 import { Route as AppContentMediaRouteImport } from './routes/_app/content/media'
 import { Route as AppContentTagsRouteImport } from './routes/_app/content/tags'
+import { Route as AppRegistrationsIndexRouteImport } from './routes/_app/registrations/index'
+import { Route as AppRegistrationsIdRouteImport } from './routes/_app/registrations/$id'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAccessRouteImport } from './routes/_app/settings/access'
 import { Route as AppSettingsIndustriesRouteImport } from './routes/_app/settings/industries'
@@ -78,6 +80,16 @@ const AppContentTagsRoute = AppContentTagsRouteImport.update({
   path: '/content/tags',
   getParentRoute: () => AppRoute,
 } as any)
+const AppRegistrationsIndexRoute = AppRegistrationsIndexRouteImport.update({
+  id: '/registrations/',
+  path: '/registrations/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRegistrationsIdRoute = AppRegistrationsIdRouteImport.update({
+  id: '/registrations/$id',
+  path: '/registrations/$id',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
@@ -135,10 +147,12 @@ export interface FileRoutesByFullPath {
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
+  '/registrations/$id': typeof AppRegistrationsIdRoute
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/crm/$': typeof ApiCrmSplatRoute
+  '/registrations/': typeof AppRegistrationsIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
@@ -155,10 +169,12 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
+  '/registrations/$id': typeof AppRegistrationsIdRoute
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/crm/$': typeof ApiCrmSplatRoute
+  '/registrations': typeof AppRegistrationsIndexRoute
   '/settings': typeof AppSettingsIndexRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
@@ -177,10 +193,12 @@ export interface FileRoutesById {
   '/_app/': typeof AppIndexRoute
   '/_app/content/media': typeof AppContentMediaRoute
   '/_app/content/tags': typeof AppContentTagsRoute
+  '/_app/registrations/$id': typeof AppRegistrationsIdRoute
   '/_app/settings/access': typeof AppSettingsAccessRoute
   '/_app/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/crm/$': typeof ApiCrmSplatRoute
+  '/_app/registrations/': typeof AppRegistrationsIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/_app/content/workshops/$id': typeof AppContentWorkshopsIdRoute
@@ -199,10 +217,12 @@ export interface FileRouteTypes {
     | '/preview/workshop'
     | '/content/media'
     | '/content/tags'
+    | '/registrations/$id'
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
     | '/api/crm/$'
+    | '/registrations/'
     | '/settings/'
     | '/content/sessions/$id'
     | '/content/workshops/$id'
@@ -219,10 +239,12 @@ export interface FileRouteTypes {
     | '/'
     | '/content/media'
     | '/content/tags'
+    | '/registrations/$id'
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
     | '/api/crm/$'
+    | '/registrations'
     | '/settings'
     | '/content/sessions/$id'
     | '/content/workshops/$id'
@@ -240,10 +262,12 @@ export interface FileRouteTypes {
     | '/_app/'
     | '/_app/content/media'
     | '/_app/content/tags'
+    | '/_app/registrations/$id'
     | '/_app/settings/access'
     | '/_app/settings/industries'
     | '/api/auth/$'
     | '/api/crm/$'
+    | '/_app/registrations/'
     | '/_app/settings/'
     | '/_app/content/sessions/$id'
     | '/_app/content/workshops/$id'
@@ -334,6 +358,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppContentTagsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/registrations/': {
+      id: '/_app/registrations/'
+      path: '/registrations'
+      fullPath: '/registrations/'
+      preLoaderRoute: typeof AppRegistrationsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/registrations/$id': {
+      id: '/_app/registrations/$id'
+      path: '/registrations/$id'
+      fullPath: '/registrations/$id'
+      preLoaderRoute: typeof AppRegistrationsIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/settings/': {
       id: '/_app/settings/'
       path: '/settings'
@@ -404,8 +442,10 @@ interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppContentMediaRoute: typeof AppContentMediaRoute
   AppContentTagsRoute: typeof AppContentTagsRoute
+  AppRegistrationsIdRoute: typeof AppRegistrationsIdRoute
   AppSettingsAccessRoute: typeof AppSettingsAccessRoute
   AppSettingsIndustriesRoute: typeof AppSettingsIndustriesRoute
+  AppRegistrationsIndexRoute: typeof AppRegistrationsIndexRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
   AppContentSessionsIdRoute: typeof AppContentSessionsIdRoute
   AppContentWorkshopsIdRoute: typeof AppContentWorkshopsIdRoute
@@ -417,8 +457,10 @@ const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppContentMediaRoute: AppContentMediaRoute,
   AppContentTagsRoute: AppContentTagsRoute,
+  AppRegistrationsIdRoute: AppRegistrationsIdRoute,
   AppSettingsAccessRoute: AppSettingsAccessRoute,
   AppSettingsIndustriesRoute: AppSettingsIndustriesRoute,
+  AppRegistrationsIndexRoute: AppRegistrationsIndexRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
   AppContentSessionsIdRoute: AppContentSessionsIdRoute,
   AppContentWorkshopsIdRoute: AppContentWorkshopsIdRoute,
