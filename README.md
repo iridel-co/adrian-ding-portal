@@ -50,32 +50,14 @@ The browser uploads files straight to R2 with a short-lived signed URL. The app 
 
 ## Public API
 
-The public website reads CMS content from `/api/public/*`. It is read-only, needs no sign-in, and only returns published content. Draft and archived rows, archived images and archived tags are left out.
-
-| Endpoint | Query params |
-|---|---|
-| `GET /api/public/profile` | `statsPage`: `home`, `about`, `corporate` or `inquiry` |
-| `GET /api/public/workshops` | `tag` (tag name), `upcoming=true` |
-| `GET /api/public/workshops/:slug` | |
-| `GET /api/public/clients` | `industry` (industry id), `featured=true` |
-| `GET /api/public/industries` | |
-| `GET /api/public/programs` | |
-| `GET /api/public/testimonials` | `featured=true`, `workshop` (workshop slug) |
-| `GET /api/public/faqs` | `group`: `workshop` or `about` |
+The public website reads CMS content from `/api/public/*`.
+It is read-only, needs no sign-in and returns published content only.
 
 ```bash
 curl "http://localhost:3000/api/public/workshops?upcoming=true"
-curl "http://localhost:3000/api/public/faqs?group=workshop"
 ```
 
-- Images come back as `{ url, alt, width, height }`, or `null` when there is no image.
-- Prices are in centavos: `{ centavos, currency: "PHP", note }`.
-- Session times are Manila wall-clock time (`timezone: "Asia/Manila"`).
-- Errors look like `{ "error": { "code", "message" } }`: 400 `invalid_request`, 404 `not_found`, 405 `method_not_allowed`.
-- Successful responses are cached by CDNs for 5 minutes (`s-maxage=300`), so edits can take up to 5 minutes to show on the site.
-- Set `PUBLIC_SITE_ORIGIN` to the public site's origin (comma-separated for more than one) to limit which browsers can call the API. Leave it empty to allow any origin.
-
-Route files are in `src/routes/api/public/`. The queries are in each feature's `public.ts`, and the visibility rules are in `src/features/shared/visibility.ts`.
+See [docs/public-api.md](docs/public-api.md) for every endpoint, its params, its response type and an example response.
 
 ## Deploy
 
