@@ -375,4 +375,86 @@ describe.skipIf(!isolatedUrl)("CRM intake in isolated Postgres", () => {
     try { expect((await (await lookup()).json()).items).toEqual([]); }
     finally { await db.update(workshop).set({ status: "published" }).where(eq(workshop.id, workshopId)); }
   });
+
+  it("serves whole-event filters/search, payment/email metadata and totals independently of pagination", async () => {
+    const googleId = randomUUID();
+    await db.insert(account).values({ id: googleId, userId: actorId, accountId: actorId, providerId: "google" });
+    const dependencies = { db, userId: actorId, adminEmails: actor.email, portalUrl: "http://localhost:3000" };
+    const call = (path: string, overrides: Parameters<typeof handleStaffRequest>[1] = dependencies) => handleStaffRequest(new Request(`http://localhost:3000/api/crm/${path}`), overrides);
+    try {
+      const id = await session(60);
+      const names = ["Target 100%_\\guest", "Paid person", "Cancelled person", "Failure person"];
+      for (let i = 0; i < names.length; i++) await submit({ ...base, workshopSessionId: id, fullName: names[i], email: `dashboard${i}-${base.email}` });
+      const saved = await registrations(id);
+      const target = saved.find(row => row.fullName === names[0])!;
+      const paid = saved.find(row => row.fullName === names[1])!;
+      const cancelled = saved.find(row => row.fullName === names[2])!;
+      const failed = saved.find(row => row.fullName === names[3])!;
+      await changeRegistration(db, paid.id, actor, { kind: "payment", input: { paymentStatus: "paid", expectedPaymentStatus: "unpaid" } });
+      await changeRegistration(db, cancelled.id, actor, { kind: "cancel", input: { reason: "Dashboard test" } });
+      await db.update(crmEmailJob).set({ state: "failed", lastErrorCode: "provider_request_failed" }).where(eq(crmEmailJob.registrationId, failed.id));
+      await db.update(registration).set({ createdAt: new Date("2020-01-01") }).where(eq(registration.id, target.id));
+      await db.insert(registration).values(Array.from({ length: 48 }, (_, i) => ({ workshopSessionId: id, fullName: `Page person ${i}`,
+        email: `dashboard-page${i}-${base.email}`, phone: base.phone, occupation: "Engineer", salaryRange: base.salaryRange,
+        consentAt: new Date(), priceCentavos: 12345, payloadHash: "a".repeat(64), idempotencyKey: randomUUID() })));
+      const path = `registrations?workshopSessionId=${id}`;
+      const defaultPage = await (await call(path)).json();
+      expect(defaultPage.items).toHaveLength(50); expect(defaultPage.hasMore).toBe(true);
+      expect(defaultPage.items.some((row: { id: string }) => row.id === target.id)).toBe(false);
+      const search = await (await call(`${path}&search=${encodeURIComponent("tArGeT")}`)).json();
+      expect(search.items.map((row: { id: string }) => row.id)).toEqual([target.id]);
+      const literal = await (await call(`${path}&search=${encodeURIComponent("%_\\")}`)).json();
+      expect(literal.items.map((row: { id: string }) => row.id)).toEqual([target.id]);
+      expect((await (await call(`${path}&search=${encodeURIComponent(target.email.toUpperCase())}`)).json()).items[0].id).toBe(target.id);
+      for (const [filter, count] of [["all", 52], ["active", 51], ["paid", 1], ["unpaid", 50], ["cancelled", 1]] as const) {
+        const body = await (await call(`${path}&filter=${filter}&limit=100`)).json();
+        expect(body.items).toHaveLength(count); expect(body.hasMore).toBe(false);
+      }
+      const failures = await (await call(`${path}&search=Failure&filter=unpaid`)).json();
+      expect(failures.items[0].emailJob).toMatchObject({ state: "failed", lastErrorCode: "provider_request_failed", attemptCount: 0 });
+      expect(failures.items[0].emailJob).not.toHaveProperty("payload");
+      expect(failures.items[0]).not.toHaveProperty("payloadHash");
+      const noJob = await (await call(`${path}&search=Page%20person&limit=1`)).json();
+      expect(noJob.items[0].emailJob).toBeNull();
+      const event = await (await call(`events/${id}`)).json();
+      expect(event.counts).toEqual({ reserved: 51, remaining: 9, paid: 1, unpaid: 50, cancelled: 1 });
+      expect(event.capacity).toBe(60); expect(event.timeZone).toBe("Asia/Manila");
+      expect((await call(`${path}&filter=unknown`)).status).toBe(400);
+      expect((await call(`${path}&search=${"a".repeat(201)}`)).status).toBe(400);
+      expect((await call(`${path}&filter=active`, { ...dependencies, adminEmails: "" })).status).toBe(403);
+      expect((await call(`events/${id}`, { ...dependencies, userId: undefined })).status).toBe(401);
+    } finally { await db.delete(account).where(eq(account.id, googleId)); }
+  });
+
+  it("selects bounded admin events including past/closed dates under CRM authorization", async () => {
+    const googleId = randomUUID();
+    await db.insert(account).values({ id: googleId, userId: actorId, accountId: actorId, providerId: "google" });
+    const dependencies = { db, userId: actorId, adminEmails: actor.email, portalUrl: "http://localhost:3000" };
+    const call = (path: string, overrides: Parameters<typeof handleStaffRequest>[1] = dependencies) => handleStaffRequest(new Request(`http://localhost:3000/api/crm/${path}`), overrides);
+    try {
+      const old = await session(5, { date: "2010-01-01", endDate: "2010-01-01", status: "closed" });
+      const future = await session(5, { date: "2031-01-01", endDate: "2031-01-01", status: "closed" });
+      const path = `events?workshopId=${workshopId}`;
+      const upcoming = await (await call(`${path}&limit=100`)).json();
+      expect(upcoming.items.some((row: { id: string }) => row.id === old)).toBe(false);
+      expect(upcoming.items.some((row: { id: string }) => row.id === future)).toBe(true);
+      const past = await (await call(`${path}&when=past`)).json();
+      expect(past.items.some((row: { id: string }) => row.id === old)).toBe(true);
+      expect(past.items.some((row: { id: string }) => row.id === future)).toBe(false);
+      const all = await (await call(`${path}&when=all&limit=100`)).json();
+      expect(all.items.findIndex((row: { id: string }) => row.id === old)).toBeGreaterThan(all.items.findIndex((row: { id: string }) => row.id === future));
+      const page = await (await call(`${path}&when=all&limit=1`)).json();
+      expect(page.items).toHaveLength(1); expect(page.hasMore).toBe(true);
+      const empty = await (await call(`events?workshopId=${randomUUID()}`)).json();
+      expect(empty.items).toEqual([]);
+      const detail = await (await call(`events/${old}`)).json();
+      expect(detail).toMatchObject({ status: "closed", counts: { reserved: 0, remaining: 5, paid: 0, unpaid: 0, cancelled: 0 } });
+      expect(JSON.stringify(detail)).not.toContain(base.email);
+      expect((await call(`events/${randomUUID()}`)).status).toBe(404);
+      for (const query of ["limit=101", "when=unknown", "workshopId=bad", "email=private@example.com"]) expect((await call(`events?${query}`)).status).toBe(400);
+      expect((await call(`events/${old}?limit=1`)).status).toBe(400);
+      expect((await call(path, { ...dependencies, adminEmails: "" })).status).toBe(403);
+      expect((await call(path, { ...dependencies, userId: undefined })).status).toBe(401);
+    } finally { await db.delete(account).where(eq(account.id, googleId)); }
+  });
 });

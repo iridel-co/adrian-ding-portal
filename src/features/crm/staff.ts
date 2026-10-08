@@ -1,10 +1,11 @@
 import "@tanstack/react-start/server-only";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { getTableColumns } from "drizzle-orm";
 import { z } from "zod";
 import { activityLog, corporateInquiry, crmEmailJob, registration, workshop, workshopSession } from "@/db/schema";
 import type { Db } from "@/db";
 import { logActivity } from "@/features/shared/audit";
+import { manilaWallClock } from "@/features/shared/time";
 import { IntakeError } from "./service";
 
 export type StaffActor = { id: string; name: string; email: string };
@@ -12,14 +13,67 @@ const status = z.enum(["unpaid", "paid"]);
 export const paymentChangeSchema = z.strictObject({ paymentStatus: status, expectedPaymentStatus: status, reason: z.string().trim().min(1).max(2000).optional() });
 export const cancellationSchema = z.strictObject({ reason: z.string().trim().min(1).max(2000) });
 export const pageSchema = z.strictObject({ limit: z.coerce.number().int().min(1).max(100).default(50), offset: z.coerce.number().int().min(0).max(100000).default(0) });
+export const registrationListSchema = pageSchema.extend({
+  filter: z.enum(["active", "unpaid", "paid", "cancelled", "all"]).default("all"),
+  search: z.string().trim().max(200).default("")
+});
+export const eventListSchema = pageSchema.extend({
+  when: z.enum(["upcoming", "past", "all"]).default("upcoming"),
+  workshopId: z.uuid().optional()
+});
 const { idempotencyKey: _registrationKey, payloadHash: _registrationHash, ...registrationFields } = getTableColumns(registration);
 const { idempotencyKey: _inquiryKey, payloadHash: _inquiryHash, ...inquiryFields } = getTableColumns(corporateInquiry);
 const { payload: _payload, ...jobFields } = getTableColumns(crmEmailJob);
 
-export async function listRegistrations(db: Db, sessionId: string, page: z.output<typeof pageSchema>) {
-  const rows = await db.select(registrationFields).from(registration).where(eq(registration.workshopSessionId, sessionId))
+export async function listRegistrations(db: Db, sessionId: string, page: z.output<typeof registrationListSchema>) {
+  const pattern = `%${page.search.replace(/[\\%_]/g, "\\$&")}%`;
+  const rows = await db.select({ ...registrationFields, emailJob: {
+    id: crmEmailJob.id, state: crmEmailJob.state, attemptCount: crmEmailJob.attemptCount,
+    firstAttemptAt: crmEmailJob.firstAttemptAt, lastAttemptAt: crmEmailJob.lastAttemptAt,
+    leaseExpiresAt: crmEmailJob.leaseExpiresAt, sentAt: crmEmailJob.sentAt, lastErrorCode: crmEmailJob.lastErrorCode
+  } }).from(registration).leftJoin(crmEmailJob, and(eq(crmEmailJob.registrationId, registration.id), eq(crmEmailJob.kind, "payment_instructions")))
+    .where(and(eq(registration.workshopSessionId, sessionId),
+      page.filter === "all" ? undefined : page.filter === "cancelled" ? isNotNull(registration.cancelledAt) : isNull(registration.cancelledAt),
+      page.filter === "paid" || page.filter === "unpaid" ? eq(registration.paymentStatus, page.filter) : undefined,
+      page.search ? or(ilike(registration.fullName, pattern), ilike(registration.email, pattern)) : undefined))
     .orderBy(desc(registration.createdAt), desc(registration.id)).limit(page.limit + 1).offset(page.offset);
   return { items: rows.slice(0, page.limit), hasMore: rows.length > page.limit };
+}
+
+function eventQuery(db: Db) {
+  return db.select({
+    id: workshopSession.id, workshopId: workshop.id, workshopTitle: workshop.title, workshopStatus: workshop.status,
+    date: workshopSession.date, endDate: workshopSession.endDate, startTime: workshopSession.startTime, endTime: workshopSession.endTime,
+    venueName: workshopSession.venueName, city: workshopSession.city, status: workshopSession.status,
+    priceCentavos: workshopSession.priceCentavos, capacity: workshopSession.capacity,
+    counts: sql<{ reserved: number; remaining: number; paid: number; unpaid: number; cancelled: number }>`(
+      select jsonb_build_object(
+        'reserved', count(*) filter (where ${registration.cancelledAt} is null),
+        'remaining', greatest(${workshopSession.capacity} - count(*) filter (where ${registration.cancelledAt} is null), 0),
+        'paid', count(*) filter (where ${registration.cancelledAt} is null and ${registration.paymentStatus} = 'paid'),
+        'unpaid', count(*) filter (where ${registration.cancelledAt} is null and ${registration.paymentStatus} = 'unpaid'),
+        'cancelled', count(*) filter (where ${registration.cancelledAt} is not null)
+      ) from ${registration} where ${registration.workshopSessionId} = ${workshopSession.id}
+    )`
+  }).from(workshopSession).innerJoin(workshop, eq(workshop.id, workshopSession.workshopId));
+}
+
+export async function listEvents(db: Db, page: z.output<typeof eventListSchema>) {
+  const clock = manilaWallClock();
+  const past = sql<boolean>`(${workshopSession.endDate} < ${clock.date} or (${workshopSession.endDate} = ${clock.date} and ${workshopSession.endTime} <= ${clock.time}))`;
+  const rows = await eventQuery(db).where(and(
+    page.when === "all" ? undefined : page.when === "past" ? past : sql`not ${past}`,
+    page.workshopId ? eq(workshopSession.workshopId, page.workshopId) : undefined))
+    .orderBy(asc(past), sql`case when ${past} then ${workshopSession.date} end desc`,
+      sql`case when not ${past} then ${workshopSession.date} end asc`, asc(workshopSession.startTime), asc(workshopSession.id))
+    .limit(page.limit + 1).offset(page.offset);
+  return { items: rows.slice(0, page.limit), hasMore: rows.length > page.limit, timeZone: "Asia/Manila" };
+}
+
+export async function eventDetail(db: Db, id: string) {
+  const [row] = await eventQuery(db).where(eq(workshopSession.id, id));
+  if (!row) throw new IntakeError(404, "event_not_found");
+  return { ...row, timeZone: "Asia/Manila" };
 }
 
 export async function listInquiries(db: Db, page: z.output<typeof pageSchema>) {
