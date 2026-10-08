@@ -18,10 +18,18 @@ import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/ind
 import { Route as AppSettingsAccessRouteImport } from './routes/_app/settings/access'
 import { Route as AppSettingsIndustriesRouteImport } from './routes/_app/settings/industries'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiPublicClientsRouteImport } from './routes/api/public/clients'
+import { Route as ApiPublicFaqsRouteImport } from './routes/api/public/faqs'
+import { Route as ApiPublicIndustriesRouteImport } from './routes/api/public/industries'
+import { Route as ApiPublicProfileRouteImport } from './routes/api/public/profile'
+import { Route as ApiPublicProgramsRouteImport } from './routes/api/public/programs'
+import { Route as ApiPublicTestimonialsRouteImport } from './routes/api/public/testimonials'
 import { Route as AppContentSessionsIndexRouteImport } from './routes/_app/content/sessions/index'
 import { Route as AppContentSessionsIdRouteImport } from './routes/_app/content/sessions/$id'
 import { Route as AppContentWorkshopsIndexRouteImport } from './routes/_app/content/workshops/index'
 import { Route as AppContentWorkshopsIdRouteImport } from './routes/_app/content/workshops/$id'
+import { Route as ApiPublicWorkshopsIndexRouteImport } from './routes/api/public/workshops/index'
+import { Route as ApiPublicWorkshopsSlugRouteImport } from './routes/api/public/workshops/$slug'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -67,6 +75,36 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicClientsRoute = ApiPublicClientsRouteImport.update({
+  id: '/api/public/clients',
+  path: '/api/public/clients',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicFaqsRoute = ApiPublicFaqsRouteImport.update({
+  id: '/api/public/faqs',
+  path: '/api/public/faqs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicIndustriesRoute = ApiPublicIndustriesRouteImport.update({
+  id: '/api/public/industries',
+  path: '/api/public/industries',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicProfileRoute = ApiPublicProfileRouteImport.update({
+  id: '/api/public/profile',
+  path: '/api/public/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicProgramsRoute = ApiPublicProgramsRouteImport.update({
+  id: '/api/public/programs',
+  path: '/api/public/programs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTestimonialsRoute = ApiPublicTestimonialsRouteImport.update({
+  id: '/api/public/testimonials',
+  path: '/api/public/testimonials',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppContentSessionsIndexRoute = AppContentSessionsIndexRouteImport.update({
   id: '/content/sessions/',
   path: '/content/sessions/',
@@ -88,6 +126,16 @@ const AppContentWorkshopsIdRoute = AppContentWorkshopsIdRouteImport.update({
   path: '/content/workshops/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicWorkshopsIndexRoute = ApiPublicWorkshopsIndexRouteImport.update({
+  id: '/api/public/workshops/',
+  path: '/api/public/workshops/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicWorkshopsSlugRoute = ApiPublicWorkshopsSlugRouteImport.update({
+  id: '/api/public/workshops/$slug',
+  path: '/api/public/workshops/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -97,11 +145,19 @@ export interface FileRoutesByFullPath {
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/public/clients': typeof ApiPublicClientsRoute
+  '/api/public/faqs': typeof ApiPublicFaqsRoute
+  '/api/public/industries': typeof ApiPublicIndustriesRoute
+  '/api/public/profile': typeof ApiPublicProfileRoute
+  '/api/public/programs': typeof ApiPublicProgramsRoute
+  '/api/public/testimonials': typeof ApiPublicTestimonialsRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
+  '/api/public/workshops/$slug': typeof ApiPublicWorkshopsSlugRoute
   '/content/sessions/': typeof AppContentSessionsIndexRoute
   '/content/workshops/': typeof AppContentWorkshopsIndexRoute
+  '/api/public/workshops/': typeof ApiPublicWorkshopsIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -111,11 +167,19 @@ export interface FileRoutesByTo {
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/public/clients': typeof ApiPublicClientsRoute
+  '/api/public/faqs': typeof ApiPublicFaqsRoute
+  '/api/public/industries': typeof ApiPublicIndustriesRoute
+  '/api/public/profile': typeof ApiPublicProfileRoute
+  '/api/public/programs': typeof ApiPublicProgramsRoute
+  '/api/public/testimonials': typeof ApiPublicTestimonialsRoute
   '/settings': typeof AppSettingsIndexRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
+  '/api/public/workshops/$slug': typeof ApiPublicWorkshopsSlugRoute
   '/content/sessions': typeof AppContentSessionsIndexRoute
   '/content/workshops': typeof AppContentWorkshopsIndexRoute
+  '/api/public/workshops': typeof ApiPublicWorkshopsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -127,11 +191,19 @@ export interface FileRoutesById {
   '/_app/settings/access': typeof AppSettingsAccessRoute
   '/_app/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/public/clients': typeof ApiPublicClientsRoute
+  '/api/public/faqs': typeof ApiPublicFaqsRoute
+  '/api/public/industries': typeof ApiPublicIndustriesRoute
+  '/api/public/profile': typeof ApiPublicProfileRoute
+  '/api/public/programs': typeof ApiPublicProgramsRoute
+  '/api/public/testimonials': typeof ApiPublicTestimonialsRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/_app/content/workshops/$id': typeof AppContentWorkshopsIdRoute
+  '/api/public/workshops/$slug': typeof ApiPublicWorkshopsSlugRoute
   '/_app/content/sessions/': typeof AppContentSessionsIndexRoute
   '/_app/content/workshops/': typeof AppContentWorkshopsIndexRoute
+  '/api/public/workshops/': typeof ApiPublicWorkshopsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -143,11 +215,19 @@ export interface FileRouteTypes {
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
+    | '/api/public/clients'
+    | '/api/public/faqs'
+    | '/api/public/industries'
+    | '/api/public/profile'
+    | '/api/public/programs'
+    | '/api/public/testimonials'
     | '/settings/'
     | '/content/sessions/$id'
     | '/content/workshops/$id'
+    | '/api/public/workshops/$slug'
     | '/content/sessions/'
     | '/content/workshops/'
+    | '/api/public/workshops/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -157,11 +237,19 @@ export interface FileRouteTypes {
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
+    | '/api/public/clients'
+    | '/api/public/faqs'
+    | '/api/public/industries'
+    | '/api/public/profile'
+    | '/api/public/programs'
+    | '/api/public/testimonials'
     | '/settings'
     | '/content/sessions/$id'
     | '/content/workshops/$id'
+    | '/api/public/workshops/$slug'
     | '/content/sessions'
     | '/content/workshops'
+    | '/api/public/workshops'
   id:
     | '__root__'
     | '/_app'
@@ -172,17 +260,33 @@ export interface FileRouteTypes {
     | '/_app/settings/access'
     | '/_app/settings/industries'
     | '/api/auth/$'
+    | '/api/public/clients'
+    | '/api/public/faqs'
+    | '/api/public/industries'
+    | '/api/public/profile'
+    | '/api/public/programs'
+    | '/api/public/testimonials'
     | '/_app/settings/'
     | '/_app/content/sessions/$id'
     | '/_app/content/workshops/$id'
+    | '/api/public/workshops/$slug'
     | '/_app/content/sessions/'
     | '/_app/content/workshops/'
+    | '/api/public/workshops/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiPublicClientsRoute: typeof ApiPublicClientsRoute
+  ApiPublicFaqsRoute: typeof ApiPublicFaqsRoute
+  ApiPublicIndustriesRoute: typeof ApiPublicIndustriesRoute
+  ApiPublicProfileRoute: typeof ApiPublicProfileRoute
+  ApiPublicProgramsRoute: typeof ApiPublicProgramsRoute
+  ApiPublicTestimonialsRoute: typeof ApiPublicTestimonialsRoute
+  ApiPublicWorkshopsSlugRoute: typeof ApiPublicWorkshopsSlugRoute
+  ApiPublicWorkshopsIndexRoute: typeof ApiPublicWorkshopsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -250,6 +354,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/clients': {
+      id: '/api/public/clients'
+      path: '/api/public/clients'
+      fullPath: '/api/public/clients'
+      preLoaderRoute: typeof ApiPublicClientsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/faqs': {
+      id: '/api/public/faqs'
+      path: '/api/public/faqs'
+      fullPath: '/api/public/faqs'
+      preLoaderRoute: typeof ApiPublicFaqsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/industries': {
+      id: '/api/public/industries'
+      path: '/api/public/industries'
+      fullPath: '/api/public/industries'
+      preLoaderRoute: typeof ApiPublicIndustriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/profile': {
+      id: '/api/public/profile'
+      path: '/api/public/profile'
+      fullPath: '/api/public/profile'
+      preLoaderRoute: typeof ApiPublicProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/programs': {
+      id: '/api/public/programs'
+      path: '/api/public/programs'
+      fullPath: '/api/public/programs'
+      preLoaderRoute: typeof ApiPublicProgramsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/testimonials': {
+      id: '/api/public/testimonials'
+      path: '/api/public/testimonials'
+      fullPath: '/api/public/testimonials'
+      preLoaderRoute: typeof ApiPublicTestimonialsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/content/sessions/': {
       id: '/_app/content/sessions/'
       path: '/content/sessions'
@@ -277,6 +423,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/content/workshops/$id'
       preLoaderRoute: typeof AppContentWorkshopsIdRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/api/public/workshops/': {
+      id: '/api/public/workshops/'
+      path: '/api/public/workshops'
+      fullPath: '/api/public/workshops/'
+      preLoaderRoute: typeof ApiPublicWorkshopsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/workshops/$slug': {
+      id: '/api/public/workshops/$slug'
+      path: '/api/public/workshops/$slug'
+      fullPath: '/api/public/workshops/$slug'
+      preLoaderRoute: typeof ApiPublicWorkshopsSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -313,6 +473,14 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiPublicClientsRoute: ApiPublicClientsRoute,
+  ApiPublicFaqsRoute: ApiPublicFaqsRoute,
+  ApiPublicIndustriesRoute: ApiPublicIndustriesRoute,
+  ApiPublicProfileRoute: ApiPublicProfileRoute,
+  ApiPublicProgramsRoute: ApiPublicProgramsRoute,
+  ApiPublicTestimonialsRoute: ApiPublicTestimonialsRoute,
+  ApiPublicWorkshopsSlugRoute: ApiPublicWorkshopsSlugRoute,
+  ApiPublicWorkshopsIndexRoute: ApiPublicWorkshopsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
