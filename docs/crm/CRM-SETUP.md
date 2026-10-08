@@ -1,5 +1,9 @@
 # CRM implementation setup
 
+For the current admin dashboard demo and manual testing instructions, see
+[the local dashboard guide](CRM-DASHBOARD-DEMO.md). The setup history below records
+the earlier backend implementation.
+
 Step 1 completed on October 6, 2026.
 
 ## Stacked branch
