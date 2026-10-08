@@ -1,6 +1,6 @@
 # Admin registration dashboard
 
-Design interview completed October 7, 2026. Bryan authorized step 1 on October 8.
+Design interview completed October 7, 2026. Bryan authorized steps 1–2 on October 8.
 This document records accepted decisions and implementation progress.
 Deployment remains outside this scope.
 
@@ -133,3 +133,32 @@ database tests pass, for 92 distinct checks. Typecheck and build pass.
 No schema, migration, provider transport, public API, or web file changed.
 Steps 2–4 remain. Dashboard navigation/screens and local demo fixtures are not
 implemented by step 1. No deployment or production database operation occurred.
+
+## Step 2 implementation, October 8, 2026
+
+Authorized admins now see Registrations in the sidebar. `/registrations` lists
+scheduled events with upcoming/past/all dates, seat/payment counts, and pagination.
+`/registrations/<session-id>` shows the event's dates, venue, status, seat/payment
+totals, and registrants with phone, payment, saved amount, and email state. It
+defaults to Active, supports server-side name/email search and all agreed filters,
+and includes pagination and manual Refresh. Totals remain independent of search.
+
+The UI follows existing Portal components and server-function/React Query patterns.
+Every CRM read checks fresh Google/staff authorization, independently of the
+navigation visibility check. An unauthorized CMS user sees Access denied without
+customer records. Loading, failure/retry, and empty states are included. Authorized
+staff get a Manage registrants shortcut in the existing session editor. Its
+inaccurate automatic-cancellation-email copy was corrected.
+
+The full suite passes 73 unit tests and 20 isolated database checks, for 93 distinct
+checks, plus typecheck and build. Built-server browser verification with synthetic
+signed staff sessions covered event navigation, past/closed selection, totals,
+pagination, off-page search, cancelled filters, empty events, the session shortcut,
+and revoked-access denial with hidden CRM navigation. At 390px width the page
+stays within the viewport. Email acceptance labels do not imply inbox delivery.
+
+Temporary browser fixtures/server were cleaned up. The checks do not verify real
+Google OAuth or deployed behavior. No real email, QR, production database, or web
+repository operation occurred. Registrant rows are read-only in this stage;
+the side panel/payment actions remain step 3 and reusable demo setup remains
+step 4. Nothing was pushed or deployed.
