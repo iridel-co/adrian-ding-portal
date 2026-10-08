@@ -258,6 +258,8 @@ send the portal session cookie. All mutation bodies are JSON with the same
 
 | Method | Path | Result |
 | --- | --- | --- |
+| GET | `/api/crm/events` | Bounded scheduled-workshop list with seat/payment totals |
+| GET | `/api/crm/events/<session-uuid>` | One scheduled workshop with seat/payment totals |
 | GET | `/api/crm/registrations?workshopSessionId=<uuid>` | `{ items, hasMore }`, includes paid/unpaid and cancelled registrations for that session |
 | GET | `/api/crm/registrations/<uuid>` | Registration fields plus `emailJobs`, `history`, `historyHasMore` |
 | PATCH | `/api/crm/registrations/<uuid>/payment` | `{ changed: true }` or `{ changed: false }` |
@@ -270,6 +272,55 @@ from 0 to 100,000, default 0. These are implementation bounds. Rows sort newest
 first, with UUID as a stable tie-breaker. Detail pagination applies to history;
 email jobs are always included. Unknown query parameters are rejected. An empty
 session list is returned when its UUID has no registrations.
+
+### Dashboard event selection and registrant search
+
+`GET /api/crm/events` accepts `when=upcoming|past|all` (default upcoming), optional
+`workshopId=<uuid>`, and the standard limit/offset bounds. These are scheduled
+workshop sessions, not a separate event catalogue. Admin reads include draft,
+closed, cancelled, and past dates, even when the parent workshop is unpublished
+or archived. The public session lookup remains unchanged and more restrictive.
+
+Upcoming means the session's final day/time has not ended in Asia/Manila, matching
+the CMS session list. With `when=all`, upcoming sessions precede past sessions;
+upcoming dates sort earliest first and past dates most recent first, with start
+time and UUID as tie-breakers. Responses are `{ items, hasMore, timeZone }`.
+
+Event fields include session `id`, workshop ID/title/status, session status,
+dates/times, venue/city, price in centavos, capacity, and `counts`:
+
+```json
+{ "reserved": 12, "remaining": 8, "paid": 5, "unpaid": 7, "cancelled": 2 }
+```
+
+Paid and Unpaid counts exclude cancelled registrations. Reserved is their sum;
+remaining is capacity minus reserved, floored at zero. Counts cover the entire
+session independently of registrant search, filters, and pagination. No customer
+details or email message payloads appear in event responses. A session with no
+registrations has zero counts and all seats remaining.
+
+`GET /api/crm/events/<session-uuid>` returns the same event fields plus
+`timeZone: "Asia/Manila"`, rejects query fields, and returns
+`404 event_not_found` for a missing session. Both endpoints enforce the existing
+per-request CRM authorization and private/no-store responses.
+
+The per-session registration list now accepts `filter=active|unpaid|paid|cancelled|all`
+and optional `search` (trimmed, at most 200 characters). For compatibility the
+API default remains `all`; the dashboard should explicitly request `filter=active`.
+Paid/Unpaid filters include only active registrations. Search matches name or
+email case-insensitively across the whole session, before pagination. It treats
+percent, underscore, and backslash literally, rather than as wildcard operators.
+
+Each listed registration includes `emailJob`, either null or metadata for its
+payment-instruction job: ID, state, attempt count/times, lease expiry, sent time,
+and safe error code. It exposes no message payload or attachment. Email state
+does not prove inbox delivery. Existing detail/history and mutation contracts
+are unchanged. Invalid filters, dates selection values, bounds, or unknown query
+fields return `400 invalid_request`.
+
+Totals and the paginated list are separate reads; another submission or staff
+change can occur between them. Refresh both after actions. This adds no new
+approval status, mutation, database migration, or public-site change.
 
 Payment example:
 

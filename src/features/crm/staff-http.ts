@@ -8,7 +8,7 @@ import { getEnv } from "@/lib/env";
 import { readJson } from "./http";
 import { sendEmailJob, type EmailTransport } from "./email";
 import { IntakeError } from "./service";
-import { cancellationSchema, changeRegistration, emailJobDetail, listInquiries, listRegistrations, pageSchema, paymentChangeSchema, registrationDetail } from "./staff";
+import { cancellationSchema, changeRegistration, emailJobDetail, eventDetail, eventListSchema, listEvents, listInquiries, listRegistrations, pageSchema, paymentChangeSchema, registrationDetail, registrationListSchema } from "./staff";
 
 export async function authorizeStaff(db: Db, userId: string | undefined, adminEmails: string) {
   if (!userId) throw new IntakeError(401, "authentication_required");
@@ -43,10 +43,15 @@ export async function handleStaffRequest(request: Request, dependencies?: Depend
     };
     if (request.method === "GET" && segments.length <= 2) {
       const query = Object.fromEntries(url.searchParams);
+      if (resource === "events" && !rawId) return respond(200, await listEvents(db, parse(eventListSchema, query)));
+      if (resource === "events" && id?.success) {
+        parse(z.strictObject({}), query);
+        return respond(200, await eventDetail(db, id.data));
+      }
       if (resource === "registrations" && !rawId) {
         const sessionId = parse(z.uuid(), query.workshopSessionId);
         delete query.workshopSessionId;
-        return respond(200, await listRegistrations(db, sessionId, parse(pageSchema, query)));
+        return respond(200, await listRegistrations(db, sessionId, parse(registrationListSchema, query)));
       }
       if (resource === "registrations" && id?.success) return respond(200, await registrationDetail(db, id.data, parse(pageSchema, query)));
       if (resource === "corporate-inquiries" && !rawId) return respond(200, await listInquiries(db, parse(pageSchema, query)));
