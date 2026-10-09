@@ -8,7 +8,9 @@ import { workshop } from "./workshops";
 /* A corporate training program run in-house for a company. */
 export const inhouseProgram = pgTable("inhouse_program", {
   id: uuid("id").primaryKey().defaultRandom(),
+  slug: text("slug").notNull().unique(),
   title: text("title").notNull(),
+  summary: text("summary").default("").notNull(),
   imageMediaId: uuid("image_media_id").references(() => media.id, { onDelete: "restrict" }),
   usefulFor: stringList("useful_for"),
   position: position(),
