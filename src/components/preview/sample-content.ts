@@ -73,3 +73,9 @@ export const FOOTER_EXPLORE_LINKS = [
   "Gallery",
   "Email templates"
 ];
+
+export const PROGRAMS_SECTION = {
+  intro:
+    "Coach Adrian’s corporate training programmes, delivered in-house for your company — at your office or offsite, for one team or the whole organisation. Each is tailored to your people’s roles, industry and goals, drawing on twenty years on the training circuit.",
+  hoverHint: "Hover a programme to see who it’s for."
+};
