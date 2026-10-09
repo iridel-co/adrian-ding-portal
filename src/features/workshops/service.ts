@@ -1,5 +1,5 @@
 import "@tanstack/react-start/server-only";
-import { and, asc, desc, eq, gte, ilike, inArray, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { media, taxonomyTerm, user, workshop, workshopSession, workshopTag } from "@/db/schema";
@@ -19,7 +19,7 @@ import {
 import type { DbOrTx } from "@/features/shared/db-types";
 import { CmsValidationError } from "@/features/shared/errors";
 import { assertPublishable } from "@/features/shared/publish";
-import { assertSlugAvailable, slugify } from "@/features/shared/slug";
+import { assertSlugAvailable, makeUniqueSlug } from "@/features/shared/slug";
 import { manilaToday } from "@/features/shared/time";
 import { isCourseCodeLocked } from "@/features/workshops/course-code-lock";
 import {
@@ -70,21 +70,6 @@ async function findUpcomingActiveSessions(db: DbOrTx, workshopId: string) {
       )
     )
     .orderBy(asc(workshopSession.date));
-}
-
-async function makeUniqueSlug(db: DbOrTx, title: string) {
-  const base = slugify(title) || "workshop";
-  const taken = await db
-    .select({ slug: workshop.slug })
-    .from(workshop)
-    .where(or(eq(workshop.slug, base), ilike(workshop.slug, `${base}-%`)));
-  const takenSlugs = new Set(taken.map((row) => row.slug));
-
-  let slug = base;
-  for (let suffix = 2; takenSlugs.has(slug); suffix++) {
-    slug = `${base}-${suffix}`;
-  }
-  return slug;
 }
 
 async function assertCourseCodeFree(db: DbOrTx, courseCode: string | null, workshopId: string) {
@@ -208,7 +193,12 @@ export async function getWorkshop(db: DbOrTx, data: z.infer<typeof idInput>) {
 
 export async function createWorkshop(db: DbOrTx, actor: Actor, data: z.infer<typeof createInput>) {
   return db.transaction(async (tx) => {
-    const slug = await makeUniqueSlug(tx, data.title);
+    const slug = await makeUniqueSlug(tx, {
+      table: workshop,
+      slugColumn: workshop.slug,
+      title: data.title,
+      fallback: "workshop"
+    });
 
     const [row] = await tx
       .insert(workshop)
