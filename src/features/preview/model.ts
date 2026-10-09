@@ -43,11 +43,44 @@ export type PreviewView = z.infer<typeof previewViewSchema>;
 
 export const PREVIEW_MESSAGE_TYPE = "content-preview";
 
+/* One in-house program card on the corporate training page. */
+export const programPreviewModelSchema = z.object({
+  title: z.string().nullable(),
+  slug: z.string().nullable(),
+  summary: z.string().nullable(),
+  image: imageSchema.nullable(),
+  usefulFor: z.array(z.string())
+});
+
+export type ProgramPreviewModel = z.infer<typeof programPreviewModelSchema>;
+
+export const previewContentSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("workshop"),
+    model: previewModelSchema
+  }),
+  z.object({
+    kind: z.literal("program"),
+    cards: z.array(programPreviewModelSchema),
+    editedIndex: z.number().int().min(0)
+  })
+]);
+
+export type PreviewContent = z.infer<typeof previewContentSchema>;
+
+export type PreviewKind = PreviewContent["kind"];
+
+/* The views each content kind offers, in tab order. */
+export const PREVIEW_VIEWS: Record<PreviewKind, PreviewView[]> = {
+  workshop: ["card", "page"],
+  program: ["card"]
+};
+
 /* The message the editor posts to the preview frame. */
 export const previewPayloadSchema = z.object({
   type: z.literal(PREVIEW_MESSAGE_TYPE),
   view: previewViewSchema,
-  model: previewModelSchema
+  content: previewContentSchema
 });
 
 export type PreviewPayload = z.infer<typeof previewPayloadSchema>;
@@ -173,5 +206,50 @@ export function buildSessionPreview(
     priceText: session.priceCentavos === null ? null : formatPesos(session.priceCentavos),
     priceNote: text(session.priceNote),
     capacity: session.capacity
+  };
+}
+
+export type ProgramPreviewSource = {
+  title: string;
+  slug: string;
+  summary: string;
+  image: PreviewImage | null;
+  usefulFor: string[];
+};
+
+export function buildProgramPreview(program: ProgramPreviewSource): ProgramPreviewModel {
+  return {
+    title: text(program.title),
+    slug: text(program.slug),
+    summary: text(program.summary),
+    image: program.image,
+    usefulFor: list(program.usefulFor)
+  };
+}
+
+type PublishedCard = ProgramPreviewSource & { id: string };
+
+/*
+  The published cards in order, with the edited program in its own place.
+  A program that is not published goes at the end of the row.
+*/
+export function buildProgramRowPreview(
+  edited: ProgramPreviewSource & { id: string },
+  publishedCards: PublishedCard[]
+): Extract<PreviewContent, { kind: "program" }> {
+  const savedIndex = publishedCards.findIndex((card) => card.id === edited.id);
+  const editedIndex = savedIndex === -1 ? publishedCards.length : savedIndex;
+  const neighbors = publishedCards.filter((card) => card.id !== edited.id);
+
+  const sources = [
+    ...neighbors.slice(0, editedIndex),
+    edited,
+    ...neighbors.slice(editedIndex)
+  ];
+
+  return {
+    kind: "program",
+    cards: sources.map(buildProgramPreview),
+    editedIndex
   };
 }

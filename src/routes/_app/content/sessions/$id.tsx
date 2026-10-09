@@ -25,7 +25,11 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { buildSessionPreview, type WorkshopPreviewSource } from "@/features/preview/model";
+import {
+  buildSessionPreview,
+  type PreviewContent,
+  type WorkshopPreviewSource
+} from "@/features/preview/model";
 import { formatDateRange } from "@/features/shared/format";
 import { type WorkshopDetail, workshopQueryOptions } from "@/features/workshops/functions";
 import { allowedSessionTransitions, type SessionStatus } from "@/features/sessions/status";
@@ -107,10 +111,14 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
   const isLocked = session.status === "cancelled";
   const { data: parent } = useQuery(workshopQueryOptions(detail.workshop.id));
 
-  const previewModel = useMemo(
-    () => (parent ? buildSessionPreview(toWorkshopPreviewSource(parent), values) : null),
-    [parent, values]
-  );
+  const previewContent = useMemo((): PreviewContent | null => {
+    if (!parent) return null;
+
+    return {
+      kind: "workshop",
+      model: buildSessionPreview(toWorkshopPreviewSource(parent), values)
+    };
+  }, [parent, values]);
 
   const refresh = () =>
     Promise.all([
@@ -187,7 +195,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
         isSaving={save.isPending}
         isDirty={isDirty && !isLocked}
         onSave={() => save.mutate()}
-        preview={previewModel && <PreviewButton model={previewModel} />}
+        preview={previewContent && <PreviewButton content={previewContent} />}
         aside={
           <FormSection title="Workshop">
             <Link

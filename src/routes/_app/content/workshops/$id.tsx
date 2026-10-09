@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { ContentStatus } from "@/features/shared/content-status";
-import { buildWorkshopPreview } from "@/features/preview/model";
+import { buildWorkshopPreview, type PreviewContent } from "@/features/preview/model";
 import { formatDateRange } from "@/features/shared/format";
 import {
   $setWorkshopStatus,
@@ -160,9 +160,12 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
 
   const setSlug = useCallback((slug: string) => setField("slug", slug), [setField]);
 
-  const previewModel = useMemo(() => {
+  const previewContent = useMemo((): PreviewContent => {
     const nextSession = detail.upcomingSessions.find((session) => session.status !== "cancelled");
-    return buildWorkshopPreview(values, nextSession ?? null);
+    return {
+      kind: "workshop",
+      model: buildWorkshopPreview(values, nextSession ?? null)
+    };
   }, [detail.upcomingSessions, values]);
 
   return (
@@ -180,7 +183,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       isSaving={save.isPending}
       isDirty={isDirty}
       onSave={() => save.mutate()}
-      preview={<PreviewButton model={previewModel} />}
+      preview={<PreviewButton content={previewContent} />}
       aside={
         <>
           <FormSection title="Hero image">
