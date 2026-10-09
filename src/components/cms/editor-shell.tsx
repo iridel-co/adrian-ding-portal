@@ -32,6 +32,7 @@ type EditorShellProps = {
   isSaving: boolean;
   isDirty: boolean;
   onSave: () => void;
+  preview?: ReactNode;
   aside?: ReactNode;
   children: ReactNode;
 };
@@ -49,6 +50,7 @@ export function EditorShell({
   isSaving,
   isDirty,
   onSave,
+  preview,
   aside,
   children
 }: EditorShellProps) {
@@ -76,6 +78,7 @@ export function EditorShell({
             </div>
           </div>
           <div className="flex shrink-0 gap-2">
+            {preview}
             {statusActions.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

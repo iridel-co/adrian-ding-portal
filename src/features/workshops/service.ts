@@ -177,6 +177,7 @@ export async function getWorkshop(db: DbOrTx, data: z.infer<typeof idInput>) {
       date: workshopSession.date,
       endDate: workshopSession.endDate,
       startTime: workshopSession.startTime,
+      endTime: workshopSession.endTime,
       venueName: workshopSession.venueName,
       status: workshopSession.status
     })
