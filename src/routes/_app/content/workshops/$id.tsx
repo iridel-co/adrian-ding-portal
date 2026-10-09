@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 
 import { BackLink, EditorShell, type StatusAction } from "@/components/cms/editor-shell";
@@ -9,6 +9,7 @@ import { Field, FormSection } from "@/components/cms/form-section";
 import { MediaField } from "@/components/cms/media-field";
 import type { PickedMedia } from "@/components/cms/media-picker";
 import { MoneyField } from "@/components/cms/money-field";
+import { PreviewButton } from "@/components/cms/preview-dialog";
 import { SlugField } from "@/components/cms/slug-field";
 import {
   CONTENT_STATUS_DISPLAY,
@@ -22,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { ContentStatus } from "@/features/shared/content-status";
+import { buildWorkshopPreview } from "@/features/preview/model";
 import { formatDateRange } from "@/features/shared/format";
 import {
   $setWorkshopStatus,
@@ -158,6 +160,11 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
 
   const setSlug = useCallback((slug: string) => setField("slug", slug), [setField]);
 
+  const previewModel = useMemo(() => {
+    const nextSession = detail.upcomingSessions.find((session) => session.status !== "cancelled");
+    return buildWorkshopPreview(values, nextSession ?? null);
+  }, [detail.upcomingSessions, values]);
+
   return (
     <EditorShell
       title={values.title}
@@ -173,6 +180,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       isSaving={save.isPending}
       isDirty={isDirty}
       onSave={() => save.mutate()}
+      preview={<PreviewButton model={previewModel} />}
       aside={
         <>
           <FormSection title="Hero image">
