@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@tanstack/react-start/server-only", () => ({}));
-import { getCorporateConfig, getCorporateOrigins } from "./config";
+import { getCorporateConfig, getCorporateMailConfig, getCorporateOrigins } from "./config";
 
 afterEach(() => vi.unstubAllEnvs());
 describe("Corporate intake configuration", () => {
@@ -43,6 +43,11 @@ describe("Corporate intake configuration", () => {
   it("keeps intake disabled until explicitly enabled", () => {
     vi.stubEnv("CORPORATE_INTAKE_ENABLED", "false");
     expect(getCorporateConfig).toThrow("intake_unavailable");
+  });
+  it("reads mail settings for staff recovery without requiring public intake or a bot secret", () => {
+    vi.stubEnv("CORPORATE_INTAKE_ENABLED", "false");
+    vi.stubEnv("TURNSTILE_SECRET_KEY", "");
+    expect(getCorporateMailConfig().EMAIL_REPLY_TO).toBe("sales@example.invalid");
   });
   it.each(["*", "https://website.test/path", "https://website.test/", "ftp://website.test"])('rejects unsafe origin configuration %s', origin => {
     vi.stubEnv("SITE_ORIGINS", origin);

@@ -10,6 +10,11 @@ export type CorporateMailConfig = {
   CORPORATE_PORTAL_URL?: string;
 };
 
+export function corporateMessageHasPlaceholders(message: CrmEmailPayload) {
+  return /example\.|\.invalid/i.test([message.from, ...message.to, message.replyTo ?? ""].join(" "))
+    || ["[TEAM_PHONE]", "[APPROVED_CREDIBILITY_LINE]"].some(value => `${message.text ?? ""} ${message.html}`.includes(value));
+}
+
 export function corporateMessages(data: CorporateInquiryInput, id: string, config: CorporateMailConfig) {
   const targetDate = data.targetDateFrom
     ? `${data.targetDateFrom}${data.targetDateTo ? ` to ${data.targetDateTo}` : ""}` : data.targetDateText!;

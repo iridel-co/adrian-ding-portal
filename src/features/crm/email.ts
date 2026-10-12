@@ -2,6 +2,10 @@ import "@tanstack/react-start/server-only";
 import { and, eq, sql } from "drizzle-orm";
 import { crmEmailJob, registration, type CrmEmailPayload } from "@/db/schema";
 import type { DbOrTx } from "@/features/shared/db-types";
+import { logActivity } from "@/features/shared/audit";
+import type { PortalActor } from "@/lib/access";
+import { IntakeError } from "./errors";
+import { corporateMessageHasPlaceholders } from "./templates";
 
 export type EmailTransport = (payload: CrmEmailPayload, key: string) => Promise<{ id: string }>;
 
@@ -31,7 +35,8 @@ export async function sendViaResend(payload: CrmEmailPayload, key: string, apiKe
 const RETRY_WINDOW_MS = (24 * 60 * 60 - 60) * 1000;
 const LEASE_MS = 60000;
 
-export async function sendEmailJob(db: DbOrTx, id: string, apiKey: string, transport: EmailTransport = (payload, key) => sendViaResend(payload, key, apiKey)) {
+export async function sendEmailJob(db: DbOrTx, id: string, apiKey: string,
+  transport: EmailTransport = (payload, key) => sendViaResend(payload, key, apiKey), actor?: PortalActor) {
   const claimed = await db.transaction(async tx => {
     await tx.execute(sql`set local lock_timeout = '5s'`);
     await tx.execute(sql`set local statement_timeout = '10s'`);
@@ -53,9 +58,16 @@ export async function sendEmailJob(db: DbOrTx, id: string, apiKey: string, trans
       await tx.update(crmEmailJob).set({ state: "skipped", leaseExpiresAt: null, lastErrorCode: "payment_instructions_obsolete" }).where(eq(crmEmailJob.id, id));
       return null;
     }
+    if (job.corporateInquiryId && corporateMessageHasPlaceholders(job.payload)) throw new IntakeError(503, "email_unavailable");
     const [claimed] = await tx.update(crmEmailJob).set({ state: "sending", attemptCount: job.attemptCount + 1,
       firstAttemptAt: job.firstAttemptAt ?? now, lastAttemptAt: now, leaseExpiresAt: new Date(now.getTime() + LEASE_MS), lastErrorCode: null })
       .where(eq(crmEmailJob.id, id)).returning();
+    if (actor && job.corporateInquiryId) {
+      await logActivity(tx, { userId: actor.id, action: "update", entityType: "corporate_inquiry", entityId: job.corporateInquiryId,
+        changes: { emailRetry: { from: { jobId: id, state: job.state, attemptCount: job.attemptCount },
+          to: { jobId: id, state: "sending", attemptCount: claimed.attemptCount } },
+          actor: { from: null, to: { id: actor.id, name: actor.name, email: actor.email } } } });
+    }
     return claimed;
   });
   if (!claimed) return;

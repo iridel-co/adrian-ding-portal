@@ -17,7 +17,6 @@ export function getCorporateOrigins() {
 }
 
 const configSchema = z.object({
-  TURNSTILE_SECRET_KEY: z.string().min(1),
   CORPORATE_EMAIL_ENABLED: z.enum(["true", "false"]).default("false").transform(value => value === "true"),
   RESEND_API_KEY: z.string().default(""),
   CORPORATE_EMAIL_FROM: z.string().trim().min(1).max(320).refine(value => !/[\r\n]/.test(value)
@@ -35,6 +34,12 @@ const configSchema = z.object({
 
 export function getCorporateConfig() {
   if (process.env.CORPORATE_INTAKE_ENABLED !== "true") throw new IntakeError(503, "intake_unavailable");
+  const secret = z.string().min(1).safeParse(process.env.TURNSTILE_SECRET_KEY);
+  if (!secret.success) throw new IntakeError(503, "intake_unavailable");
+  return { ...getCorporateMailConfig(), TURNSTILE_SECRET_KEY: secret.data };
+}
+
+export function getCorporateMailConfig() {
   const result = configSchema.safeParse(process.env);
   if (!result.success) throw new IntakeError(503, "intake_unavailable");
   const config = result.data;

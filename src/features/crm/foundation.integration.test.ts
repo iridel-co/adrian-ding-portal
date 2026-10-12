@@ -12,6 +12,9 @@ import { relations } from "@/db/schema";
 import { acceptCorporateInquiry } from "./service";
 import { corporateInquirySchema } from "./schemas";
 import { sendEmailJob, type EmailTransport } from "./email";
+import { changeInquiry, inquiryDetail, listInquiries, retryInquiryEmail } from "./staff";
+import { inquiryListSchema, inquiryPageSchema, inquiryTransitionSchema } from "./schemas";
+import { authorizePortalUser, type PortalActor } from "@/lib/access";
 
 // Explicit opt-in only. Never use DATABASE_URL or the application's DB client.
 const isolatedUrl = process.env.CRM_INTEGRATION_DATABASE_URL;
@@ -31,12 +34,17 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
   let db: ReturnType<typeof drizzle<typeof relations>>;
   let baselineFolder: string | undefined;
   const createdDatabases: string[] = [];
+  const actor: PortalActor = { id: `staff-${suffix}`, name: "Synthetic Staff", email: "staff@company.test", role: "staff" };
   const config = { EMAIL_FROM: "Test <test@example.invalid>", EMAIL_REPLY_TO: "sales@example.invalid",
     CORPORATE_INQUIRY_RECIPIENTS: ["primary@example.invalid", "secondary@example.invalid"] };
   const now = new Date("2026-10-16T10:00:00+08:00");
   const input = () => corporateInquirySchema.parse({ fullName: "Synthetic Lead", email: `${randomUUID()}@example.invalid`,
     phone: "+63 917 123 4567", consent: true, company: "Synthetic Company", role: "HR Manager", program: "Leadership",
     attendees: "16 to 30", targetDateFrom: "2027-01-12", targetDateTo: "2027-01-14", venue: "Our office", context: "<script>test</script>" });
+  const deliveryConfig = { ...config, EMAIL_FROM: "Test <test@company.test>", EMAIL_REPLY_TO: "sales@company.test",
+    CORPORATE_INQUIRY_RECIPIENTS: ["primary@company.test", "secondary@company.test"],
+    CORPORATE_TEAM_PHONE: "+639171234567", CORPORATE_CREDIBILITY_LINE: "Synthetic approved wording" };
+  const deliveryInput = () => ({ ...input(), email: `${randomUUID()}@company.test` });
   const code = (error: unknown) => {
     const failure = error as { code?: string; cause?: { code?: string } };
     return failure.code ?? failure.cause?.code;
@@ -74,6 +82,8 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
         expect((await raw`select title from workshop where slug = 'corporate-migration-sentinel'`)[0].title).toBe("Preserved workshop");
       } else { sql = raw; db = database; }
     }
+    await sql`insert into "user" (id, name, email, email_verified) values (${actor.id}, ${actor.name}, ${actor.email}, true)`;
+    await sql`insert into account (id, account_id, provider_id, user_id) values (${`google-${suffix}`}, ${`google-${suffix}`}, 'google', ${actor.id})`;
   }, 30000);
 
   afterAll(async () => {
@@ -148,7 +158,7 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
   });
 
   it("claims delivery once, captures both immutable messages, and persists provider failure for retry", async () => {
-    const [ack, notice] = await acceptCorporateInquiry(db, input(), randomUUID(), config);
+    const [ack, notice] = await acceptCorporateInquiry(db, deliveryInput(), randomUUID(), deliveryConfig);
     const capture = vi.fn<EmailTransport>(async (_payload, id) => ({ id: `captured-${id}` }));
     await Promise.all([sendEmailJob(db, ack, "unused", capture), sendEmailJob(db, ack, "unused", capture)]);
     expect(capture).toHaveBeenCalledTimes(1);
@@ -161,13 +171,13 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
     expect(failed.last_error_code).toBe("provider_request_failed");
     expect(failed.lease_expires_at).toBeNull();
     await sendEmailJob(db, notice, "unused", capture);
-    expect(capture.mock.calls[1][0].to).toEqual(config.CORPORATE_INQUIRY_RECIPIENTS);
+    expect(capture.mock.calls[1][0].to).toEqual(deliveryConfig.CORPORATE_INQUIRY_RECIPIENTS);
     expect(capture.mock.calls[1][1]).toBe(notice);
     expect((await sql`select attempt_count from crm_email_job where id = ${notice}`)[0].attempt_count).toBe(2);
   });
 
   it("recovers expired leases with the same key and stops retries after the provider window", async () => {
-    const [recoverable, expired] = await acceptCorporateInquiry(db, input(), randomUUID(), config);
+    const [recoverable, expired] = await acceptCorporateInquiry(db, deliveryInput(), randomUUID(), deliveryConfig);
     for (const id of [recoverable, expired]) {
       await sql`update crm_email_job set state = 'sending', attempt_count = 1,
         first_attempt_at = now() - interval '1 hour', last_attempt_at = now() - interval '1 hour',
@@ -180,5 +190,129 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
     expect(capture).toHaveBeenCalledTimes(1);
     expect(capture.mock.calls[0][1]).toBe(recoverable);
     expect((await sql`select state from crm_email_job where id = ${expired}`)[0].state).toBe("needs_reconciliation");
+  });
+
+  const savedInquiry = async (answers = input(), mail = config) => {
+    const key = randomUUID();
+    const jobs = await acceptCorporateInquiry(db, answers, key, mail);
+    const [row] = await sql`select id from corporate_inquiry where idempotency_key = ${key}`;
+    return { id: row.id as string, jobs };
+  };
+  const transition = (expectedStatus: string, status: string, extra = {}) => inquiryTransitionSchema.parse({ expectedStatus, status, ...extra });
+
+  it("applies status/search filters before pagination and includes closed inquiries in Non-spam", async () => {
+    const marker = `Filter_${suffix}%`;
+    const ids: string[] = [];
+    for (const status of ["NEW", "CONTACTED", "LOST", "WON", "SPAM"] as const) {
+      const { id } = await savedInquiry({ ...input(), company: marker });
+      ids.push(id);
+      if (status === "CONTACTED" || status === "WON") await changeInquiry(db, id, actor, transition("NEW", "CONTACTED"));
+      if (status === "WON") {
+        await changeInquiry(db, id, actor, transition("CONTACTED", "PROPOSAL_SENT", { estimatedValueCentavos: 12345 }));
+        await changeInquiry(db, id, actor, transition("PROPOSAL_SENT", "WON"));
+      }
+      if (status === "LOST") await changeInquiry(db, id, actor, transition("NEW", "LOST", { lostReason: "Not a fit" }));
+      if (status === "SPAM") await changeInquiry(db, id, actor, transition("NEW", "SPAM"));
+    }
+    await savedInquiry({ ...input(), company: marker.replace("_", "X").replace("%", "anything") });
+    const all = await listInquiries(db, inquiryListSchema.parse({ search: marker, status: "all" }));
+    expect(all.items.map(row => row.id).sort()).toEqual(ids.sort());
+    const first = await listInquiries(db, inquiryListSchema.parse({ search: marker, status: "non-spam", limit: 2 }));
+    const second = await listInquiries(db, inquiryListSchema.parse({ search: marker, status: "non-spam", limit: 2, offset: 2 }));
+    expect(first.hasMore).toBe(true);
+    expect(second.hasMore).toBe(false);
+    expect([...first.items, ...second.items].map(row => row.status).sort()).toEqual(["CONTACTED", "LOST", "NEW", "WON"]);
+    expect(new Set([...first.items, ...second.items].map(row => row.id)).size).toBe(4);
+    const spam = await listInquiries(db, inquiryListSchema.parse({ search: marker, status: "SPAM" }));
+    expect(spam.items).toHaveLength(1);
+    expect(spam.items[0].status).toBe("SPAM");
+  });
+
+  it("serializes conflicting changes and saves one audit entry with the actor and actual timestamps", async () => {
+    const { id } = await savedInquiry();
+    const outcomes = await Promise.allSettled([
+      changeInquiry(db, id, actor, transition("NEW", "CONTACTED")),
+      changeInquiry(db, id, actor, transition("NEW", "SPAM"))
+    ]);
+    expect(outcomes.filter(result => result.status === "fulfilled")).toHaveLength(1);
+    const failure = outcomes.find(result => result.status === "rejected") as PromiseRejectedResult;
+    expect(failure.reason).toMatchObject({ status: 409, code: "inquiry_status_changed" });
+    const history = await sql`select * from activity_log where entity_type = 'corporate_inquiry' and entity_id = ${id}`;
+    expect(history).toHaveLength(1);
+    expect(history[0].changes.status.from).toBe("NEW");
+    expect(history[0].changes.actor.to).toEqual({ id: actor.id, name: actor.name, email: actor.email });
+  });
+
+  it("rolls back the state change when saving its audit entry fails", async () => {
+    const { id } = await savedInquiry();
+    await sql`alter table activity_log add constraint corporate_test_reject_audit check (entity_type <> 'corporate_inquiry') not valid`;
+    try {
+      await expect(changeInquiry(db, id, actor, transition("NEW", "CONTACTED"))).rejects.toSatisfy(error => code(error) === "23514");
+      const [row] = await sql`select status, contacted_at from corporate_inquiry where id = ${id}`;
+      expect(row.status).toBe("NEW");
+      expect(row.contacted_at).toBeNull();
+    } finally { await sql`alter table activity_log drop constraint corporate_test_reject_audit`; }
+  });
+
+  it("returns submitted dates, lifecycle and safe history/mail metadata without keys or message payloads", async () => {
+    const { id } = await savedInquiry();
+    await changeInquiry(db, id, actor, transition("NEW", "CONTACTED"));
+    await changeInquiry(db, id, actor, transition("CONTACTED", "PROPOSAL_SENT", { estimatedValueCentavos: 0 }));
+    await changeInquiry(db, id, actor, transition("PROPOSAL_SENT", "LOST", { lostReason: "Timing did not work" }));
+    const detail = await inquiryDetail(db, id, inquiryPageSchema.parse({ limit: 2 }));
+    expect(detail).toMatchObject({ status: "LOST", estimatedValueCentavos: 0, lostReason: "Timing did not work",
+      targetDateFrom: "2027-01-12", targetDateTo: "2027-01-14" });
+    expect(detail.contactedAt).toBeInstanceOf(Date);
+    expect(detail.proposalSentAt).toBeInstanceOf(Date);
+    expect(detail.closedAt).toBeInstanceOf(Date);
+    expect(detail.history).toHaveLength(2);
+    expect(detail.historyHasMore).toBe(true);
+    expect(detail).not.toHaveProperty("idempotencyKey");
+    expect(detail).not.toHaveProperty("payloadHash");
+    for (const job of detail.emailJobs) {
+      expect(job).not.toHaveProperty("payload");
+      expect(job).not.toHaveProperty("providerId");
+    }
+    await expect(changeInquiry(db, id, actor, transition("LOST", "CONTACTED"))).rejects.toMatchObject({ code: "invalid_inquiry_transition" });
+  });
+
+  it("requires a currently verified Google account and an environment assignment", async () => {
+    vi.stubEnv("ADMIN_EMAILS", "");
+    vi.stubEnv("STAFF_EMAILS", actor.email);
+    try {
+      expect((await authorizePortalUser(db, actor.id, "staff")).role).toBe("staff");
+      await expect(authorizePortalUser(db, actor.id, "admin")).rejects.toMatchObject({ status: 403 });
+      vi.stubEnv("STAFF_EMAILS", "");
+      await sql`insert into allowed_email (email) values (${actor.email})`;
+      await expect(authorizePortalUser(db, actor.id, "staff")).rejects.toMatchObject({ status: 403 });
+      vi.stubEnv("ADMIN_EMAILS", actor.email);
+      expect((await authorizePortalUser(db, actor.id, "admin")).role).toBe("admin");
+      await sql`update "user" set email_verified = false where id = ${actor.id}`;
+      await expect(authorizePortalUser(db, actor.id, "admin")).rejects.toMatchObject({ status: 403 });
+      await sql`update "user" set email_verified = true where id = ${actor.id}`;
+      await sql`update account set provider_id = 'credential' where user_id = ${actor.id}`;
+      await expect(authorizePortalUser(db, actor.id, "admin")).rejects.toMatchObject({ status: 403 });
+    } finally {
+      await sql`update "user" set email_verified = true where id = ${actor.id}`;
+      await sql`update account set provider_id = 'google' where user_id = ${actor.id}`;
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("retries only the specified inquiry's eligible job, audits the claim and blocks placeholder snapshots", async () => {
+    const { id, jobs } = await savedInquiry(deliveryInput(), deliveryConfig);
+    const capture = vi.fn<EmailTransport>(async (_payload, jobId) => ({ id: `captured-${jobId}` }));
+    await expect(retryInquiryEmail(db, randomUUID(), jobs[0], actor, "unused", capture)).rejects.toMatchObject({ code: "email_job_not_found" });
+    const sent = await retryInquiryEmail(db, id, jobs[0], actor, "unused", capture);
+    expect(sent.state).toBe("sent");
+    await expect(retryInquiryEmail(db, id, jobs[0], actor, "unused", capture)).rejects.toMatchObject({ code: "email_not_retryable" });
+    expect(capture).toHaveBeenCalledTimes(1);
+    const detail = await inquiryDetail(db, id, inquiryPageSchema.parse({}));
+    expect(detail.history[0].changes.emailRetry?.to?.jobId).toBe(jobs[0]);
+    const placeholder = await savedInquiry();
+    await expect(retryInquiryEmail(db, placeholder.id, placeholder.jobs[0], actor, "unused", capture))
+      .rejects.toMatchObject({ code: "email_unavailable" });
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect((await sql`select attempt_count from crm_email_job where id = ${placeholder.jobs[0]}`)[0].attempt_count).toBe(0);
   });
 });

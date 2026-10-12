@@ -51,6 +51,16 @@ export const idempotencyKeySchema = z.uuidv4().transform((value) => value.toLowe
 
 export type CorporateInquiryInput = z.output<typeof corporateInquirySchema>;
 
+export const inquiryPageSchema = z.strictObject({
+  limit: z.number().int().min(1).max(100).default(50),
+  offset: z.number().int().min(0).max(100000).default(0)
+});
+
+export const inquiryListSchema = inquiryPageSchema.extend({
+  status: z.enum(["all", "non-spam", "NEW", "CONTACTED", "PROPOSAL_SENT", "WON", "LOST", "SPAM"]).default("all"),
+  search: z.string().trim().max(200).default("")
+});
+
 export const inquiryTransitionSchema = z.strictObject({
   expectedStatus: z.enum(["NEW", "CONTACTED", "PROPOSAL_SENT", "WON", "LOST", "SPAM"]),
   status: z.enum(["CONTACTED", "PROPOSAL_SENT", "WON", "LOST", "SPAM"]),

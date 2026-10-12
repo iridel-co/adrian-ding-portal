@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { corporateMessages } from "./templates";
+import { corporateMessageHasPlaceholders, corporateMessages } from "./templates";
 import { corporateInquirySchema } from "./schemas";
 
 const data = corporateInquirySchema.parse({ fullName: "Test <Lead>", email: "lead@example.invalid", phone: "+639171234567",
@@ -11,6 +11,13 @@ const config = { EMAIL_FROM: "Team <team@example.invalid>", EMAIL_REPLY_TO: "sal
   CORPORATE_PORTAL_URL: "https://portal.test", CORPORATE_TEAM_PHONE: "[TEAM_PHONE]", CORPORATE_CREDIBILITY_LINE: "[APPROVED_CREDIBILITY_LINE]" };
 
 describe("Corporate E3 and N3 email content", () => {
+  it("blocks old placeholder snapshots but permits ordinary brackets in submitted text", () => {
+    expect(corporateMessageHasPlaceholders(corporateMessages(data, "id", config).notification)).toBe(true);
+    const message = { from: "team@company.test", to: ["lead@company.test"], replyTo: "sales@company.test",
+      subject: "Inquiry", text: "Context: training [team A]", html: "training [team A]" };
+    expect(corporateMessageHasPlaceholders(message)).toBe(false);
+    expect(corporateMessageHasPlaceholders({ ...message, text: "Call [TEAM_PHONE]" })).toBe(true);
+  });
   it("acknowledges the programme, attendees, date range and venue with the response promise and placeholders", () => {
     const { acknowledgment } = corporateMessages(data, "inquiry-id", config);
     for (const text of ["two business days", "Manila time", "Leadership", "16 to 30", "2027-01-12 to 2027-01-14",

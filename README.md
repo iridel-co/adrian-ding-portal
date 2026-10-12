@@ -77,8 +77,26 @@ The inquiry and both email snapshots commit together. A successful save returns
 202 `{ accepted: true }` even if delivery fails. Keep the original key and answers
 for retries, but get a fresh Turnstile token for every attempt. Changed answers
 with an accepted key return 409; replaying the same answers creates no new jobs.
-When sending is disabled, saved jobs remain pending. The staff retry interface,
-inquiry page linked from staff emails, and recovery scheduler are later steps.
+When sending is disabled, saved jobs remain pending. Staff APIs are implemented
+as server functions in `src/features/crm/functions.ts`: list/detail, audited
+status changes with an expected current status, and eligible email retries.
+List filters include All, Non-spam and every inquiry state. Non-spam includes
+closed inquiries and excludes only SPAM. History uses bounded pagination, and
+responses exclude message payloads, submission hashes and provider identifiers.
+
+Staff retry uses mail settings independently of the public intake switch. Active
+leases, completed jobs and reconciliation jobs cannot be retried. Expired
+attempts are marked for reconciliation; placeholder snapshots are never sent.
+The inquiry page linked from staff emails, retry screens and recovery scheduler
+are later steps. CRM server functions reject cross-site requests and require an
+approved portal origin for mutations; public intake keeps its own CORS policy.
+
+CRM roles come from `ADMIN_EMAILS` and `STAFF_EMAILS` deployment settings. Admin
+wins if an email appears in both lists. Each CRM request requires a verified
+Google account and a current role assignment. The database sign-in list does not
+grant CRM access. Staff emails are included in sign-in, but CMS/settings keep
+their existing signed-in-user permissions in this step. CMS role enforcement is
+deferred at the user's request.
 
 ## Deploy
 
