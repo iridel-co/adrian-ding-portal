@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
 import {
   BookOpen,
+  Briefcase,
   Building2,
   CalendarDays,
   ChevronsUpDown,
@@ -48,6 +49,7 @@ const NAV_GROUPS = [
     items: [
       { title: "Workshops", to: "/content/workshops", icon: BookOpen },
       { title: "Sessions", to: "/content/sessions", icon: CalendarDays },
+      { title: "Corporate trainings", to: "/content/corporate-trainings", icon: Briefcase },
       { title: "Media", to: "/content/media", icon: Images },
       { title: "Tags", to: "/content/tags", icon: Tags }
     ]

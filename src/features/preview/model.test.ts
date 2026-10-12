@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildProgramPreview,
+  buildProgramRowPreview,
   buildSessionPreview,
   buildWorkshopPreview,
   previewPayloadSchema,
@@ -120,7 +122,10 @@ describe("previewPayloadSchema", () => {
     const payload = {
       type: PREVIEW_MESSAGE_TYPE,
       view: "page",
-      model: buildSessionPreview(workshop, session)
+      content: {
+        kind: "workshop",
+        model: buildSessionPreview(workshop, session)
+      }
     };
 
     expect(previewPayloadSchema.safeParse(payload).success).toBe(true);
@@ -128,5 +133,75 @@ describe("previewPayloadSchema", () => {
 
   it("rejects an unknown message", () => {
     expect(previewPayloadSchema.safeParse({ type: "other" }).success).toBe(false);
+  });
+});
+
+const program = {
+  id: "edited",
+  title: " Inspirational Keynotes ",
+  slug: "inspirational-keynotes",
+  summary: " Story-led keynotes. ",
+  image: null,
+  usefulFor: [" Sales summits ", "", "Kick-offs"]
+};
+
+function publishedCard(id: string) {
+  return {
+    id,
+    title: id,
+    slug: id,
+    summary: "",
+    image: { url: `https://cdn.example.com/${id}.jpg`, alt: id },
+    usefulFor: ["Teams"]
+  };
+}
+
+describe("buildProgramPreview", () => {
+  it("trims text, drops empty list items and marks empty values as null", () => {
+    expect(buildProgramPreview({ ...program, slug: " " })).toEqual({
+      title: "Inspirational Keynotes",
+      slug: null,
+      summary: "Story-led keynotes.",
+      image: null,
+      usefulFor: ["Sales summits", "Kick-offs"]
+    });
+  });
+});
+
+describe("buildProgramRowPreview", () => {
+  it("keeps a published program at its saved place with its unsaved values", () => {
+    const row = buildProgramRowPreview(program, [
+      publishedCard("first"),
+      { ...publishedCard("edited"), title: "Old title" },
+      publishedCard("last")
+    ]);
+
+    expect(row.editedIndex).toBe(1);
+    expect(row.cards.map((card) => card.title)).toEqual([
+      "first",
+      "Inspirational Keynotes",
+      "last"
+    ]);
+  });
+
+  it("puts a program that is not published at the end", () => {
+    const row = buildProgramRowPreview(program, [publishedCard("first"), publishedCard("last")]);
+
+    expect(row.editedIndex).toBe(2);
+    expect(row.cards.map((card) => card.title)).toEqual([
+      "first",
+      "last",
+      "Inspirational Keynotes"
+    ]);
+  });
+
+  it("passes the payload schema", () => {
+    const payload = {
+      type: PREVIEW_MESSAGE_TYPE,
+      view: "card",
+      content: buildProgramRowPreview(program, [])
+    };
+
+    expect(previewPayloadSchema.safeParse(payload).success).toBe(true);
   });
 });

@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  type PreviewModel,
+  type PreviewContent,
   type PreviewPayload,
   type PreviewView,
   PREVIEW_MESSAGE_TYPE,
   PREVIEW_READY_MESSAGE,
+  PREVIEW_VIEWS,
   previewViewSchema
 } from "@/features/preview/model";
 
@@ -22,18 +23,24 @@ const DEVICES = [
 
 type DeviceId = (typeof DEVICES)[number]["id"];
 
+const VIEW_LABELS: Record<PreviewView, string> = {
+  card: "Card",
+  page: "Page"
+};
+
 const POST_DELAY_MS = 150;
 const PHONE_SCREEN_MAX_WIDTH = 767;
 
 type PreviewDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  model: PreviewModel;
+  content: PreviewContent;
 };
 
 /* Full-screen preview of the public site layout in a frame at a chosen device width. */
-export function PreviewDialog({ open, onOpenChange, model }: PreviewDialogProps) {
-  const [view, setView] = useState<PreviewView>("page");
+export function PreviewDialog({ open, onOpenChange, content }: PreviewDialogProps) {
+  const views = PREVIEW_VIEWS[content.kind];
+  const [view, setView] = useState<PreviewView>(views.at(-1) ?? "card");
   const [deviceId, setDeviceId] = useState<DeviceId>("desktop");
 
   useEffect(() => {
@@ -50,12 +57,17 @@ export function PreviewDialog({ open, onOpenChange, model }: PreviewDialogProps)
               Shows your unsaved changes. Nothing is saved.
             </DialogDescription>
           </div>
-          <Tabs value={view} onValueChange={(value) => setView(previewViewSchema.parse(value))}>
-            <TabsList>
-              <TabsTrigger value="card">Card</TabsTrigger>
-              <TabsTrigger value="page">Page</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          {views.length > 1 && (
+            <Tabs value={view} onValueChange={(value) => setView(previewViewSchema.parse(value))}>
+              <TabsList>
+                {views.map((option) => (
+                  <TabsTrigger key={option} value={option}>
+                    {VIEW_LABELS[option]}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          )}
           <div className="flex gap-1 rounded-lg bg-muted p-1" role="group" aria-label="Device">
             {DEVICES.map((device) => (
               <Button
@@ -73,7 +85,7 @@ export function PreviewDialog({ open, onOpenChange, model }: PreviewDialogProps)
           </div>
         </div>
         <PreviewFrame
-          model={model}
+          content={content}
           view={view}
           width={DEVICES.find((device) => device.id === deviceId)?.width ?? 1280}
         />
@@ -83,13 +95,13 @@ export function PreviewDialog({ open, onOpenChange, model }: PreviewDialogProps)
 }
 
 type PreviewFrameProps = {
-  model: PreviewModel;
+  content: PreviewContent;
   view: PreviewView;
   width: number;
 };
 
 /* The frame at its true device width, scaled down to fit the stage when the stage is narrower. */
-function PreviewFrame({ model, view, width }: PreviewFrameProps) {
+function PreviewFrame({ content, view, width }: PreviewFrameProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [isFrameReady, setIsFrameReady] = useState(false);
@@ -120,12 +132,16 @@ function PreviewFrame({ model, view, width }: PreviewFrameProps) {
   useEffect(() => {
     if (!isFrameReady) return;
 
-    const payload: PreviewPayload = { type: PREVIEW_MESSAGE_TYPE, view, model };
+    const payload: PreviewPayload = {
+      type: PREVIEW_MESSAGE_TYPE,
+      view,
+      content
+    };
     const timer = window.setTimeout(() => {
       frameRef.current?.contentWindow?.postMessage(payload, window.location.origin);
     }, POST_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [isFrameReady, model, view]);
+  }, [isFrameReady, content, view]);
 
   const scale = stage.width > 0 ? Math.min(1, stage.width / width) : 1;
 
@@ -137,7 +153,7 @@ function PreviewFrame({ model, view, width }: PreviewFrameProps) {
       >
         <iframe
           ref={frameRef}
-          src="/preview/workshop"
+          src={`/preview/${content.kind}`}
           title="Public site preview"
           className={cn("origin-top-left border-0", !isFrameReady && "opacity-0")}
           style={{
@@ -151,7 +167,7 @@ function PreviewFrame({ model, view, width }: PreviewFrameProps) {
   );
 }
 
-export function PreviewButton({ model }: { model: PreviewModel }) {
+export function PreviewButton({ content }: { content: PreviewContent }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -160,7 +176,7 @@ export function PreviewButton({ model }: { model: PreviewModel }) {
         <Eye />
         Preview
       </Button>
-      <PreviewDialog open={isOpen} onOpenChange={setIsOpen} model={model} />
+      <PreviewDialog open={isOpen} onOpenChange={setIsOpen} content={content} />
     </>
   );
 }

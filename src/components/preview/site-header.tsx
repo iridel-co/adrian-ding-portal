@@ -1,9 +1,10 @@
+import { cn } from "cn";
 import { Menu } from "lucide-react";
 
 import { NAV_LINKS } from "@/components/preview/sample-content";
 
 /* The public site top bar: full nav from md, a menu button below md. */
-export function SiteHeader() {
+export function SiteHeader({ activeLink }: { activeLink: string }) {
   return (
     <header className="sticky top-0 z-40 h-(--nav-h) border-b border-border/60 bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-full w-full max-w-7xl items-center justify-between px-6 sm:px-10">
@@ -12,7 +13,13 @@ export function SiteHeader() {
         </span>
         <nav className="hidden items-center gap-7 md:flex">
           {NAV_LINKS.map((link) => (
-            <span key={link} className="text-[0.9375rem] text-foreground/80">
+            <span
+              key={link}
+              className={cn(
+                "text-[0.95rem] font-medium",
+                link === activeLink ? "text-brand" : "text-foreground/70"
+              )}
+            >
               {link}
             </span>
           ))}

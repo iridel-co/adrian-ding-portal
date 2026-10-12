@@ -16,7 +16,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 
 type SortableListProps<T> = {
   items: T[];
@@ -38,6 +38,7 @@ export function SortableList<T>({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
   const ids = items.map(getId);
+  const dndContextId = useId();
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return;
@@ -48,7 +49,7 @@ export function SortableList<T>({
   };
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext id={dndContextId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={ids} strategy={verticalListSortingStrategy} disabled={disabled}>
         <ul className="flex flex-col gap-2">
           {items.map((item, index) => (

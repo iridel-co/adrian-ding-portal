@@ -1,4 +1,4 @@
-import { and, eq, ne, type SQL } from "drizzle-orm";
+import { and, eq, ilike, ne, or, type SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 
 import type { DbOrTx } from "@/features/shared/db-types";
@@ -47,4 +47,27 @@ export async function assertSlugAvailable(db: DbOrTx, check: SlugCheck) {
   if (existing) {
     throw new CmsValidationError(`The slug "${check.slug}" is already in use.`);
   }
+}
+
+type UniqueSlugTarget = {
+  table: PgTable;
+  slugColumn: PgColumn;
+  title: string;
+  fallback: string;
+};
+
+/* A slug from the title, with a -2, -3 suffix when the base slug is taken. */
+export async function makeUniqueSlug(db: DbOrTx, target: UniqueSlugTarget) {
+  const base = slugify(target.title) || target.fallback;
+  const taken = await db
+    .select({ slug: target.slugColumn })
+    .from(target.table)
+    .where(or(eq(target.slugColumn, base), ilike(target.slugColumn, `${base}-%`)));
+  const takenSlugs = new Set(taken.map((row) => String(row.slug)));
+
+  let slug = base;
+  for (let suffix = 2; takenSlugs.has(slug); suffix++) {
+    slug = `${base}-${suffix}`;
+  }
+  return slug;
 }

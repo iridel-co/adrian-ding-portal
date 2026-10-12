@@ -4,6 +4,8 @@
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
 @import "@fontsource/instrument-serif";
+@import "@fontsource-variable/red-hat-display";
+@import "@fontsource/prata";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -172,7 +174,7 @@
 
 /*
   Light theme for the public site preview, copied from the public site palette.
-  Applies inside .site-preview whatever the CMS theme is.
+  Applies inside .site-preview whatever the CMS theme is, with the public site fonts.
 */
 .site-preview {
   --background: oklch(1 0 0);
@@ -190,6 +192,15 @@
   color-scheme: light;
   background-color: var(--background);
   color: var(--foreground);
+}
+
+.site-preview,
+.site-preview .font-sans {
+  font-family: "Red Hat Display Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+.site-preview .font-display {
+  font-family: "Prata", Georgia, "Times New Roman", serif;
 }
 
 @theme inline {
