@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import type { z } from "zod";
 
 import { ContentListPage, EmptyState, FilterSelect } from "@/components/cms/content-list-page";
 import { SortableList } from "@/components/cms/sortable-list";
@@ -24,6 +25,7 @@ import {
   type ProgramListItem,
   programsQueryOptions
 } from "@/features/corporate-trainings/functions";
+import type { statusFilterSchema } from "@/features/corporate-trainings/schemas";
 import { errorMessage } from "@/features/shared/error-message";
 
 export const Route = createFileRoute("/_app/content/corporate-trainings/")({
@@ -31,7 +33,7 @@ export const Route = createFileRoute("/_app/content/corporate-trainings/")({
   component: ProgramsPage
 });
 
-type StatusFilter = "active" | "draft" | "published" | "archived";
+type StatusFilter = z.infer<typeof statusFilterSchema>;
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "active", label: "All but archived" },

@@ -4,13 +4,18 @@ import { contentStatus } from "@/db/schema";
 import { nonEmptyList, stringListSchema } from "@/features/shared/field-schemas";
 import type { FieldLabels } from "@/features/shared/publish";
 
+export const SUMMARY_MAX_LENGTH = 160;
+export const USEFUL_FOR_MAX_ITEMS = 6;
+
 /* What the editor saves. A draft needs only a title and a valid slug. */
 export const programSaveSchema = z.object({
   title: z.string().trim().min(1, "Enter a title."),
   slug: z.string().trim(),
-  summary: z.string().trim(),
+  summary: z.string().trim().max(SUMMARY_MAX_LENGTH, `Keep the summary to ${SUMMARY_MAX_LENGTH} characters.`),
   imageMediaId: z.uuid().nullable(),
-  usefulFor: stringListSchema
+  usefulFor: stringListSchema.pipe(
+    z.array(z.string()).max(USEFUL_FOR_MAX_ITEMS, `Add at most ${USEFUL_FOR_MAX_ITEMS} "Useful for" items.`)
+  )
 });
 
 export const programPublishSchema = z.object({

@@ -20,8 +20,9 @@ import {
   type ProgramDetail,
   programQueryOptions
 } from "@/features/corporate-trainings/functions";
+import { SUMMARY_MAX_LENGTH, USEFUL_FOR_MAX_ITEMS } from "@/features/corporate-trainings/schemas";
 import { buildProgramRowPreview, type PreviewContent } from "@/features/preview/model";
-import type { ContentStatus } from "@/features/shared/content-status";
+import { CONTENT_STATUS_ACTIONS, type ContentStatus } from "@/features/shared/content-status";
 import { errorMessage } from "@/features/shared/error-message";
 
 export const Route = createFileRoute("/_app/content/corporate-trainings/$id")({
@@ -58,18 +59,6 @@ function toSaveInput(form: ProgramForm) {
   };
 }
 
-const STATUS_ACTION_LABELS: Record<ContentStatus, { label: string; to: ContentStatus }[]> = {
-  draft: [
-    { label: "Publish", to: "published" },
-    { label: "Archive", to: "archived" }
-  ],
-  published: [
-    { label: "Unpublish (back to draft)", to: "draft" },
-    { label: "Archive", to: "archived" }
-  ],
-  archived: [{ label: "Restore as draft", to: "draft" }]
-};
-
 function ProgramEditorPage() {
   const { id } = Route.useParams();
   const { data } = useSuspenseQuery(programQueryOptions(id));
@@ -101,7 +90,7 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
     onError: (error) => toast.error(errorMessage(error))
   });
 
-  const statusActions: StatusAction[] = STATUS_ACTION_LABELS[program.status].map((action) => ({
+  const statusActions: StatusAction[] = CONTENT_STATUS_ACTIONS[program.status].map((action) => ({
     label: action.label,
     isDestructive: action.to === "archived",
     onSelect: () => {
@@ -166,6 +155,7 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
           <Textarea
             id="summary"
             rows={2}
+            maxLength={SUMMARY_MAX_LENGTH}
             value={values.summary}
             onChange={(event) => setField("summary", event.target.value)}
           />
@@ -177,6 +167,7 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
           value={values.usefulFor}
           onChange={(list) => setField("usefulFor", list)}
           addLabel="Add item"
+          maxItems={USEFUL_FOR_MAX_ITEMS}
         />
       </FormSection>
     </EditorShell>
