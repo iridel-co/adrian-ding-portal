@@ -13,6 +13,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as ApiCorporateInquiriesRouteImport } from './routes/api/corporate-inquiries'
 import { Route as PreviewProgramRouteImport } from './routes/preview/program'
 import { Route as PreviewWorkshopRouteImport } from './routes/preview/workshop'
 import { Route as AppContentMediaRouteImport } from './routes/_app/content/media'
@@ -46,6 +47,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const ApiCorporateInquiriesRoute = ApiCorporateInquiriesRouteImport.update({
+  id: '/api/corporate-inquiries',
+  path: '/api/corporate-inquiries',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PreviewProgramRoute = PreviewProgramRouteImport.update({
   id: '/program',
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
+  '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/preview/program': typeof PreviewProgramRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/content/media': typeof AppContentMediaRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
+  '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/preview/program': typeof PreviewProgramRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/': typeof AppIndexRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
+  '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/preview/program': typeof PreviewProgramRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/_app/': typeof AppIndexRoute
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/preview'
+    | '/api/corporate-inquiries'
     | '/preview/program'
     | '/preview/workshop'
     | '/content/media'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/preview'
+    | '/api/corporate-inquiries'
     | '/preview/program'
     | '/preview/workshop'
     | '/'
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/login'
     | '/preview'
+    | '/api/corporate-inquiries'
     | '/preview/program'
     | '/preview/workshop'
     | '/_app/'
@@ -245,6 +257,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   PreviewRoute: typeof PreviewRouteWithChildren
+  ApiCorporateInquiriesRoute: typeof ApiCorporateInquiriesRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -277,6 +290,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/api/corporate-inquiries': {
+      id: '/api/corporate-inquiries'
+      path: '/api/corporate-inquiries'
+      fullPath: '/api/corporate-inquiries'
+      preLoaderRoute: typeof ApiCorporateInquiriesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/preview/program': {
       id: '/preview/program'
@@ -429,17 +449,9 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   PreviewRoute: PreviewRouteWithChildren,
+  ApiCorporateInquiriesRoute: ApiCorporateInquiriesRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

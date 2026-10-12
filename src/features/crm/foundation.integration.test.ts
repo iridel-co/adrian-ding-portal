@@ -11,6 +11,7 @@ vi.mock("@tanstack/react-start/server-only", () => ({}));
 import { relations } from "@/db/schema";
 import { acceptCorporateInquiry } from "./service";
 import { corporateInquirySchema } from "./schemas";
+import { sendEmailJob, type EmailTransport } from "./email";
 
 // Explicit opt-in only. Never use DATABASE_URL or the application's DB client.
 const isolatedUrl = process.env.CRM_INTEGRATION_DATABASE_URL;
@@ -144,5 +145,40 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
     await sql`update corporate_inquiry set status = 'PROPOSAL_SENT', proposal_sent_at = now(), estimated_value_centavos = 0 where id = ${row.id}`;
     await sql`update corporate_inquiry set status = 'WON', closed_at = now() where id = ${row.id}`;
     expect((await sql`select status from corporate_inquiry where id = ${row.id}`)[0].status).toBe("WON");
+  });
+
+  it("claims delivery once, captures both immutable messages, and persists provider failure for retry", async () => {
+    const [ack, notice] = await acceptCorporateInquiry(db, input(), randomUUID(), config);
+    const capture = vi.fn<EmailTransport>(async (_payload, id) => ({ id: `captured-${id}` }));
+    await Promise.all([sendEmailJob(db, ack, "unused", capture), sendEmailJob(db, ack, "unused", capture)]);
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture.mock.calls[0][0].to).toHaveLength(1);
+    expect(capture.mock.calls[0][1]).toBe(ack);
+    expect((await sql`select state from crm_email_job where id = ${ack}`)[0].state).toBe("sent");
+    await sendEmailJob(db, notice, "unused", async () => { throw new Error("private provider details"); });
+    const [failed] = await sql`select * from crm_email_job where id = ${notice}`;
+    expect(failed.state).toBe("failed");
+    expect(failed.last_error_code).toBe("provider_request_failed");
+    expect(failed.lease_expires_at).toBeNull();
+    await sendEmailJob(db, notice, "unused", capture);
+    expect(capture.mock.calls[1][0].to).toEqual(config.CORPORATE_INQUIRY_RECIPIENTS);
+    expect(capture.mock.calls[1][1]).toBe(notice);
+    expect((await sql`select attempt_count from crm_email_job where id = ${notice}`)[0].attempt_count).toBe(2);
+  });
+
+  it("recovers expired leases with the same key and stops retries after the provider window", async () => {
+    const [recoverable, expired] = await acceptCorporateInquiry(db, input(), randomUUID(), config);
+    for (const id of [recoverable, expired]) {
+      await sql`update crm_email_job set state = 'sending', attempt_count = 1,
+        first_attempt_at = now() - interval '1 hour', last_attempt_at = now() - interval '1 hour',
+        lease_expires_at = now() - interval '1 minute' where id = ${id}`;
+    }
+    await sql`update crm_email_job set first_attempt_at = now() - interval '25 hours' where id = ${expired}`;
+    const capture = vi.fn<EmailTransport>(async (_payload, id) => ({ id: `captured-${id}` }));
+    await sendEmailJob(db, recoverable, "unused", capture);
+    await sendEmailJob(db, expired, "unused", capture);
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture.mock.calls[0][1]).toBe(recoverable);
+    expect((await sql`select state from crm_email_job where id = ${expired}`)[0].state).toBe("needs_reconciliation");
   });
 });

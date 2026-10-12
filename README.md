@@ -59,6 +59,27 @@ The browser uploads files straight to R2 with a short-lived signed URL. The app 
 - Schema: `src/db/schema/` (one file per area, re-exported from `index.ts`)
 - After changing it: `pnpm db:generate`, then `pnpm db:migrate`
 
+## Corporate inquiries
+
+`POST /api/corporate-inquiries` accepts a JSON inquiry, a UUID v4
+`Idempotency-Key` header, an approved `Origin`, an empty `website` honeypot,
+and a `turnstileToken` verified server-side for action `corporate-inquiry`.
+Picked dates use `targetDateFrom` and optional `targetDateTo`; rough dates use
+`targetDateText` instead. Consent must be `true` before anything is saved.
+
+Fill the corporate settings in `.env.example`. Intake and delivery are disabled
+by default. Replace the two staff addresses, sender, sales reply-to, phone and
+credibility wording before enabling delivery. Configure deployment request
+throttling before enabling public intake. Corporate settings do not require a
+workshop payment account.
+
+The inquiry and both email snapshots commit together. A successful save returns
+202 `{ accepted: true }` even if delivery fails. Keep the original key and answers
+for retries, but get a fresh Turnstile token for every attempt. Changed answers
+with an accepted key return 409; replaying the same answers creates no new jobs.
+When sending is disabled, saved jobs remain pending. The staff retry interface,
+inquiry page linked from staff emails, and recovery scheduler are later steps.
+
 ## Deploy
 
 Set the same env vars as `.env` on the host. `BETTER_AUTH_URL` must be the public URL, and the Google redirect URI must match it.
