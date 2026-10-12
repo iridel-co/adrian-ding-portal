@@ -1,5 +1,16 @@
 # Adrian Ding Portal
 
+## Corporate inquiry work
+
+See [the FSD implementation plan](docs/crm/CORPORATE-INQUIRY-PLAN.md) for the
+corporate inquiry lifecycle, reusable portal code, implementation sequence and
+remaining decisions. Corporate validation, bounded request parsing and the email
+provider boundary have been transferred into `src/features/crm/` with tests.
+Step 1 now adds the shared CRM schema, an inquiry lifecycle migration and an
+atomic inquiry save service. See [the step 1 review](docs/crm/STEP-1-REVIEW.md)
+for changes and validation. No public corporate endpoint or sending worker is
+connected yet.
+
 Internal dashboard shell. TanStack Start (frontend + server in one app), Better Auth with Google sign-in, Drizzle + Postgres, shadcn/ui.
 
 Only allowlisted emails can sign in. Manage the list on the **Settings** page.

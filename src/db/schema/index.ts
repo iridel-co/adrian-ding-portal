@@ -9,3 +9,4 @@ export * from "./relations";
 export * from "./showcase";
 export * from "./taxonomy";
 export * from "./workshops";
+export * from "./crm";
