@@ -19,6 +19,9 @@ async function staffAction<T>(action: () => Promise<T>) {
 export const $listInquiries = createServerFn({ method: "GET" }).middleware([staffMiddleware]).validator(inquiryListSchema)
   .handler(({ data }) => staffAction(() => listInquiries(getDb(), data)));
 
+export const $crmAccess = createServerFn({ method: "GET" }).middleware([staffMiddleware])
+  .handler(({ context }) => ({ role: context.actor.role }));
+
 export const $getInquiry = createServerFn({ method: "GET" }).middleware([staffMiddleware])
   .validator(inquiryPageSchema.extend({ id: z.uuid() }))
   .handler(({ data }) => staffAction(() => inquiryDetail(getDb(), data.id, data)));

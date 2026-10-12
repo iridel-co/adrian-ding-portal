@@ -12,7 +12,10 @@ export const staffMiddleware = createMiddleware().middleware([authMiddleware]).s
     const request = getRequest();
     const origin = request.headers.get("origin");
     const portalOrigin = new URL(getEnv().BETTER_AUTH_URL).origin;
-    if (request.headers.get("sec-fetch-site") === "cross-site"
+    // Post-login document GETs can carry cors mode; cross-site RPC calls remain blocked.
+    const pageNavigation = request.method === "GET" && request.headers.get("sec-fetch-dest") === "document"
+      && !request.headers.has("x-tsr-serverFn");
+    if ((request.headers.get("sec-fetch-site") === "cross-site" && !pageNavigation)
       || (origin !== null && origin !== portalOrigin)
       || (request.method !== "GET" && origin !== portalOrigin)) throw new AccessError(403, "origin_not_allowed");
     actor = await authorizePortalUser(getDb(), context.user.id, "staff");

@@ -4,12 +4,9 @@
 
 See [the FSD implementation plan](docs/crm/CORPORATE-INQUIRY-PLAN.md) for the
 corporate inquiry lifecycle, reusable portal code, implementation sequence and
-remaining decisions. Corporate validation, bounded request parsing and the email
-provider boundary have been transferred into `src/features/crm/` with tests.
-Step 1 now adds the shared CRM schema, an inquiry lifecycle migration and an
-atomic inquiry save service. See [the step 1 review](docs/crm/STEP-1-REVIEW.md)
-for changes and validation. No public corporate endpoint or sending worker is
-connected yet.
+remaining decisions. Storage, public intake, email delivery and staff operations
+are implemented. Step 4 adds the inquiry screens for review. Website integration
+and scheduled recovery remain later steps.
 
 Internal dashboard shell. TanStack Start (frontend + server in one app), Better Auth with Google sign-in, Drizzle + Postgres, shadcn/ui.
 
@@ -20,9 +17,20 @@ Only allowlisted emails can sign in. Manage the list on the **Settings** page.
 ```bash
 pnpm install
 cp .env.example .env   # fill in the values
+docker compose up -d --wait postgres
 pnpm db:migrate
 pnpm dev               # http://localhost:3000
 ```
+
+Start Docker Desktop before the Compose command. This worktree has its own
+database volume, separate from `portal/`. Postgres listens only on
+`127.0.0.1:55432`; `.env.example` already contains the matching `DATABASE_URL`.
+If you already have a `.env`, update its database URL to match. The portal's
+Compose database uses the same port, so stop that service before starting this one.
+
+`docker compose down` stops the database and preserves its data volume. Migrations
+are applied by `pnpm db:migrate`, not automatically by Compose. Keep corporate
+intake and email sending disabled while reviewing local inquiry screens.
 
 ### Google OAuth
 
@@ -87,8 +95,12 @@ responses exclude message payloads, submission hashes and provider identifiers.
 Staff retry uses mail settings independently of the public intake switch. Active
 leases, completed jobs and reconciliation jobs cannot be retried. Expired
 attempts are marked for reconciliation; placeholder snapshots are never sent.
-The inquiry page linked from staff emails, retry screens and recovery scheduler
-are later steps. CRM server functions reject cross-site requests and require an
+The portal now has `/inquiries` and `/inquiries/:id` pages. Assigned Staff and
+Admin accounts land on Inquiries after sign-in. The list supports status filters,
+search and pagination; detail shows submitted requirements, Manila deadlines,
+valid status actions, email retry controls and history. Contact and proposal
+messages are sent outside the portal, then recorded here. The recovery scheduler
+is a later step. CRM server functions reject cross-site requests and require an
 approved portal origin for mutations; public intake keeps its own CORS policy.
 
 CRM roles come from `ADMIN_EMAILS` and `STAFF_EMAILS` deployment settings. Admin

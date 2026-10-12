@@ -13,11 +13,14 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppInquiriesRouteImport } from './routes/_app/inquiries'
 import { Route as ApiCorporateInquiriesRouteImport } from './routes/api/corporate-inquiries'
 import { Route as PreviewProgramRouteImport } from './routes/preview/program'
 import { Route as PreviewWorkshopRouteImport } from './routes/preview/workshop'
 import { Route as AppContentMediaRouteImport } from './routes/_app/content/media'
 import { Route as AppContentTagsRouteImport } from './routes/_app/content/tags'
+import { Route as AppInquiriesIndexRouteImport } from './routes/_app/inquiries/index'
+import { Route as AppInquiriesIdRouteImport } from './routes/_app/inquiries/$id'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAccessRouteImport } from './routes/_app/settings/access'
 import { Route as AppSettingsIndustriesRouteImport } from './routes/_app/settings/industries'
@@ -48,6 +51,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppInquiriesRoute = AppInquiriesRouteImport.update({
+  id: '/inquiries',
+  path: '/inquiries',
+  getParentRoute: () => AppRoute,
+} as any)
 const ApiCorporateInquiriesRoute = ApiCorporateInquiriesRouteImport.update({
   id: '/api/corporate-inquiries',
   path: '/api/corporate-inquiries',
@@ -72,6 +80,16 @@ const AppContentTagsRoute = AppContentTagsRouteImport.update({
   id: '/content/tags',
   path: '/content/tags',
   getParentRoute: () => AppRoute,
+} as any)
+const AppInquiriesIndexRoute = AppInquiriesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppInquiriesRoute,
+} as any)
+const AppInquiriesIdRoute = AppInquiriesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppInquiriesRoute,
 } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/settings/',
@@ -131,14 +149,17 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
+  '/inquiries': typeof AppInquiriesRouteWithChildren
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/preview/program': typeof PreviewProgramRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
+  '/inquiries/$id': typeof AppInquiriesIdRoute
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/inquiries/': typeof AppInquiriesIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
@@ -156,9 +177,11 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
+  '/inquiries/$id': typeof AppInquiriesIdRoute
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/inquiries': typeof AppInquiriesIndexRoute
   '/settings': typeof AppSettingsIndexRoute
   '/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
@@ -172,15 +195,18 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
+  '/_app/inquiries': typeof AppInquiriesRouteWithChildren
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/preview/program': typeof PreviewProgramRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/_app/': typeof AppIndexRoute
   '/_app/content/media': typeof AppContentMediaRoute
   '/_app/content/tags': typeof AppContentTagsRoute
+  '/_app/inquiries/$id': typeof AppInquiriesIdRoute
   '/_app/settings/access': typeof AppSettingsAccessRoute
   '/_app/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_app/inquiries/': typeof AppInquiriesIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/_app/content/sessions/$id': typeof AppContentSessionsIdRoute
@@ -195,14 +221,17 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/preview'
+    | '/inquiries'
     | '/api/corporate-inquiries'
     | '/preview/program'
     | '/preview/workshop'
     | '/content/media'
     | '/content/tags'
+    | '/inquiries/$id'
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
+    | '/inquiries/'
     | '/settings/'
     | '/content/corporate-trainings/$id'
     | '/content/sessions/$id'
@@ -220,9 +249,11 @@ export interface FileRouteTypes {
     | '/'
     | '/content/media'
     | '/content/tags'
+    | '/inquiries/$id'
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
+    | '/inquiries'
     | '/settings'
     | '/content/corporate-trainings/$id'
     | '/content/sessions/$id'
@@ -235,15 +266,18 @@ export interface FileRouteTypes {
     | '/_app'
     | '/login'
     | '/preview'
+    | '/_app/inquiries'
     | '/api/corporate-inquiries'
     | '/preview/program'
     | '/preview/workshop'
     | '/_app/'
     | '/_app/content/media'
     | '/_app/content/tags'
+    | '/_app/inquiries/$id'
     | '/_app/settings/access'
     | '/_app/settings/industries'
     | '/api/auth/$'
+    | '/_app/inquiries/'
     | '/_app/settings/'
     | '/_app/content/corporate-trainings/$id'
     | '/_app/content/sessions/$id'
@@ -291,6 +325,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/inquiries': {
+      id: '/_app/inquiries'
+      path: '/inquiries'
+      fullPath: '/inquiries'
+      preLoaderRoute: typeof AppInquiriesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/corporate-inquiries': {
       id: '/api/corporate-inquiries'
       path: '/api/corporate-inquiries'
@@ -325,6 +366,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/content/tags'
       preLoaderRoute: typeof AppContentTagsRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/inquiries/': {
+      id: '/_app/inquiries/'
+      path: '/'
+      fullPath: '/inquiries/'
+      preLoaderRoute: typeof AppInquiriesIndexRouteImport
+      parentRoute: typeof AppInquiriesRoute
+    }
+    '/_app/inquiries/$id': {
+      id: '/_app/inquiries/$id'
+      path: '/$id'
+      fullPath: '/inquiries/$id'
+      preLoaderRoute: typeof AppInquiriesIdRouteImport
+      parentRoute: typeof AppInquiriesRoute
     }
     '/_app/settings/': {
       id: '/_app/settings/'
@@ -399,7 +454,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppInquiriesRouteChildren {
+  AppInquiriesIdRoute: typeof AppInquiriesIdRoute
+  AppInquiriesIndexRoute: typeof AppInquiriesIndexRoute
+}
+
+const AppInquiriesRouteChildren: AppInquiriesRouteChildren = {
+  AppInquiriesIdRoute: AppInquiriesIdRoute,
+  AppInquiriesIndexRoute: AppInquiriesIndexRoute,
+}
+
+const AppInquiriesRouteWithChildren = AppInquiriesRoute._addFileChildren(
+  AppInquiriesRouteChildren,
+)
+
 interface AppRouteChildren {
+  AppInquiriesRoute: typeof AppInquiriesRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppContentMediaRoute: typeof AppContentMediaRoute
   AppContentTagsRoute: typeof AppContentTagsRoute
@@ -415,6 +485,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppInquiriesRoute: AppInquiriesRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppContentMediaRoute: AppContentMediaRoute,
   AppContentTagsRoute: AppContentTagsRoute,

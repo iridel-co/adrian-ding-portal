@@ -60,7 +60,7 @@ vi.mock("@/db", () => ({ getDb: () => ({
 vi.mock("@/features/crm/staff", () => ({ changeInquiry: harness.crmCall, inquiryDetail: harness.crmCall,
   listInquiries: harness.crmCall, retryInquiryEmail: harness.crmCall }));
 vi.mock("@/lib/env", () => ({ getEnv: () => ({ BETTER_AUTH_URL: "https://portal.test" }) }));
-import { $changeInquiry, $listInquiries } from "@/features/crm/functions";
+import { $changeInquiry, $crmAccess, $listInquiries } from "@/features/crm/functions";
 
 afterEach(() => vi.unstubAllEnvs());
 beforeEach(() => {
@@ -74,6 +74,14 @@ beforeEach(() => {
 });
 
 describe("Registered CRM permissions", () => {
+  it("returns only the current role for navigation and rejects removed assignments", async () => {
+    await expect($crmAccess()).resolves.toEqual({ role: "staff" });
+    harness.identity!.email = "admin@company.test";
+    await expect($crmAccess()).resolves.toEqual({ role: "admin" });
+    vi.stubEnv("ADMIN_EMAILS", "");
+    await expect($crmAccess()).rejects.toThrow("staff_access_required");
+    expect(harness.crmCall).not.toHaveBeenCalled();
+  });
   it("allows Staff and Admin inquiry access", async () => {
     await $listInquiries({ data: {} });
     expect(harness.crmCall).toHaveBeenCalledOnce();
@@ -98,6 +106,38 @@ describe("Registered CRM permissions", () => {
   it("rejects cross-site CRM calls without querying identity or inquiry data", async () => {
     harness.request = new Request("https://portal.test/_server/action", { headers: { Origin: "https://attacker.test", "Sec-Fetch-Site": "cross-site" } });
     await expect($listInquiries({ data: {} })).rejects.toThrow("origin_not_allowed");
+    expect(harness.dbCall).not.toHaveBeenCalled();
+    expect(harness.crmCall).not.toHaveBeenCalled();
+  });
+  it("allows an email link's GET page navigation while still checking the current role", async () => {
+    harness.request = new Request("https://portal.test/inquiries/12345678-abcd-4000-8000-123456789abc", {
+      headers: { "Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "document" }
+    });
+    await expect($crmAccess()).resolves.toEqual({ role: "staff" });
+    harness.identity!.email = "removed@company.test";
+    await expect($crmAccess()).rejects.toThrow("staff_access_required");
+    expect(harness.crmCall).not.toHaveBeenCalled();
+  });
+  it("allows the post-login document request even when its fetch mode is cors", async () => {
+    harness.request = new Request("https://portal.test/", { headers: {
+      "Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "cors", "Sec-Fetch-Dest": "document"
+    } });
+    await expect($crmAccess()).resolves.toEqual({ role: "staff" });
+    harness.identity!.email = "removed@company.test";
+    await expect($crmAccess()).rejects.toThrow("staff_access_required");
+  });
+  it("does not treat document metadata as permission for foreign origins, RPC calls or mutations", async () => {
+    const metadata = { "Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "cors", "Sec-Fetch-Dest": "document" };
+    for (const headers of [
+      { ...metadata, Origin: "https://attacker.test" },
+      { ...metadata, "x-tsr-serverFn": "true" },
+      { ...metadata, "Sec-Fetch-Dest": "empty" }
+    ]) {
+      harness.request = new Request("https://portal.test/_server/action", { headers });
+      await expect($crmAccess()).rejects.toThrow("origin_not_allowed");
+    }
+    harness.request = new Request("https://portal.test/_server/action", { method: "POST", headers: metadata });
+    await expect($changeInquiry({ data: { id: "12345678-abcd-4000-8000-123456789abc", expectedStatus: "NEW", status: "CONTACTED" } })).rejects.toThrow("origin_not_allowed");
     expect(harness.dbCall).not.toHaveBeenCalled();
     expect(harness.crmCall).not.toHaveBeenCalled();
   });
