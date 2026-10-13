@@ -6,7 +6,7 @@ import { activityLog, corporateInquiry, corporateInquiryStatus, crmEmailJob } fr
 import { diffChanges, logActivity } from "@/features/shared/audit";
 import type { PortalActor } from "@/lib/access";
 import { sendEmailJob, type EmailTransport } from "./email";
-import { IntakeError } from "./errors";
+import { IntakeError, IntakeErrorCode } from "./errors";
 import { assertInquiryTransition } from "./lifecycle";
 import type { inquiryListSchema, inquiryPageSchema, inquiryTransitionSchema } from "./schemas";
 
@@ -43,7 +43,7 @@ export async function listInquiries(db: Db, input: z.output<typeof inquiryListSc
 
 export async function inquiryDetail(db: Db, id: string, page: z.output<typeof inquiryPageSchema>) {
   const [inquiry] = await db.select(inquiryFields).from(corporateInquiry).where(eq(corporateInquiry.id, id));
-  if (!inquiry) throw new IntakeError(404, "inquiry_not_found");
+  if (!inquiry) throw new IntakeError(404, IntakeErrorCode.InquiryNotFound);
   const history = await db.select({
     id: activityLog.id, action: activityLog.action,
     createdAt: activityLog.createdAt, changes: activityLog.changes
@@ -65,8 +65,8 @@ export async function changeInquiry(db: Db, id: string, actor: PortalActor, inpu
     await tx.execute(sql`set local lock_timeout = '5s'`);
     await tx.execute(sql`set local statement_timeout = '10s'`);
     const [before] = await tx.select().from(corporateInquiry).where(eq(corporateInquiry.id, id)).for("update");
-    if (!before) throw new IntakeError(404, "inquiry_not_found");
-    if (before.status !== input.expectedStatus) throw new IntakeError(409, "inquiry_status_changed");
+    if (!before) throw new IntakeError(404, IntakeErrorCode.InquiryNotFound);
+    if (before.status !== input.expectedStatus) throw new IntakeError(409, IntakeErrorCode.InquiryStatusChanged);
     assertInquiryTransition(before.status, input.status);
     const [after] = await tx.update(corporateInquiry).set({
       status: input.status, updatedAt: sql`clock_timestamp()`,
@@ -95,10 +95,10 @@ export async function retryInquiryEmail(db: Db, inquiryId: string, jobId: string
   transport?: EmailTransport) {
   const [job] = await db.select({ ...emailFields, now: sql<Date>`clock_timestamp()` }).from(crmEmailJob)
     .where(and(eq(crmEmailJob.id, jobId), eq(crmEmailJob.corporateInquiryId, inquiryId)));
-  if (!job) throw new IntakeError(404, "email_job_not_found");
+  if (!job) throw new IntakeError(404, IntakeErrorCode.EmailJobNotFound);
   if (!["pending", "failed", "sending"].includes(job.state)
     || (job.state === "sending" && job.leaseExpiresAt && job.leaseExpiresAt > new Date(job.now))) {
-    throw new IntakeError(409, "email_not_retryable");
+    throw new IntakeError(409, IntakeErrorCode.EmailNotRetryable);
   }
   await sendEmailJob(db, jobId, apiKey, transport, actor);
   const [result] = await db.select(emailFields).from(crmEmailJob).where(eq(crmEmailJob.id, jobId));

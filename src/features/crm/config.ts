@@ -1,6 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { z } from "zod";
-import { IntakeError } from "./errors";
+import { IntakeError, IntakeErrorCode } from "./errors";
 
 const originsSchema = z.string().default("").transform(value => value.split(",").map(value => value.trim()).filter(Boolean))
   .pipe(z.array(z.url().refine(value => {
@@ -12,7 +12,7 @@ const originsSchema = z.string().default("").transform(value => value.split(",")
 
 export function getCorporateOrigins() {
   const result = originsSchema.safeParse(process.env.SITE_ORIGINS);
-  if (!result.success) throw new IntakeError(503, "intake_unavailable");
+  if (!result.success) throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
   return result.data;
 }
 
@@ -33,20 +33,20 @@ const configSchema = z.object({
 });
 
 export function getCorporateConfig() {
-  if (process.env.CORPORATE_INTAKE_ENABLED !== "true") throw new IntakeError(503, "intake_unavailable");
+  if (process.env.CORPORATE_INTAKE_ENABLED !== "true") throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
   const secret = z.string().min(1).safeParse(process.env.TURNSTILE_SECRET_KEY);
-  if (!secret.success) throw new IntakeError(503, "intake_unavailable");
+  if (!secret.success) throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
   return { ...getCorporateMailConfig(), TURNSTILE_SECRET_KEY: secret.data };
 }
 
 export function getCorporateMailConfig() {
   const result = configSchema.safeParse(process.env);
-  if (!result.success) throw new IntakeError(503, "intake_unavailable");
+  if (!result.success) throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
   const config = result.data;
   if (config.CORPORATE_EMAIL_ENABLED && (!config.RESEND_API_KEY
     || /example\.|\.invalid|\[|\]/i.test([config.CORPORATE_EMAIL_FROM, config.CORPORATE_REPLY_TO,
       ...config.CORPORATE_INQUIRY_RECIPIENTS, config.CORPORATE_TEAM_PHONE, config.CORPORATE_CREDIBILITY_LINE].join(" ")))) {
-    throw new IntakeError(503, "intake_unavailable");
+    throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
   }
   return { ...config, EMAIL_FROM: config.CORPORATE_EMAIL_FROM, EMAIL_REPLY_TO: config.CORPORATE_REPLY_TO };
 }

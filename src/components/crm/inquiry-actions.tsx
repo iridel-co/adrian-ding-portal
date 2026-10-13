@@ -1,3 +1,4 @@
+import { IntakeErrorCode } from "@/features/crm/errors";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
@@ -26,7 +27,7 @@ export function InquiryActions({ inquiry, draft, setDraft }: {
     mutationFn: (data: Parameters<typeof $changeInquiry>[0]["data"]) => $changeInquiry({ data }),
     onSuccess: async () => { updateDraft({ selected: null }); toast.success("Inquiry status updated."); await queryClient.invalidateQueries({ queryKey: inquiryQueryKey }); },
     onError: async error => {
-      if (error.message === "inquiry_status_changed" || error.message === "invalid_inquiry_transition" || isInquiryAccessError(error)) {
+      if (error.message === IntakeErrorCode.InquiryStatusChanged || error.message === IntakeErrorCode.InvalidInquiryTransition || isInquiryAccessError(error)) {
         await queryClient.invalidateQueries({ queryKey: inquiryQueryKey });
       }
     }

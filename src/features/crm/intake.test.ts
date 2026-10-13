@@ -10,7 +10,7 @@ import { getCorporateConfig } from "./config";
 import { verifyCorporateTurnstile } from "./turnstile";
 import { acceptCorporateInquiry } from "./service";
 import { sendEmailJob } from "./email";
-import { IntakeError } from "./errors";
+import { IntakeError, IntakeErrorCode } from "./errors";
 import { handleCorporateInquiry } from "./intake";
 
 const answers = { fullName: "Test Lead", email: "test@example.invalid", phone: "+639171234567", consent: true,
@@ -61,7 +61,7 @@ describe("Corporate public intake", () => {
   });
 
   it("rejects a failed bot check before saving", async () => {
-    vi.mocked(verifyCorporateTurnstile).mockRejectedValue(new IntakeError(400, "verification_failed"));
+    vi.mocked(verifyCorporateTurnstile).mockRejectedValue(new IntakeError(400, IntakeErrorCode.VerificationFailed));
     expect((await handleCorporateInquiry(request())).status).toBe(400);
     expect(getDb).not.toHaveBeenCalled();
   });
@@ -87,7 +87,7 @@ describe("Corporate public intake", () => {
   });
 
   it("returns mismatch conflicts and hides unexpected database errors", async () => {
-    vi.mocked(acceptCorporateInquiry).mockRejectedValue(new IntakeError(409, "idempotency_key_mismatch"));
+    vi.mocked(acceptCorporateInquiry).mockRejectedValue(new IntakeError(409, IntakeErrorCode.IdempotencyKeyMismatch));
     expect((await handleCorporateInquiry(request())).status).toBe(409);
     vi.mocked(acceptCorporateInquiry).mockRejectedValue(new Error("private database connection"));
     const response = await handleCorporateInquiry(request());

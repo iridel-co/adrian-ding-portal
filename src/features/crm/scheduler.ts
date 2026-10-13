@@ -5,7 +5,7 @@ import { corporateInquiry, crmEmailJob } from "@/db/schema";
 import type { DbOrTx } from "@/features/shared/db-types";
 import { getCorporateMailConfig } from "./config";
 import { sendEmailJob, type EmailTransport } from "./email";
-import { IntakeError } from "./errors";
+import { IntakeError, IntakeErrorCode } from "./errors";
 import { corporateOverdueMessage, type CorporateMailConfig } from "./templates";
 
 // Bounds each invocation; the next 15-minute tick handles remaining work.
@@ -45,8 +45,8 @@ export async function runCorporateScheduler(db: DbOrTx, config: ReturnType<typeo
       catch (error) {
         // Rotate blocked snapshots behind other work without changing their content.
         // They remain visible for manual review instead of starving later jobs.
-        if (error instanceof IntakeError && error.code === "email_unavailable") {
-          await db.update(crmEmailJob).set({ updatedAt: sql`clock_timestamp()`, lastErrorCode: "email_unavailable" })
+        if (error instanceof IntakeError && error.code === IntakeErrorCode.EmailUnavailable) {
+          await db.update(crmEmailJob).set({ updatedAt: sql`clock_timestamp()`, lastErrorCode: IntakeErrorCode.EmailUnavailable })
             .where(and(eq(crmEmailJob.id, job.id), inArray(crmEmailJob.state, ["pending", "failed", "sending"])));
         }
         throw error;
@@ -59,27 +59,27 @@ export async function runCorporateScheduler(db: DbOrTx, config: ReturnType<typeo
 
 async function authenticateScheduler(request: Request) {
   const secret = process.env.CORPORATE_SCHEDULER_SECRET;
-  if (!secret || secret.length < 32) throw new IntakeError(503, "scheduler_unavailable");
+  if (!secret || secret.length < 32) throw new IntakeError(503, IntakeErrorCode.SchedulerUnavailable);
   const authorization = request.headers.get("authorization") ?? "";
-  if (authorization.length > 1024) throw new IntakeError(401, "scheduler_unauthorized");
+  if (authorization.length > 1024) throw new IntakeError(401, IntakeErrorCode.SchedulerUnauthorized);
   // Compare fixed-size hashes so the comparison does not stop at the first differing byte.
   const hash = async (value: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)));
   const [expected, supplied] = await Promise.all([hash(`Bearer ${secret}`), hash(authorization)]);
   let difference = 0;
   for (let index = 0; index < expected.length; index++) difference |= expected[index] ^ supplied[index];
-  if (difference !== 0) throw new IntakeError(401, "scheduler_unauthorized");
+  if (difference !== 0) throw new IntakeError(401, IntakeErrorCode.SchedulerUnauthorized);
 }
 
 export async function handleCorporateScheduler(request: Request) {
   const headers = { "Cache-Control": "no-store" };
   try {
-    if (request.method !== "POST") throw new IntakeError(405, "method_not_allowed");
+    if (request.method !== "POST") throw new IntakeError(405, IntakeErrorCode.MethodNotAllowed);
     await authenticateScheduler(request);
-    if (process.env.CORPORATE_SCHEDULER_ENABLED !== "true") throw new IntakeError(503, "scheduler_disabled");
+    if (process.env.CORPORATE_SCHEDULER_ENABLED !== "true") throw new IntakeError(503, IntakeErrorCode.SchedulerDisabled);
     const result = await runCorporateScheduler(getDb(), getCorporateMailConfig());
     return Response.json(result, { headers });
   } catch (error) {
-    const failure = error instanceof IntakeError ? error : new IntakeError(503, "scheduler_unavailable");
+    const failure = error instanceof IntakeError ? error : new IntakeError(503, IntakeErrorCode.SchedulerUnavailable);
     return Response.json({ error: failure.code }, { status: failure.status, headers });
   }
 }

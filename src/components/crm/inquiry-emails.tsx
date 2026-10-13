@@ -1,3 +1,4 @@
+import { IntakeErrorCode } from "@/features/crm/errors";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -20,7 +21,7 @@ export function InquiryEmails({ inquiryId, jobs }: { inquiryId: string; jobs: Em
       await queryClient.invalidateQueries({ queryKey: inquiryQueryKey });
     },
     onError: async error => {
-      if (error.message === "email_not_retryable" || isInquiryAccessError(error)) await queryClient.invalidateQueries({ queryKey: inquiryQueryKey });
+      if (error.message === IntakeErrorCode.EmailNotRetryable || isInquiryAccessError(error)) await queryClient.invalidateQueries({ queryKey: inquiryQueryKey });
     }
   });
   const selectedJob = jobs.find(job => job.id === selected);

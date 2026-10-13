@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { getCorporateConfig, getCorporateOrigins } from "./config";
 import { sendEmailJob } from "./email";
-import { IntakeError } from "./errors";
+import { IntakeError, IntakeErrorCode } from "./errors";
 import { readJson } from "./http";
 import { corporateInquirySchema, idempotencyKeySchema } from "./schemas";
 import { acceptCorporateInquiry } from "./service";
@@ -19,21 +19,21 @@ export async function handleCorporateInquiry(request: Request) {
   try {
     const origins = getCorporateOrigins();
     const origin = request.headers.get("origin");
-    if (!origin || !origins.includes(origin)) throw new IntakeError(403, "origin_not_allowed");
+    if (!origin || !origins.includes(origin)) throw new IntakeError(403, IntakeErrorCode.OriginNotAllowed);
     headers.set("Access-Control-Allow-Origin", origin);
     if (request.method === "OPTIONS") return handleOptions(request, headers);
-    if (request.method !== "POST") throw new IntakeError(405, "method_not_allowed");
+    if (request.method !== "POST") throw new IntakeError(405, IntakeErrorCode.MethodNotAllowed);
     return await handlePost(request, headers, origins);
   } catch (error) {
-    const failure = error instanceof IntakeError ? error : new IntakeError(503, "intake_unavailable");
+    const failure = error instanceof IntakeError ? error : new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
     return Response.json({ error: failure.code }, { status: failure.status, headers });
   }
 }
 
 function handleOptions(request: Request, headers: Headers) {
-  if (request.headers.get("access-control-request-method") !== "POST") throw new IntakeError(405, "method_not_allowed");
+  if (request.headers.get("access-control-request-method") !== "POST") throw new IntakeError(405, IntakeErrorCode.MethodNotAllowed);
   const requested = request.headers.get("access-control-request-headers")?.toLowerCase().split(",").map(value => value.trim()) ?? [];
-  if (requested.some(header => !["content-type", "idempotency-key"].includes(header))) throw new IntakeError(400, "headers_not_allowed");
+  if (requested.some(header => !["content-type", "idempotency-key"].includes(header))) throw new IntakeError(400, IntakeErrorCode.HeadersNotAllowed);
   headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
   headers.set("Access-Control-Allow-Headers", "Content-Type, Idempotency-Key");
   return new Response(null, { status: 204, headers });
@@ -42,11 +42,11 @@ function handleOptions(request: Request, headers: Headers) {
 async function handlePost(request: Request, headers: Headers, origins: string[]) {
   const config = getCorporateConfig();
   const key = idempotencyKeySchema.safeParse(request.headers.get("idempotency-key"));
-  if (!key.success) throw new IntakeError(400, "invalid_idempotency_key");
+  if (!key.success) throw new IntakeError(400, IntakeErrorCode.InvalidIdempotencyKey);
   const parsed = submissionSchema.safeParse(await readJson(request));
-  if (!parsed.success) throw new IntakeError(400, "invalid_submission");
+  if (!parsed.success) throw new IntakeError(400, IntakeErrorCode.InvalidSubmission);
   const { website, turnstileToken, ...answers } = parsed.data;
-  if (website) throw new IntakeError(400, "submission_rejected");
+  if (website) throw new IntakeError(400, IntakeErrorCode.SubmissionRejected);
   // Verify every attempt; a retry needs a fresh token, which is excluded from the saved hash.
   await verifyCorporateTurnstile(turnstileToken, config.TURNSTILE_SECRET_KEY, origins);
   const db = getDb();

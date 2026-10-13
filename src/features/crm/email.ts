@@ -4,7 +4,7 @@ import { corporateInquiry, crmEmailJob, type CrmEmailPayload } from "@/db/schema
 import type { DbOrTx } from "@/features/shared/db-types";
 import { logActivity } from "@/features/shared/audit";
 import type { PortalActor } from "@/lib/access";
-import { IntakeError } from "./errors";
+import { IntakeError, IntakeErrorCode } from "./errors";
 import { corporateMessageHasPlaceholders } from "./templates";
 
 export type EmailTransport = (payload: CrmEmailPayload, key: string) => Promise<{ id: string }>;
@@ -61,7 +61,7 @@ export async function sendEmailJob(db: DbOrTx, id: string, apiKey: string,
       await tx.update(crmEmailJob).set({ state: "needs_reconciliation", leaseExpiresAt: null, lastErrorCode: "idempotency_window_expired" }).where(eq(crmEmailJob.id, id));
       return null;
     }
-    if (job.corporateInquiryId && corporateMessageHasPlaceholders(job.payload)) throw new IntakeError(503, "email_unavailable");
+    if (job.corporateInquiryId && corporateMessageHasPlaceholders(job.payload)) throw new IntakeError(503, IntakeErrorCode.EmailUnavailable);
     const [claimed] = await tx.update(crmEmailJob).set({ state: "sending", attemptCount: job.attemptCount + 1,
       firstAttemptAt: job.firstAttemptAt ?? now, lastAttemptAt: now, leaseExpiresAt: new Date(now.getTime() + LEASE_MS), lastErrorCode: null })
       .where(eq(crmEmailJob.id, id)).returning();

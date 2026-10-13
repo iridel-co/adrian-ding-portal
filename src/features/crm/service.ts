@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { corporateInquiry, crmEmailJob, crmSubmissionKey } from "@/db/schema";
 import type { DbOrTx } from "@/features/shared/db-types";
 import { inquiryDeadline } from "./deadline";
-import { IntakeError } from "./errors";
+import { IntakeError, IntakeErrorCode } from "./errors";
 import type { CorporateInquiryInput } from "./schemas";
 
 import { corporateMessages, type CorporateMailConfig } from "./templates";
@@ -11,7 +11,7 @@ export type { CorporateMailConfig } from "./templates";
 
 export async function acceptCorporateInquiry(db: DbOrTx, data: CorporateInquiryInput, key: string,
   config: CorporateMailConfig, now = new Date()) {
-  if (data.consent !== true) throw new IntakeError(400, "consent_required");
+  if (data.consent !== true) throw new IntakeError(400, IntakeErrorCode.ConsentRequired);
   const canonical = JSON.stringify({ kind: "corporate", data: Object.fromEntries(
     Object.entries(data).sort(([a], [b]) => a.localeCompare(b))) });
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
@@ -21,7 +21,7 @@ export async function acceptCorporateInquiry(db: DbOrTx, data: CorporateInquiryI
     await tx.execute(sql`set local statement_timeout = '10s'`);
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`crm:key:${key}`}, 0))`);
     const [receipt] = await tx.select().from(crmSubmissionKey).where(eq(crmSubmissionKey.key, key));
-    if (receipt && receipt.payloadHash !== hash) throw new IntakeError(409, "idempotency_key_mismatch");
+    if (receipt && receipt.payloadHash !== hash) throw new IntakeError(409, IntakeErrorCode.IdempotencyKeyMismatch);
     if (receipt) return [] as string[];
     const { consent: _consent, ...answers } = data;
     const [saved] = await tx.insert(corporateInquiry).values({ ...answers, idempotencyKey: key, payloadHash: hash,

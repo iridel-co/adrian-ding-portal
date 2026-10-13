@@ -1,3 +1,4 @@
+import { IntakeErrorCode } from "./errors";
 import type { InquiryStatus } from "./lifecycle";
 
 export const inquiryStatusLabels: Record<InquiryStatus, string> = {
@@ -32,15 +33,15 @@ export const emailStateLabels: Record<string, string> = {
 const messages: Record<string, string> = {
   Unauthorized: "Your session has ended. Sign in again.",
   staff_access_required: "Your account does not have inquiry access. Contact your portal administrator.",
-  origin_not_allowed: "This request was blocked. Open the portal at its configured address and try again.",
+  [IntakeErrorCode.OriginNotAllowed]: "This request was blocked. Open the portal at its configured address and try again.",
   access_unavailable: "Unable to check inquiry access. Try again.",
   crm_unavailable: "Unable to load or save this inquiry. Try again.",
-  inquiry_not_found: "This inquiry could not be found.",
-  inquiry_status_changed: "Another staff member changed this inquiry. Review the latest status before trying again. Your input has been kept.",
-  invalid_inquiry_transition: "This action is no longer available. Refresh and review the inquiry.",
-  email_unavailable: "Email sending is disabled or the saved message contains placeholders. Contact your portal administrator.",
-  email_not_retryable: "This email cannot be retried right now. Refresh to check its latest state.",
-  email_job_not_found: "This email could not be found for the inquiry."
+  [IntakeErrorCode.InquiryNotFound]: "This inquiry could not be found.",
+  [IntakeErrorCode.InquiryStatusChanged]: "Another staff member changed this inquiry. Review the latest status before trying again. Your input has been kept.",
+  [IntakeErrorCode.InvalidInquiryTransition]: "This action is no longer available. Refresh and review the inquiry.",
+  [IntakeErrorCode.EmailUnavailable]: "Email sending is disabled or the saved message contains placeholders. Contact your portal administrator.",
+  [IntakeErrorCode.EmailNotRetryable]: "This email cannot be retried right now. Refresh to check its latest state.",
+  [IntakeErrorCode.EmailJobNotFound]: "This email could not be found for the inquiry."
 };
 export function inquiryErrorMessage(error: unknown) {
   return error instanceof Error && messages[error.message] ? messages[error.message] : "The request could not be completed. Try again.";
