@@ -1,6 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { and, eq, sql } from "drizzle-orm";
-import { crmEmailJob, registration, type CrmEmailPayload } from "@/db/schema";
+import { corporateInquiry, crmEmailJob, registration, type CrmEmailPayload } from "@/db/schema";
 import type { DbOrTx } from "@/features/shared/db-types";
 import { logActivity } from "@/features/shared/audit";
 import type { PortalActor } from "@/lib/access";
@@ -40,16 +40,22 @@ export async function sendEmailJob(db: DbOrTx, id: string, apiKey: string,
   const claimed = await db.transaction(async tx => {
     await tx.execute(sql`set local lock_timeout = '5s'`);
     await tx.execute(sql`set local statement_timeout = '10s'`);
-    const [lookup] = await tx.select({ registrationId: crmEmailJob.registrationId }).from(crmEmailJob).where(eq(crmEmailJob.id, id));
+    const [lookup] = await tx.select({ registrationId: crmEmailJob.registrationId, corporateInquiryId: crmEmailJob.corporateInquiryId }).from(crmEmailJob).where(eq(crmEmailJob.id, id));
     if (!lookup) return null;
-    // Staff changes lock the registration before its jobs. Use that order here
+    // Staff changes lock the owning record before its jobs. Use that order here
     // too, and release all locks before the provider call.
     const [owner] = lookup.registrationId ? await tx.select().from(registration).where(eq(registration.id, lookup.registrationId)).for("share") : [];
+    const [inquiry] = lookup.corporateInquiryId ? await tx.select().from(corporateInquiry)
+      .where(eq(corporateInquiry.id, lookup.corporateInquiryId)).for("share") : [];
     const [job] = await tx.select().from(crmEmailJob).where(eq(crmEmailJob.id, id)).for("update");
     if (!job || ["sent", "skipped", "needs_reconciliation"].includes(job.state)) return null;
     const [{ instant }] = await tx.execute<{ instant: string }>(sql`select clock_timestamp() as instant`);
     const now = new Date(instant);
     if (job.state === "sending" && job.leaseExpiresAt && job.leaseExpiresAt > now) return null;
+    if (job.kind === "corporate_overdue" && (!inquiry || inquiry.status !== "NEW" || inquiry.slaDueAt >= now)) {
+      await tx.update(crmEmailJob).set({ state: "skipped", leaseExpiresAt: null, lastErrorCode: "inquiry_reminder_obsolete" }).where(eq(crmEmailJob.id, id));
+      return null;
+    }
     if (job.firstAttemptAt && now.getTime() - job.firstAttemptAt.getTime() >= RETRY_WINDOW_MS) {
       await tx.update(crmEmailJob).set({ state: "needs_reconciliation", leaseExpiresAt: null, lastErrorCode: "idempotency_window_expired" }).where(eq(crmEmailJob.id, id));
       return null;

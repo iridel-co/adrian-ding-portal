@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { corporateMessageHasPlaceholders, corporateMessages } from "./templates";
+import { corporateMessageHasPlaceholders, corporateMessages, corporateOverdueMessage } from "./templates";
 import { corporateInquirySchema } from "./schemas";
 
 const data = corporateInquirySchema.parse({ fullName: "Test <Lead>", email: "lead@example.invalid", phone: "+639171234567",
@@ -41,4 +41,16 @@ describe("Corporate E3 and N3 email content", () => {
     expect(acknowledgment.text).toContain("Not fixed yet; next quarter");
     expect(acknowledgment.text).not.toContain("2027-01-12");
   });
+});
+
+it("sends N4 only to both staff with an escaped inquiry summary and Manila deadline", () => {
+  const inquiry = { id: "inquiry-id", fullName: data.fullName, company: data.company, program: data.program,
+    slaDueAt: new Date("2026-10-20T02:00:00Z") };
+  const message = corporateOverdueMessage(inquiry, config);
+  expect(message.to).toEqual(config.CORPORATE_INQUIRY_RECIPIENTS);
+  expect(message.to).not.toContain(data.email);
+  expect(message.text).toContain("Manila time");
+  expect(message.text).toContain("https://portal.test/inquiries/inquiry-id");
+  expect(message.html).toContain("Test &lt;Lead&gt;");
+  expect(message.subject).toContain("overdue");
 });

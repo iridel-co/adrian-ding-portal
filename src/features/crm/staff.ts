@@ -1,5 +1,5 @@
 import "@tanstack/react-start/server-only";
-import { and, desc, eq, getTableColumns, ilike, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db";
 import { activityLog, corporateInquiry, crmEmailJob } from "@/db/schema";
@@ -68,6 +68,10 @@ export async function changeInquiry(db: Db, id: string, actor: PortalActor, inpu
     }).where(eq(corporateInquiry.id, id)).returning({ status: corporateInquiry.status,
       contactedAt: corporateInquiry.contactedAt, proposalSentAt: corporateInquiry.proposalSentAt,
       closedAt: corporateInquiry.closedAt, estimatedValueCentavos: corporateInquiry.estimatedValueCentavos, lostReason: corporateInquiry.lostReason });
+    // An in-flight provider request cannot be retracted; only skip unclaimed reminders.
+    await tx.update(crmEmailJob).set({ state: "skipped", leaseExpiresAt: null, lastErrorCode: "inquiry_reminder_obsolete" })
+      .where(and(eq(crmEmailJob.corporateInquiryId, id), eq(crmEmailJob.kind, "corporate_overdue"),
+        inArray(crmEmailJob.state, ["pending", "failed"])));
     await logActivity(tx, { userId: actor.id, action: "status_change", entityType: "corporate_inquiry", entityId: id,
       changes: { ...diffChanges(before, after), actor: { from: null, to: { id: actor.id, name: actor.name, email: actor.email } } } });
     return { changed: true, status: after.status };

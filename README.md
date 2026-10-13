@@ -1,13 +1,5 @@
 # Adrian Ding Portal
 
-## Corporate inquiry work
-
-See [the FSD implementation plan](docs/crm/CORPORATE-INQUIRY-PLAN.md) for the
-corporate inquiry lifecycle, reusable portal code, implementation sequence and
-remaining decisions. Storage, public intake, email delivery and staff operations
-are implemented. Step 4 adds the inquiry screens for review. Website integration
-and scheduled recovery remain later steps.
-
 Internal dashboard shell. TanStack Start (frontend + server in one app), Better Auth with Google sign-in, Drizzle + Postgres, shadcn/ui.
 
 Only allowlisted emails can sign in. Manage the list on the **Settings** page.
@@ -95,20 +87,40 @@ responses exclude message payloads, submission hashes and provider identifiers.
 Staff retry uses mail settings independently of the public intake switch. Active
 leases, completed jobs and reconciliation jobs cannot be retried. Expired
 attempts are marked for reconciliation; placeholder snapshots are never sent.
-The portal now has `/inquiries` and `/inquiries/:id` pages. Assigned Staff and
+The portal provides `/inquiries` and `/inquiries/:id` pages. Assigned Staff and
 Admin accounts land on Inquiries after sign-in. The list supports status filters,
 search and pagination; detail shows submitted requirements, Manila deadlines,
 valid status actions, email retry controls and history. Contact and proposal
-messages are sent outside the portal, then recorded here. The recovery scheduler
-is a later step. CRM server functions reject cross-site requests and require an
-approved portal origin for mutations; public intake keeps its own CORS policy.
+messages are sent outside the portal, then recorded here. CRM server functions
+reject cross-site requests and require an approved portal origin for mutations;
+public intake keeps its own CORS policy.
 
 CRM roles come from `ADMIN_EMAILS` and `STAFF_EMAILS` deployment settings. Admin
 wins if an email appears in both lists. Each CRM request requires a verified
 Google account and a current role assignment. The database sign-in list does not
 grant CRM access. Staff emails are included in sign-in, but CMS/settings keep
-their existing signed-in-user permissions in this step. CMS role enforcement is
-deferred at the user's request.
+their existing signed-in-user permissions.
+
+### Corporate scheduler
+
+Apply migrations with `pnpm db:migrate`. Set `CORPORATE_SCHEDULER_ENABLED=true`
+and a random `CORPORATE_SCHEDULER_SECRET` of at least 32 characters. Restart the
+local app after changing `.env`.
+
+`POST /api/internal/corporate-scheduler` requires the secret as a Bearer token.
+It queues one reminder per overdue NEW inquiry and retries eligible corporate
+emails. Keep `CORPORATE_EMAIL_ENABLED=false` to queue reminders without sending.
+Public intake can remain disabled.
+
+```bash
+curl -X POST http://localhost:3000/api/internal/corporate-scheduler \
+  -H 'Authorization: Bearer <your-secret>'
+```
+
+Scheduler hosting is awaiting confirmation. Configure the chosen scheduler to
+call this endpoint every 15 minutes with the shared secret. Enabling the endpoint
+alone does not start automatic runs. A saved email marked `needs_reconciliation`
+requires checking the provider before any new send.
 
 ## Deploy
 

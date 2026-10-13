@@ -25,6 +25,7 @@ import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/ind
 import { Route as AppSettingsAccessRouteImport } from './routes/_app/settings/access'
 import { Route as AppSettingsIndustriesRouteImport } from './routes/_app/settings/industries'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiInternalCorporateSchedulerRouteImport } from './routes/api/internal/corporate-scheduler'
 import { Route as AppContentCorporateTrainingsIndexRouteImport } from './routes/_app/content/corporate-trainings/index'
 import { Route as AppContentCorporateTrainingsIdRouteImport } from './routes/_app/content/corporate-trainings/$id'
 import { Route as AppContentSessionsIndexRouteImport } from './routes/_app/content/sessions/index'
@@ -111,6 +112,12 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalCorporateSchedulerRoute =
+  ApiInternalCorporateSchedulerRouteImport.update({
+    id: '/api/internal/corporate-scheduler',
+    path: '/api/internal/corporate-scheduler',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AppContentCorporateTrainingsIndexRoute =
   AppContentCorporateTrainingsIndexRouteImport.update({
     id: '/content/corporate-trainings/',
@@ -159,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/internal/corporate-scheduler': typeof ApiInternalCorporateSchedulerRoute
   '/inquiries/': typeof AppInquiriesIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
@@ -181,6 +189,7 @@ export interface FileRoutesByTo {
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/internal/corporate-scheduler': typeof ApiInternalCorporateSchedulerRoute
   '/inquiries': typeof AppInquiriesIndexRoute
   '/settings': typeof AppSettingsIndexRoute
   '/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
@@ -206,6 +215,7 @@ export interface FileRoutesById {
   '/_app/settings/access': typeof AppSettingsAccessRoute
   '/_app/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/internal/corporate-scheduler': typeof ApiInternalCorporateSchedulerRoute
   '/_app/inquiries/': typeof AppInquiriesIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
+    | '/api/internal/corporate-scheduler'
     | '/inquiries/'
     | '/settings/'
     | '/content/corporate-trainings/$id'
@@ -253,6 +264,7 @@ export interface FileRouteTypes {
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
+    | '/api/internal/corporate-scheduler'
     | '/inquiries'
     | '/settings'
     | '/content/corporate-trainings/$id'
@@ -277,6 +289,7 @@ export interface FileRouteTypes {
     | '/_app/settings/access'
     | '/_app/settings/industries'
     | '/api/auth/$'
+    | '/api/internal/corporate-scheduler'
     | '/_app/inquiries/'
     | '/_app/settings/'
     | '/_app/content/corporate-trainings/$id'
@@ -293,6 +306,7 @@ export interface RootRouteChildren {
   PreviewRoute: typeof PreviewRouteWithChildren
   ApiCorporateInquiriesRoute: typeof ApiCorporateInquiriesRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiInternalCorporateSchedulerRoute: typeof ApiInternalCorporateSchedulerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -409,6 +423,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/corporate-scheduler': {
+      id: '/api/internal/corporate-scheduler'
+      path: '/api/internal/corporate-scheduler'
+      fullPath: '/api/internal/corporate-scheduler'
+      preLoaderRoute: typeof ApiInternalCorporateSchedulerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/content/corporate-trainings/': {
       id: '/_app/content/corporate-trainings/'
       path: '/content/corporate-trainings'
@@ -522,6 +543,7 @@ const rootRouteChildren: RootRouteChildren = {
   PreviewRoute: PreviewRouteWithChildren,
   ApiCorporateInquiriesRoute: ApiCorporateInquiriesRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiInternalCorporateSchedulerRoute: ApiInternalCorporateSchedulerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

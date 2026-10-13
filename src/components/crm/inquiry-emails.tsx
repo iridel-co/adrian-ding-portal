@@ -27,7 +27,7 @@ export function InquiryEmails({ inquiryId, jobs }: { inquiryId: string; jobs: Em
   return <section className="space-y-3"><h2 className="text-xl font-medium">Email delivery</h2>
     <p className="text-sm text-muted-foreground">Provider acceptance does not confirm inbox delivery. Replies and proposals are handled outside the portal.</p>
     <div className="grid gap-3 sm:grid-cols-2">{jobs.map(job => <div className="space-y-2 rounded-lg border p-4" key={job.id}>
-      <h3 className="font-medium">{job.kind === "corporate_acknowledgment" ? "Customer acknowledgement" : "Staff notification"}</h3>
+      <h3 className="font-medium">{job.kind === "corporate_acknowledgment" ? "Customer acknowledgement" : job.kind === "corporate_overdue" ? "Overdue reply reminder" : "Staff notification"}</h3>
       <p>{emailStateLabels[job.state] ?? job.state}</p><p className="text-sm text-muted-foreground">Attempts: {job.attemptCount}<br />Last attempt: {formatInquiryTime(job.lastAttemptAt)}{job.sentAt && <><br />Accepted: {formatInquiryTime(job.sentAt)}</>}</p>
       {job.lastErrorCode && <p className="text-sm text-muted-foreground">Last result: {job.lastErrorCode.replaceAll("_", " ")}</p>}
       {job.state === "needs_reconciliation" && <p className="text-sm">Ask an administrator to check the provider before attempting any new send.</p>}

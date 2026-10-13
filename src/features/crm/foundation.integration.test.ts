@@ -8,6 +8,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 
 vi.mock("@tanstack/react-start/server-only", () => ({}));
+import { queueOverdueInquiries, runCorporateScheduler } from "./scheduler";
 import { relations } from "@/db/schema";
 import { acceptCorporateInquiry } from "./service";
 import { corporateInquirySchema } from "./schemas";
@@ -55,7 +56,7 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
     const migrations = path.resolve("drizzle");
     for (const name of await readdir(migrations)) {
       if (name.endsWith("_corporate_inquiry_lifecycle") || name.endsWith("_corporate_inquiry_dates")
-        || name.endsWith("_remove_inquiry_consent_timestamp")) continue;
+        || name.endsWith("_remove_inquiry_consent_timestamp") || name.endsWith("_corporate_inquiry_watchdog")) continue;
       const destination = path.join(baselineFolder, name);
       await mkdir(destination);
       await cp(path.join(migrations, name), destination, { recursive: true });
@@ -77,13 +78,13 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
       await migrate(database, { migrationsFolder: migrations });
       await migrate(database, { migrationsFolder: migrations });
       const [ledger] = await raw`select count(*)::int as count from drizzle.__drizzle_migrations`;
-      expect(ledger.count).toBe(8);
+      expect(ledger.count).toBe(9);
       if (index === 1) {
         expect((await raw`select title from workshop where slug = 'corporate-migration-sentinel'`)[0].title).toBe("Preserved workshop");
       } else { sql = raw; db = database; }
     }
     await sql`insert into "user" (id, name, email, email_verified) values (${actor.id}, ${actor.name}, ${actor.email}, true)`;
-    await sql`insert into account (id, account_id, provider_id, user_id) values (${`google-${suffix}`}, ${`google-${suffix}`}, 'google', ${actor.id})`;
+    await sql`insert into account (id, account_id, provider_id, user_id, updated_at) values (${`google-${suffix}`}, ${`google-${suffix}`}, 'google', ${actor.id}, now())`;
   }, 30000);
 
   afterAll(async () => {
@@ -108,8 +109,8 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
     expect(row.created_at.toISOString()).toBe(now.toISOString());
     expect(row.email).toBe(answers.email);
     expect(row.context).toBe(answers.context);
-    expect(row.target_date_from).toBe("2027-01-12");
-    expect(row.target_date_to).toBe("2027-01-14");
+    expect(row.target_date_from.toISOString().slice(0, 10)).toBe("2027-01-12");
+    expect(row.target_date_to.toISOString().slice(0, 10)).toBe("2027-01-14");
     expect(row.target_date).toBeNull();
     const jobs = await sql`select * from crm_email_job where corporate_inquiry_id = ${row.id}`;
     expect(jobs.map(job => job.kind).sort()).toEqual(["corporate_acknowledgment", "corporate_notification"]);
@@ -315,4 +316,124 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
     expect(capture).toHaveBeenCalledTimes(1);
     expect((await sql`select attempt_count from crm_email_job where id = ${placeholder.jobs[0]}`)[0].attempt_count).toBe(0);
   });
+  const overdueInquiry = async () => {
+    const key = randomUUID();
+    const jobs = await acceptCorporateInquiry(db, deliveryInput(), key, deliveryConfig, new Date(Date.now() - 7 * 86400000));
+    const [row] = await sql`select id from corporate_inquiry where idempotency_key = ${key}`;
+    return { id: row.id as string, jobs };
+  };
+  const schedulerConfig = { ...deliveryConfig, CORPORATE_EMAIL_ENABLED: true, RESEND_API_KEY: "unused",
+    CORPORATE_EMAIL_FROM: deliveryConfig.EMAIL_FROM, CORPORATE_REPLY_TO: deliveryConfig.EMAIL_REPLY_TO,
+    CORPORATE_PORTAL_URL: "https://portal.test" };
+
+  it("queues one N4 across overlapping scans, only for overdue NEW inquiries", async () => {
+    const overdue = await overdueInquiry();
+    const upcoming = await savedInquiry(deliveryInput(), deliveryConfig);
+    const closed = await overdueInquiry();
+    await changeInquiry(db, closed.id, actor, transition("NEW", "LOST", { lostReason: "Not a fit" }));
+    await Promise.all([queueOverdueInquiries(db, schedulerConfig), queueOverdueInquiries(db, schedulerConfig)]);
+    await queueOverdueInquiries(db, schedulerConfig);
+    const jobs = await sql`select * from crm_email_job where kind = 'corporate_overdue'
+      and corporate_inquiry_id in (${overdue.id}, ${upcoming.id}, ${closed.id})`;
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0].corporate_inquiry_id).toBe(overdue.id);
+    expect(jobs[0].payload.to).toEqual(deliveryConfig.CORPORATE_INQUIRY_RECIPIENTS);
+    expect(jobs[0].payload.text).toContain(overdue.id);
+    await expect(sql`update crm_email_job set payload = '{}' where id = ${jobs[0].id}`).rejects.toSatisfy(error => code(error) === "23514");
+  });
+
+  it.each(["CONTACTED", "LOST", "SPAM"])("suppresses unclaimed reminders after %s", async status => {
+    const inquiry = await overdueInquiry();
+    await queueOverdueInquiries(db, schedulerConfig);
+    const [job] = await sql`select id from crm_email_job where corporate_inquiry_id = ${inquiry.id} and kind = 'corporate_overdue'`;
+    await changeInquiry(db, inquiry.id, actor, transition("NEW", status, status === "LOST" ? { lostReason: "Not a fit" } : {}));
+    const capture = vi.fn<EmailTransport>(async () => ({ id: "captured" }));
+    await sendEmailJob(db, job.id, "unused", capture);
+    expect(capture).not.toHaveBeenCalled();
+    expect((await sql`select state from crm_email_job where id = ${job.id}`)[0].state).toBe("skipped");
+  });
+
+  it("rechecks stale leases and changed deadlines before sending N4", async () => {
+    for (const changed of ["contacted", "deadline"]) {
+      const inquiry = await overdueInquiry();
+      await queueOverdueInquiries(db, schedulerConfig);
+      const [job] = await sql`select id from crm_email_job where corporate_inquiry_id = ${inquiry.id} and kind = 'corporate_overdue'`;
+      await sql`update crm_email_job set state = 'sending', attempt_count = 1, first_attempt_at = now() - interval '1 hour',
+        last_attempt_at = now() - interval '1 hour', lease_expires_at = now() - interval '1 minute' where id = ${job.id}`;
+      if (changed === "contacted") await changeInquiry(db, inquiry.id, actor, transition("NEW", "CONTACTED"));
+      else await sql`update corporate_inquiry set sla_due_at = now() + interval '1 day' where id = ${inquiry.id}`;
+      const capture = vi.fn<EmailTransport>(async () => ({ id: "captured" }));
+      await sendEmailJob(db, job.id, "unused", capture);
+      expect(capture).not.toHaveBeenCalled();
+      expect((await sql`select state from crm_email_job where id = ${job.id}`)[0].state).toBe("skipped");
+    }
+  });
+
+  it("keeps the result of a reminder already in flight when staff record a reply", async () => {
+    const inquiry = await overdueInquiry();
+    await queueOverdueInquiries(db, schedulerConfig);
+    const [job] = await sql`select id from crm_email_job where corporate_inquiry_id = ${inquiry.id} and kind = 'corporate_overdue'`;
+    await sendEmailJob(db, job.id, "unused", async () => {
+      await changeInquiry(db, inquiry.id, actor, transition("NEW", "CONTACTED"));
+      return { id: "captured-in-flight" };
+    });
+    expect((await sql`select state, provider_id from crm_email_job where id = ${job.id}`)[0])
+      .toMatchObject({ state: "sent", provider_id: "captured-in-flight" });
+  });
+
+  it("queues with sending disabled and recovers bounded batches without duplicate provider keys", async () => {
+    const inquiry = await overdueInquiry();
+    const capture = vi.fn<EmailTransport>(async (_payload, id) => ({ id: `captured-${id}` }));
+    const paused = await runCorporateScheduler(db, { ...schedulerConfig, CORPORATE_EMAIL_ENABLED: false }, capture);
+    expect(paused.processed).toBe(0);
+    expect(capture).not.toHaveBeenCalled();
+    expect((await sql`select count(*)::int as count from crm_email_job where corporate_inquiry_id = ${inquiry.id}`)[0].count).toBe(3);
+    // Drain prior synthetic jobs using the same bounded runner, then test overlapping recovery.
+    for (let tick = 0; tick < 20; tick++) await runCorporateScheduler(db, schedulerConfig, capture);
+    const fresh = await overdueInquiry();
+    await queueOverdueInquiries(db, schedulerConfig);
+    await sql`update crm_email_job set updated_at = now() - interval '10 days' where corporate_inquiry_id = ${fresh.id}`;
+    const results = await Promise.all([runCorporateScheduler(db, schedulerConfig, capture), runCorporateScheduler(db, schedulerConfig, capture)]);
+    expect(results.every(result => result.processed <= 10)).toBe(true);
+    const jobs = await sql`select id, state from crm_email_job where corporate_inquiry_id = ${fresh.id}`;
+    expect(jobs).toHaveLength(3);
+    expect(jobs.every(job => job.state === "sent")).toBe(true);
+    const keys = capture.mock.calls.map(call => call[1]);
+    for (const job of jobs) expect(keys.filter(key => key === job.id)).toHaveLength(1);
+  }, 30000);
+
+  it("moves expired provider attempts to reconciliation through scheduled recovery", async () => {
+    const inquiry = await overdueInquiry();
+    await sql`update crm_email_job set state = 'failed', attempt_count = 1, first_attempt_at = now() - interval '25 hours',
+      last_attempt_at = now() - interval '25 hours', updated_at = now() - interval '30 days' where id = ${inquiry.jobs[0]}`;
+    const capture = vi.fn<EmailTransport>(async (_payload, id) => ({ id: `captured-${id}` }));
+    await runCorporateScheduler(db, schedulerConfig, capture);
+    expect(capture.mock.calls.some(call => call[1] === inquiry.jobs[0])).toBe(false);
+    expect((await sql`select state from crm_email_job where id = ${inquiry.jobs[0]}`)[0].state).toBe("needs_reconciliation");
+  });
+
+  it("recovers a scheduled provider failure on the next tick with the same saved payload and key", async () => {
+    const inquiry = await savedInquiry(deliveryInput(), deliveryConfig);
+    await sql`update crm_email_job set updated_at = now() - interval '10 days' where id = ${inquiry.jobs[0]}`;
+    const capture = vi.fn<EmailTransport>().mockRejectedValueOnce(new Error("synthetic network failure"))
+      .mockImplementation(async (_payload, id) => ({ id: `captured-${id}` }));
+    await runCorporateScheduler(db, schedulerConfig, capture);
+    expect((await sql`select state from crm_email_job where id = ${inquiry.jobs[0]}`)[0].state).toBe("failed");
+    await sql`update crm_email_job set updated_at = now() - interval '10 days' where id = ${inquiry.jobs[0]}`;
+    await runCorporateScheduler(db, schedulerConfig, capture);
+    const attempts = capture.mock.calls.filter(call => call[1] === inquiry.jobs[0]);
+    expect(attempts).toHaveLength(2);
+    expect(attempts[0]).toEqual(attempts[1]);
+    expect((await sql`select state from crm_email_job where id = ${inquiry.jobs[0]}`)[0].state).toBe("sent");
+  });
+
+  it("bounds overdue queueing and continues remaining inquiries on the next run", async () => {
+    const ids: string[] = [];
+    for (let index = 0; index < 55; index++) ids.push((await overdueInquiry()).id);
+    expect(await queueOverdueInquiries(db, schedulerConfig)).toBe(50);
+    expect(await queueOverdueInquiries(db, schedulerConfig)).toBeGreaterThanOrEqual(5);
+    expect((await sql`select count(*)::int as count from crm_email_job where kind = 'corporate_overdue'
+      and corporate_inquiry_id in ${sql(ids)}`)[0].count).toBe(55);
+  });
+
 });

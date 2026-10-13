@@ -12,7 +12,8 @@ export const corporateInquiryStatus = pgEnum("corporate_inquiry_status", [
 export const crmEmailKind = pgEnum("crm_email_kind", [
   "payment_instructions",
   "corporate_acknowledgment",
-  "corporate_notification"
+  "corporate_notification",
+  "corporate_overdue"
 ]);
 // "sent" means accepted by the provider, not delivered to the recipient's inbox.
 export const crmEmailState = pgEnum("crm_email_state", [
@@ -159,9 +160,11 @@ export const crmEmailJob = pgTable("crm_email_job", {
 }, (table) => [
   uniqueIndex("crm_email_job_registration_kind_idx").on(table.registrationId, table.kind),
   uniqueIndex("crm_email_job_inquiry_kind_idx").on(table.corporateInquiryId, table.kind),
+  index("crm_email_job_corporate_recovery_idx").on(table.updatedAt, table.id)
+    .where(sql`${table.corporateInquiryId} IS NOT NULL AND ${table.state} IN ('pending', 'failed', 'sending')`),
   check("crm_email_job_owner_kind", sql`
     (${table.kind} = 'payment_instructions' AND ${table.registrationId} IS NOT NULL AND ${table.corporateInquiryId} IS NULL)
-    OR (${table.kind} IN ('corporate_acknowledgment', 'corporate_notification')
+    OR (${table.kind}::text IN ('corporate_acknowledgment', 'corporate_notification', 'corporate_overdue')
       AND ${table.corporateInquiryId} IS NOT NULL AND ${table.registrationId} IS NULL)
   `),
   check("crm_email_job_payload_object", sql`jsonb_typeof(${table.payload}) = 'object'`),
