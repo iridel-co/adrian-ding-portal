@@ -81,7 +81,9 @@ export async function listPublicPrograms(db: DbOrTx) {
 
   return rows.map((row) => ({
     id: row.program.id,
+    slug: row.program.slug,
     title: row.program.title,
+    summary: row.program.summary,
     image: toPublicMedia(row.image),
     usefulFor: row.program.usefulFor
   }));

@@ -430,7 +430,9 @@ This endpoint takes no params.
 ```ts
 type Program = {
   id: string;
+  slug: string;
   title: string;
+  summary: string;
   image: Media | null;
   usefulFor: string[];
 };
@@ -442,7 +444,9 @@ type Response = Program[];
 [
   {
     "id": "5c1e8a2b-7f3d-4e9a-b1c2-3d4e5f6a7b8c",
+    "slug": "leadership-training-and-development",
     "title": "Leadership Training & Development",
+    "summary": "Build managers who coach, delegate and lead with confidence.",
     "image": { "url": "https://<r2-public-domain>/media/leadership.jpg", "alt": "", "width": 1200, "height": 800 },
     "usefulFor": ["New managers", "Team leads"]
   }

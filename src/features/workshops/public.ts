@@ -115,10 +115,7 @@ export async function listPublicWorkshops(db: DbOrTx, filters: ListFilters) {
     summary: row.summary,
     heroImage: toPublicMedia(heroMedia),
     tags: tags.get(row.id) ?? [],
-    defaultPrice:
-      row.defaultPriceCentavos === null
-        ? null
-        : toPrice(row.defaultPriceCentavos, row.defaultPriceNote),
+    defaultPrice: toPrice(row.defaultPriceCentavos, row.defaultPriceNote),
     nextSession: findNextSession(sessions.get(row.id))
   }));
 
@@ -162,10 +159,7 @@ export async function getPublicWorkshopBySlug(db: DbOrTx, slug: string) {
       city: row.defaultCity,
       mapUrl: row.defaultVenueMapUrl
     },
-    defaultPrice:
-      row.defaultPriceCentavos === null
-        ? null
-        : toPrice(row.defaultPriceCentavos, row.defaultPriceNote),
+    defaultPrice: toPrice(row.defaultPriceCentavos, row.defaultPriceNote),
     defaultCapacity: row.defaultCapacity,
     outcomes: row.outcomes,
     curriculum: row.curriculum,

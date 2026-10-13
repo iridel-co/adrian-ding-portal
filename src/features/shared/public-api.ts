@@ -28,8 +28,13 @@ export function toPublicMedia(
   return { url: toUrl(row.key), alt: row.alt, width: row.width, height: row.height };
 }
 
-export function toPrice(centavos: number, note: string) {
-  return { centavos, currency: "PHP" as const, note };
+export type Price = { centavos: number; currency: "PHP"; note: string };
+
+export function toPrice(centavos: number, note: string): Price;
+export function toPrice(centavos: number | null, note: string): Price | null;
+export function toPrice(centavos: number | null, note: string): Price | null {
+  if (centavos === null) return null;
+  return { centavos, currency: "PHP", note };
 }
 
 export const CACHE_CONTROL = {
@@ -64,7 +69,7 @@ export function json(
   data: unknown,
   cacheControl: string,
   cors: Record<string, string>,
-  status = 200
+  status: HttpStatus = HttpStatus.Ok
 ) {
   return Response.json(data, {
     status,
@@ -72,19 +77,29 @@ export function json(
   });
 }
 
-export type ApiErrorCode =
-  | "invalid_request"
-  | "not_found"
-  | "method_not_allowed"
-  | "internal_error";
+export enum HttpStatus {
+  Ok = 200,
+  NoContent = 204,
+  BadRequest = 400,
+  NotFound = 404,
+  MethodNotAllowed = 405,
+  InternalServerError = 500
+}
+
+export enum ApiErrorCode {
+  InvalidRequest = "invalid_request",
+  NotFound = "not_found",
+  MethodNotAllowed = "method_not_allowed",
+  InternalError = "internal_error"
+}
 
 export function apiError(
-  status: number,
+  status: HttpStatus,
   code: ApiErrorCode,
   message: string,
   cors: Record<string, string> = {}
 ) {
-  const cacheControl = status === 404 ? CACHE_CONTROL.notFound : CACHE_CONTROL.noStore;
+  const cacheControl = status === HttpStatus.NotFound ? CACHE_CONTROL.notFound : CACHE_CONTROL.noStore;
   return json({ error: { code, message } }, cacheControl, cors, status);
 }
 
@@ -115,29 +130,29 @@ export function publicGet<Schema extends z.ZodType>(
     const parsed = schema.safeParse({ ...query, ...params });
 
     if (!parsed.success) {
-      return apiError(400, "invalid_request", describeIssues(parsed.error), cors);
+      return apiError(HttpStatus.BadRequest, ApiErrorCode.InvalidRequest, describeIssues(parsed.error), cors);
     }
 
     try {
       return json(await load(parsed.data), CACHE_CONTROL.ok, cors);
     } catch (error) {
       if (error instanceof NotFoundError) {
-        return apiError(404, "not_found", error.message, cors);
+        return apiError(HttpStatus.NotFound, ApiErrorCode.NotFound, error.message, cors);
       }
       console.error("Public API request failed", request.url, error);
-      return apiError(500, "internal_error", "Something went wrong.", cors);
+      return apiError(HttpStatus.InternalServerError, ApiErrorCode.InternalError, "Something went wrong.", cors);
     }
   };
 }
 
 export function publicPreflight({ request }: HandlerContext) {
-  return new Response(null, { status: 204, headers: requestCorsHeaders(request) });
+  return new Response(null, { status: HttpStatus.NoContent, headers: requestCorsHeaders(request) });
 }
 
 function methodNotAllowed({ request }: HandlerContext) {
   const response = apiError(
-    405,
-    "method_not_allowed",
+    HttpStatus.MethodNotAllowed,
+    ApiErrorCode.MethodNotAllowed,
     "This endpoint is read-only.",
     requestCorsHeaders(request)
   );

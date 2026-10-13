@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   apiError,
+  ApiErrorCode,
   CACHE_CONTROL,
   corsHeaders,
+  HttpStatus,
   json,
   toPrice,
   toPublicMedia
@@ -32,6 +34,10 @@ describe("toPrice", () => {
   it("returns centavos in PHP with the note", () => {
     expect(toPrice(650000, "")).toEqual({ centavos: 650000, currency: "PHP", note: "" });
   });
+
+  it("returns null when there is no price", () => {
+    expect(toPrice(null, "")).toBeNull();
+  });
 });
 
 describe("responses", () => {
@@ -43,10 +49,10 @@ describe("responses", () => {
   });
 
   it("caches 404s briefly and never caches 400s", async () => {
-    const notFound = apiError(404, "not_found", "Not found.");
+    const notFound = apiError(HttpStatus.NotFound, ApiErrorCode.NotFound, "Not found.");
     expect(notFound.headers.get("Cache-Control")).toBe(CACHE_CONTROL.notFound);
 
-    const invalid = apiError(400, "invalid_request", "group: Invalid option");
+    const invalid = apiError(HttpStatus.BadRequest, ApiErrorCode.InvalidRequest, "group: Invalid option");
     expect(invalid.headers.get("Cache-Control")).toBe("no-store");
     expect(await invalid.json()).toEqual({
       error: { code: "invalid_request", message: "group: Invalid option" }
