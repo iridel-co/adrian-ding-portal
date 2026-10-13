@@ -58,6 +58,17 @@ The browser uploads files straight to R2 with a short-lived signed URL. The app 
 - Schema: `src/db/schema/` (one file per area, re-exported from `index.ts`)
 - After changing it: `pnpm db:generate`, then `pnpm db:migrate`
 
+## Public API
+
+The public website reads CMS content from `/api/public/*`.
+It is read-only, needs no sign-in and returns published content only.
+
+```bash
+curl "http://localhost:3000/api/public/workshops?upcoming=true"
+```
+
+See [docs/public-api.md](docs/public-api.md) for every endpoint, its params, its response type and an example response.
+
 ## Tests
 
 `pnpm test` runs the unit tests. Database tests require the local Compose

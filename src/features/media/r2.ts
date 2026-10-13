@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { AwsClient } from "aws4fetch";
 
-import { getR2Env } from "@/lib/env";
+import { getMediaUrlEnv, getR2Env } from "@/lib/env";
 
 const UPLOAD_URL_TTL_SECONDS = 600;
 
@@ -61,5 +61,5 @@ export async function headObject(key: string) {
 }
 
 export function publicMediaUrl(key: string) {
-  return `${getR2Env().R2_PUBLIC_BASE_URL}/${key}`;
+  return `${getMediaUrlEnv().R2_PUBLIC_BASE_URL}/${key}`;
 }
