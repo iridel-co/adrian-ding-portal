@@ -1,3 +1,4 @@
+import { corporateInquiryStatus } from "@/db/schema";
 import { z } from "zod";
 
 const requiredText = (max: number, min = 2) => z.string().trim().min(min).max(max);
@@ -57,13 +58,13 @@ export const inquiryPageSchema = z.strictObject({
 });
 
 export const inquiryListSchema = inquiryPageSchema.extend({
-  status: z.enum(["all", "non-spam", "NEW", "CONTACTED", "PROPOSAL_SENT", "WON", "LOST", "SPAM"]).default("all"),
+  status: z.enum(["all", "non-spam", ...corporateInquiryStatus.enumValues]).default("all"),
   search: z.string().trim().max(200).default("")
 });
 
 export const inquiryTransitionSchema = z.strictObject({
-  expectedStatus: z.enum(["NEW", "CONTACTED", "PROPOSAL_SENT", "WON", "LOST", "SPAM"]),
-  status: z.enum(["CONTACTED", "PROPOSAL_SENT", "WON", "LOST", "SPAM"]),
+  expectedStatus: z.enum(corporateInquiryStatus.enumValues),
+  status: z.enum(corporateInquiryStatus.enumValues).exclude(["NEW"]),
   estimatedValueCentavos: z.number().int().min(0).max(2147483647).optional(),
   lostReason: z.string().trim().min(1).max(2000).optional()
 }).superRefine((input, context) => {
