@@ -14,15 +14,14 @@ pnpm db:migrate
 pnpm dev               # http://localhost:3000
 ```
 
-Start Docker Desktop before the Compose command. This worktree has its own
-database volume, separate from `portal/`. Postgres listens only on
-`127.0.0.1:55432`; `.env.example` already contains the matching `DATABASE_URL`.
-If you already have a `.env`, update its database URL to match. The portal's
-Compose database uses the same port, so stop that service before starting this one.
+Start Docker Desktop before the Compose command. The local Postgres database
+listens on `127.0.0.1:55432`; `.env.example` contains the matching connection
+string. If you already have a `.env`, update `DATABASE_URL` to match. Make sure
+port 55432 is available before starting the database.
 
-`docker compose down` stops the database and preserves its data volume. Migrations
-are applied by `pnpm db:migrate`, not automatically by Compose. Keep corporate
-intake and email sending disabled while reviewing local inquiry screens.
+`docker compose down` stops the database and preserves its data volume.
+Migrations are applied by `pnpm db:migrate`, not automatically by Compose.
+Corporate intake, email sending and scheduler execution are disabled by default.
 
 ### Google OAuth
 
@@ -58,6 +57,18 @@ The browser uploads files straight to R2 with a short-lived signed URL. The app 
 
 - Schema: `src/db/schema/` (one file per area, re-exported from `index.ts`)
 - After changing it: `pnpm db:generate`, then `pnpm db:migrate`
+
+## Tests
+
+`pnpm test` runs the unit tests. Database tests require the local Compose
+database and explicit opt-in:
+
+```bash
+CRM_INTEGRATION_DATABASE_URL="postgres://portal:portal_local_only@127.0.0.1:55432/adrian_ding_portal" pnpm test
+```
+
+Database tests create and remove temporary databases without changing the
+application database. They never use `DATABASE_URL` automatically.
 
 ## Corporate inquiries
 

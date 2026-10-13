@@ -21,15 +21,15 @@ import { authorizePortalUser, type PortalActor } from "@/lib/access";
 const isolatedUrl = process.env.CRM_INTEGRATION_DATABASE_URL;
 if (isolatedUrl) {
   const url = new URL(isolatedUrl);
-  if (url.hostname !== "127.0.0.1" || url.port !== "55432" || url.pathname !== "/adrian_ding_crm_test") {
-    throw new Error("Use only the isolated Docker CRM database at 127.0.0.1:55432/adrian_ding_crm_test");
+  if (url.hostname !== "127.0.0.1" || url.port !== "55432" || url.pathname !== "/adrian_ding_portal") {
+    throw new Error("Use only the local Compose database server at 127.0.0.1:55432/adrian_ding_portal");
   }
 }
 
 describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
   const suffix = randomUUID().replaceAll("-", "");
   const databaseNames = [`corp_clean_${suffix}`, `corp_baseline_${suffix}`];
-  const admin = postgres(isolatedUrl ?? "postgres://unused@127.0.0.1:55432/adrian_ding_crm_test", { max: 1 });
+  const admin = postgres(isolatedUrl ?? "postgres://unused@127.0.0.1:55432/adrian_ding_portal", { max: 1 });
   const clients: ReturnType<typeof postgres>[] = [];
   let sql: ReturnType<typeof postgres>;
   let db: ReturnType<typeof drizzle<typeof relations>>;
