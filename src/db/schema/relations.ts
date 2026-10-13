@@ -2,6 +2,7 @@ import { defineRelations } from "drizzle-orm";
 
 import { activityLog } from "./activity-log";
 import { account, session, user, verification } from "./auth";
+import { corporateInquiry, crmEmailJob } from "./crm";
 import { faq } from "./faq";
 import { media } from "./media";
 import { siteProfile } from "./profile";
@@ -27,7 +28,9 @@ export const relations = defineRelations(
     client,
     siteProfile,
     faq,
-    activityLog
+    activityLog,
+    corporateInquiry,
+    crmEmailJob
   },
   (r) => ({
     user: {
@@ -51,6 +54,12 @@ export const relations = defineRelations(
     },
     workshopSession: {
       workshop: r.one.workshop({ from: r.workshopSession.workshopId, to: r.workshop.id })
+    },
+    corporateInquiry: {
+      emailJobs: r.many.crmEmailJob({ from: r.corporateInquiry.id, to: r.crmEmailJob.corporateInquiryId })
+    },
+    crmEmailJob: {
+      corporateInquiry: r.one.corporateInquiry({ from: r.crmEmailJob.corporateInquiryId, to: r.corporateInquiry.id })
     },
     inhouseProgram: {
       image: r.one.media({ from: r.inhouseProgram.imageMediaId, to: r.media.id })
