@@ -5,12 +5,13 @@ import { getDb } from "@/db";
 import { allowedEmail } from "@/db/schema";
 import { getEnv } from "@/lib/env";
 
-/* An email can sign in if it's in ADMIN_EMAILS or in the allowed_email table. */
+/* Include inquiry staff in sign-in; CRM roles are checked separately on CRM requests. */
 export async function isEmailAllowed(email: string | undefined | null) {
   if (!email) return false;
   const normalized = email.trim().toLowerCase();
 
-  if (getEnv().ADMIN_EMAILS.includes(normalized)) return true;
+  const env = getEnv();
+  if (env.ADMIN_EMAILS.includes(normalized) || env.STAFF_EMAILS.includes(normalized)) return true;
 
   const [row] = await getDb()
     .select({ email: allowedEmail.email })

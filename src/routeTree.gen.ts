@@ -11,19 +11,29 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppInquiriesRouteImport } from './routes/_app/inquiries'
+import { Route as ApiCorporateInquiriesRouteImport } from './routes/api/corporate-inquiries'
+import { Route as PreviewProgramRouteImport } from './routes/preview/program'
+import { Route as PreviewWorkshopRouteImport } from './routes/preview/workshop'
 import { Route as AppContentMediaRouteImport } from './routes/_app/content/media'
 import { Route as AppContentTagsRouteImport } from './routes/_app/content/tags'
+import { Route as AppInquiriesIndexRouteImport } from './routes/_app/inquiries/index'
+import { Route as AppInquiriesIdRouteImport } from './routes/_app/inquiries/$id'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAccessRouteImport } from './routes/_app/settings/access'
 import { Route as AppSettingsIndustriesRouteImport } from './routes/_app/settings/industries'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiInternalCorporateSchedulerRouteImport } from './routes/api/internal/corporate-scheduler'
 import { Route as ApiPublicClientsRouteImport } from './routes/api/public/clients'
 import { Route as ApiPublicFaqsRouteImport } from './routes/api/public/faqs'
 import { Route as ApiPublicIndustriesRouteImport } from './routes/api/public/industries'
 import { Route as ApiPublicProfileRouteImport } from './routes/api/public/profile'
 import { Route as ApiPublicProgramsRouteImport } from './routes/api/public/programs'
 import { Route as ApiPublicTestimonialsRouteImport } from './routes/api/public/testimonials'
+import { Route as AppContentCorporateTrainingsIndexRouteImport } from './routes/_app/content/corporate-trainings/index'
+import { Route as AppContentCorporateTrainingsIdRouteImport } from './routes/_app/content/corporate-trainings/$id'
 import { Route as AppContentSessionsIndexRouteImport } from './routes/_app/content/sessions/index'
 import { Route as AppContentSessionsIdRouteImport } from './routes/_app/content/sessions/$id'
 import { Route as AppContentWorkshopsIndexRouteImport } from './routes/_app/content/workshops/index'
@@ -40,10 +50,35 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PreviewRoute = PreviewRouteImport.update({
+  id: '/preview',
+  path: '/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const AppInquiriesRoute = AppInquiriesRouteImport.update({
+  id: '/inquiries',
+  path: '/inquiries',
+  getParentRoute: () => AppRoute,
+} as any)
+const ApiCorporateInquiriesRoute = ApiCorporateInquiriesRouteImport.update({
+  id: '/api/corporate-inquiries',
+  path: '/api/corporate-inquiries',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PreviewProgramRoute = PreviewProgramRouteImport.update({
+  id: '/program',
+  path: '/program',
+  getParentRoute: () => PreviewRoute,
+} as any)
+const PreviewWorkshopRoute = PreviewWorkshopRouteImport.update({
+  id: '/workshop',
+  path: '/workshop',
+  getParentRoute: () => PreviewRoute,
 } as any)
 const AppContentMediaRoute = AppContentMediaRouteImport.update({
   id: '/content/media',
@@ -54,6 +89,16 @@ const AppContentTagsRoute = AppContentTagsRouteImport.update({
   id: '/content/tags',
   path: '/content/tags',
   getParentRoute: () => AppRoute,
+} as any)
+const AppInquiriesIndexRoute = AppInquiriesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppInquiriesRoute,
+} as any)
+const AppInquiriesIdRoute = AppInquiriesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppInquiriesRoute,
 } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/settings/',
@@ -75,6 +120,12 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalCorporateSchedulerRoute =
+  ApiInternalCorporateSchedulerRouteImport.update({
+    id: '/api/internal/corporate-scheduler',
+    path: '/api/internal/corporate-scheduler',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicClientsRoute = ApiPublicClientsRouteImport.update({
   id: '/api/public/clients',
   path: '/api/public/clients',
@@ -105,6 +156,18 @@ const ApiPublicTestimonialsRoute = ApiPublicTestimonialsRouteImport.update({
   path: '/api/public/testimonials',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppContentCorporateTrainingsIndexRoute =
+  AppContentCorporateTrainingsIndexRouteImport.update({
+    id: '/content/corporate-trainings/',
+    path: '/content/corporate-trainings/',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppContentCorporateTrainingsIdRoute =
+  AppContentCorporateTrainingsIdRouteImport.update({
+    id: '/content/corporate-trainings/$id',
+    path: '/content/corporate-trainings/$id',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppContentSessionsIndexRoute = AppContentSessionsIndexRouteImport.update({
   id: '/content/sessions/',
   path: '/content/sessions/',
@@ -140,43 +203,62 @@ const ApiPublicWorkshopsSlugRoute = ApiPublicWorkshopsSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/preview': typeof PreviewRouteWithChildren
+  '/inquiries': typeof AppInquiriesRouteWithChildren
+  '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
+  '/preview/program': typeof PreviewProgramRoute
+  '/preview/workshop': typeof PreviewWorkshopRoute
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
+  '/inquiries/$id': typeof AppInquiriesIdRoute
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/internal/corporate-scheduler': typeof ApiInternalCorporateSchedulerRoute
   '/api/public/clients': typeof ApiPublicClientsRoute
   '/api/public/faqs': typeof ApiPublicFaqsRoute
   '/api/public/industries': typeof ApiPublicIndustriesRoute
   '/api/public/profile': typeof ApiPublicProfileRoute
   '/api/public/programs': typeof ApiPublicProgramsRoute
   '/api/public/testimonials': typeof ApiPublicTestimonialsRoute
+  '/inquiries/': typeof AppInquiriesIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
+  '/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
   '/api/public/workshops/$slug': typeof ApiPublicWorkshopsSlugRoute
+  '/content/corporate-trainings/': typeof AppContentCorporateTrainingsIndexRoute
   '/content/sessions/': typeof AppContentSessionsIndexRoute
   '/content/workshops/': typeof AppContentWorkshopsIndexRoute
   '/api/public/workshops/': typeof ApiPublicWorkshopsIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/preview': typeof PreviewRouteWithChildren
+  '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
+  '/preview/program': typeof PreviewProgramRoute
+  '/preview/workshop': typeof PreviewWorkshopRoute
   '/': typeof AppIndexRoute
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
+  '/inquiries/$id': typeof AppInquiriesIdRoute
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/internal/corporate-scheduler': typeof ApiInternalCorporateSchedulerRoute
   '/api/public/clients': typeof ApiPublicClientsRoute
   '/api/public/faqs': typeof ApiPublicFaqsRoute
   '/api/public/industries': typeof ApiPublicIndustriesRoute
   '/api/public/profile': typeof ApiPublicProfileRoute
   '/api/public/programs': typeof ApiPublicProgramsRoute
   '/api/public/testimonials': typeof ApiPublicTestimonialsRoute
+  '/inquiries': typeof AppInquiriesIndexRoute
   '/settings': typeof AppSettingsIndexRoute
+  '/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
   '/api/public/workshops/$slug': typeof ApiPublicWorkshopsSlugRoute
+  '/content/corporate-trainings': typeof AppContentCorporateTrainingsIndexRoute
   '/content/sessions': typeof AppContentSessionsIndexRoute
   '/content/workshops': typeof AppContentWorkshopsIndexRoute
   '/api/public/workshops': typeof ApiPublicWorkshopsIndexRoute
@@ -185,22 +267,32 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/preview': typeof PreviewRouteWithChildren
+  '/_app/inquiries': typeof AppInquiriesRouteWithChildren
+  '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
+  '/preview/program': typeof PreviewProgramRoute
+  '/preview/workshop': typeof PreviewWorkshopRoute
   '/_app/': typeof AppIndexRoute
   '/_app/content/media': typeof AppContentMediaRoute
   '/_app/content/tags': typeof AppContentTagsRoute
+  '/_app/inquiries/$id': typeof AppInquiriesIdRoute
   '/_app/settings/access': typeof AppSettingsAccessRoute
   '/_app/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/internal/corporate-scheduler': typeof ApiInternalCorporateSchedulerRoute
   '/api/public/clients': typeof ApiPublicClientsRoute
   '/api/public/faqs': typeof ApiPublicFaqsRoute
   '/api/public/industries': typeof ApiPublicIndustriesRoute
   '/api/public/profile': typeof ApiPublicProfileRoute
   '/api/public/programs': typeof ApiPublicProgramsRoute
   '/api/public/testimonials': typeof ApiPublicTestimonialsRoute
+  '/_app/inquiries/': typeof AppInquiriesIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
+  '/_app/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/_app/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/_app/content/workshops/$id': typeof AppContentWorkshopsIdRoute
   '/api/public/workshops/$slug': typeof ApiPublicWorkshopsSlugRoute
+  '/_app/content/corporate-trainings/': typeof AppContentCorporateTrainingsIndexRoute
   '/_app/content/sessions/': typeof AppContentSessionsIndexRoute
   '/_app/content/workshops/': typeof AppContentWorkshopsIndexRoute
   '/api/public/workshops/': typeof ApiPublicWorkshopsIndexRoute
@@ -210,43 +302,62 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/preview'
+    | '/inquiries'
+    | '/api/corporate-inquiries'
+    | '/preview/program'
+    | '/preview/workshop'
     | '/content/media'
     | '/content/tags'
+    | '/inquiries/$id'
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
+    | '/api/internal/corporate-scheduler'
     | '/api/public/clients'
     | '/api/public/faqs'
     | '/api/public/industries'
     | '/api/public/profile'
     | '/api/public/programs'
     | '/api/public/testimonials'
+    | '/inquiries/'
     | '/settings/'
+    | '/content/corporate-trainings/$id'
     | '/content/sessions/$id'
     | '/content/workshops/$id'
     | '/api/public/workshops/$slug'
+    | '/content/corporate-trainings/'
     | '/content/sessions/'
     | '/content/workshops/'
     | '/api/public/workshops/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/preview'
+    | '/api/corporate-inquiries'
+    | '/preview/program'
+    | '/preview/workshop'
     | '/'
     | '/content/media'
     | '/content/tags'
+    | '/inquiries/$id'
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
+    | '/api/internal/corporate-scheduler'
     | '/api/public/clients'
     | '/api/public/faqs'
     | '/api/public/industries'
     | '/api/public/profile'
     | '/api/public/programs'
     | '/api/public/testimonials'
+    | '/inquiries'
     | '/settings'
+    | '/content/corporate-trainings/$id'
     | '/content/sessions/$id'
     | '/content/workshops/$id'
     | '/api/public/workshops/$slug'
+    | '/content/corporate-trainings'
     | '/content/sessions'
     | '/content/workshops'
     | '/api/public/workshops'
@@ -254,22 +365,32 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/login'
+    | '/preview'
+    | '/_app/inquiries'
+    | '/api/corporate-inquiries'
+    | '/preview/program'
+    | '/preview/workshop'
     | '/_app/'
     | '/_app/content/media'
     | '/_app/content/tags'
+    | '/_app/inquiries/$id'
     | '/_app/settings/access'
     | '/_app/settings/industries'
     | '/api/auth/$'
+    | '/api/internal/corporate-scheduler'
     | '/api/public/clients'
     | '/api/public/faqs'
     | '/api/public/industries'
     | '/api/public/profile'
     | '/api/public/programs'
     | '/api/public/testimonials'
+    | '/_app/inquiries/'
     | '/_app/settings/'
+    | '/_app/content/corporate-trainings/$id'
     | '/_app/content/sessions/$id'
     | '/_app/content/workshops/$id'
     | '/api/public/workshops/$slug'
+    | '/_app/content/corporate-trainings/'
     | '/_app/content/sessions/'
     | '/_app/content/workshops/'
     | '/api/public/workshops/'
@@ -278,7 +399,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  PreviewRoute: typeof PreviewRouteWithChildren
+  ApiCorporateInquiriesRoute: typeof ApiCorporateInquiriesRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiInternalCorporateSchedulerRoute: typeof ApiInternalCorporateSchedulerRoute
   ApiPublicClientsRoute: typeof ApiPublicClientsRoute
   ApiPublicFaqsRoute: typeof ApiPublicFaqsRoute
   ApiPublicIndustriesRoute: typeof ApiPublicIndustriesRoute
@@ -305,12 +429,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/preview': {
+      id: '/preview'
+      path: '/preview'
+      fullPath: '/preview'
+      preLoaderRoute: typeof PreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/': {
       id: '/_app/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/inquiries': {
+      id: '/_app/inquiries'
+      path: '/inquiries'
+      fullPath: '/inquiries'
+      preLoaderRoute: typeof AppInquiriesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/api/corporate-inquiries': {
+      id: '/api/corporate-inquiries'
+      path: '/api/corporate-inquiries'
+      fullPath: '/api/corporate-inquiries'
+      preLoaderRoute: typeof ApiCorporateInquiriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/preview/program': {
+      id: '/preview/program'
+      path: '/program'
+      fullPath: '/preview/program'
+      preLoaderRoute: typeof PreviewProgramRouteImport
+      parentRoute: typeof PreviewRoute
+    }
+    '/preview/workshop': {
+      id: '/preview/workshop'
+      path: '/workshop'
+      fullPath: '/preview/workshop'
+      preLoaderRoute: typeof PreviewWorkshopRouteImport
+      parentRoute: typeof PreviewRoute
     }
     '/_app/content/media': {
       id: '/_app/content/media'
@@ -325,6 +484,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/content/tags'
       preLoaderRoute: typeof AppContentTagsRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/inquiries/': {
+      id: '/_app/inquiries/'
+      path: '/'
+      fullPath: '/inquiries/'
+      preLoaderRoute: typeof AppInquiriesIndexRouteImport
+      parentRoute: typeof AppInquiriesRoute
+    }
+    '/_app/inquiries/$id': {
+      id: '/_app/inquiries/$id'
+      path: '/$id'
+      fullPath: '/inquiries/$id'
+      preLoaderRoute: typeof AppInquiriesIdRouteImport
+      parentRoute: typeof AppInquiriesRoute
     }
     '/_app/settings/': {
       id: '/_app/settings/'
@@ -352,6 +525,13 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/corporate-scheduler': {
+      id: '/api/internal/corporate-scheduler'
+      path: '/api/internal/corporate-scheduler'
+      fullPath: '/api/internal/corporate-scheduler'
+      preLoaderRoute: typeof ApiInternalCorporateSchedulerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/clients': {
@@ -395,6 +575,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/testimonials'
       preLoaderRoute: typeof ApiPublicTestimonialsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/content/corporate-trainings/': {
+      id: '/_app/content/corporate-trainings/'
+      path: '/content/corporate-trainings'
+      fullPath: '/content/corporate-trainings/'
+      preLoaderRoute: typeof AppContentCorporateTrainingsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/content/corporate-trainings/$id': {
+      id: '/_app/content/corporate-trainings/$id'
+      path: '/content/corporate-trainings/$id'
+      fullPath: '/content/corporate-trainings/$id'
+      preLoaderRoute: typeof AppContentCorporateTrainingsIdRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/content/sessions/': {
       id: '/_app/content/sessions/'
@@ -441,38 +635,75 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppInquiriesRouteChildren {
+  AppInquiriesIdRoute: typeof AppInquiriesIdRoute
+  AppInquiriesIndexRoute: typeof AppInquiriesIndexRoute
+}
+
+const AppInquiriesRouteChildren: AppInquiriesRouteChildren = {
+  AppInquiriesIdRoute: AppInquiriesIdRoute,
+  AppInquiriesIndexRoute: AppInquiriesIndexRoute,
+}
+
+const AppInquiriesRouteWithChildren = AppInquiriesRoute._addFileChildren(
+  AppInquiriesRouteChildren,
+)
+
 interface AppRouteChildren {
+  AppInquiriesRoute: typeof AppInquiriesRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppContentMediaRoute: typeof AppContentMediaRoute
   AppContentTagsRoute: typeof AppContentTagsRoute
   AppSettingsAccessRoute: typeof AppSettingsAccessRoute
   AppSettingsIndustriesRoute: typeof AppSettingsIndustriesRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
+  AppContentCorporateTrainingsIdRoute: typeof AppContentCorporateTrainingsIdRoute
   AppContentSessionsIdRoute: typeof AppContentSessionsIdRoute
   AppContentWorkshopsIdRoute: typeof AppContentWorkshopsIdRoute
+  AppContentCorporateTrainingsIndexRoute: typeof AppContentCorporateTrainingsIndexRoute
   AppContentSessionsIndexRoute: typeof AppContentSessionsIndexRoute
   AppContentWorkshopsIndexRoute: typeof AppContentWorkshopsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppInquiriesRoute: AppInquiriesRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppContentMediaRoute: AppContentMediaRoute,
   AppContentTagsRoute: AppContentTagsRoute,
   AppSettingsAccessRoute: AppSettingsAccessRoute,
   AppSettingsIndustriesRoute: AppSettingsIndustriesRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
+  AppContentCorporateTrainingsIdRoute: AppContentCorporateTrainingsIdRoute,
   AppContentSessionsIdRoute: AppContentSessionsIdRoute,
   AppContentWorkshopsIdRoute: AppContentWorkshopsIdRoute,
+  AppContentCorporateTrainingsIndexRoute:
+    AppContentCorporateTrainingsIndexRoute,
   AppContentSessionsIndexRoute: AppContentSessionsIndexRoute,
   AppContentWorkshopsIndexRoute: AppContentWorkshopsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface PreviewRouteChildren {
+  PreviewProgramRoute: typeof PreviewProgramRoute
+  PreviewWorkshopRoute: typeof PreviewWorkshopRoute
+}
+
+const PreviewRouteChildren: PreviewRouteChildren = {
+  PreviewProgramRoute: PreviewProgramRoute,
+  PreviewWorkshopRoute: PreviewWorkshopRoute,
+}
+
+const PreviewRouteWithChildren =
+  PreviewRoute._addFileChildren(PreviewRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  PreviewRoute: PreviewRouteWithChildren,
+  ApiCorporateInquiriesRoute: ApiCorporateInquiriesRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiInternalCorporateSchedulerRoute: ApiInternalCorporateSchedulerRoute,
   ApiPublicClientsRoute: ApiPublicClientsRoute,
   ApiPublicFaqsRoute: ApiPublicFaqsRoute,
   ApiPublicIndustriesRoute: ApiPublicIndustriesRoute,

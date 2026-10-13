@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 
 import { BackLink, EditorShell, type StatusAction } from "@/components/cms/editor-shell";
@@ -9,6 +9,7 @@ import { Field, FormSection } from "@/components/cms/form-section";
 import { MediaField } from "@/components/cms/media-field";
 import type { PickedMedia } from "@/components/cms/media-picker";
 import { MoneyField } from "@/components/cms/money-field";
+import { PreviewButton } from "@/components/cms/preview-dialog";
 import { SlugField } from "@/components/cms/slug-field";
 import {
   CONTENT_STATUS_DISPLAY,
@@ -21,7 +22,8 @@ import { useEditorForm } from "@/components/cms/use-editor-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { ContentStatus } from "@/features/shared/content-status";
+import { CONTENT_STATUS_ACTIONS, type ContentStatus } from "@/features/shared/content-status";
+import { buildWorkshopPreview, type PreviewContent } from "@/features/preview/model";
 import { formatDateRange } from "@/features/shared/format";
 import {
   $setWorkshopStatus,
@@ -100,18 +102,6 @@ function toSaveInput(form: WorkshopForm) {
   };
 }
 
-const STATUS_ACTION_LABELS: Record<ContentStatus, { label: string; to: ContentStatus }[]> = {
-  draft: [
-    { label: "Publish", to: "published" },
-    { label: "Archive", to: "archived" }
-  ],
-  published: [
-    { label: "Unpublish (back to draft)", to: "draft" },
-    { label: "Archive", to: "archived" }
-  ],
-  archived: [{ label: "Restore as draft", to: "draft" }]
-};
-
 function WorkshopEditorPage() {
   const { id } = Route.useParams();
   const { data } = useSuspenseQuery(workshopQueryOptions(id));
@@ -144,7 +134,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
     onError: (error) => toast.error(errorMessage(error))
   });
 
-  const statusActions: StatusAction[] = STATUS_ACTION_LABELS[workshop.status].map((action) => ({
+  const statusActions: StatusAction[] = CONTENT_STATUS_ACTIONS[workshop.status].map((action) => ({
     label: action.label,
     isDestructive: action.to === "archived",
     onSelect: () => {
@@ -157,6 +147,14 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
   }));
 
   const setSlug = useCallback((slug: string) => setField("slug", slug), [setField]);
+
+  const previewContent = useMemo((): PreviewContent => {
+    const nextSession = detail.upcomingSessions.find((session) => session.status !== "cancelled");
+    return {
+      kind: "workshop",
+      model: buildWorkshopPreview(values, nextSession ?? null)
+    };
+  }, [detail.upcomingSessions, values]);
 
   return (
     <EditorShell
@@ -173,6 +171,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       isSaving={save.isPending}
       isDirty={isDirty}
       onSave={() => save.mutate()}
+      preview={<PreviewButton content={previewContent} />}
       aside={
         <>
           <FormSection title="Hero image">

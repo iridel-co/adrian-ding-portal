@@ -1,11 +1,12 @@
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { BackLink, EditorShell, type StatusAction } from "@/components/cms/editor-shell";
 import { Field, FormSection } from "@/components/cms/form-section";
 import { MoneyField } from "@/components/cms/money-field";
+import { PreviewButton } from "@/components/cms/preview-dialog";
 import {
   PAST_DISPLAY,
   SESSION_STATUS_DISPLAY,
@@ -24,7 +25,13 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import {
+  buildSessionPreview,
+  type PreviewContent,
+  type WorkshopPreviewSource
+} from "@/features/preview/model";
 import { formatDateRange } from "@/features/shared/format";
+import { type WorkshopDetail, workshopQueryOptions } from "@/features/workshops/functions";
 import { allowedSessionTransitions, type SessionStatus } from "@/features/sessions/status";
 import {
   $setSessionStatus,
@@ -79,6 +86,17 @@ function toForm(detail: SessionDetail): SessionForm {
   };
 }
 
+function toWorkshopPreviewSource(detail: WorkshopDetail): WorkshopPreviewSource {
+  const { workshop } = detail;
+  return {
+    ...workshop,
+    tags: detail.tags,
+    heroMedia: detail.heroMedia,
+    primerVideoUrl: workshop.primerVideoUrl ?? "",
+    defaultVenueMapUrl: workshop.defaultVenueMapUrl ?? ""
+  };
+}
+
 function SessionEditorPage() {
   const { id } = Route.useParams();
   const { data } = useSuspenseQuery(sessionQueryOptions(id));
@@ -91,6 +109,16 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
   const { values, setField, isDirty, markSaved } = useEditorForm(toForm(detail));
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const isLocked = session.status === "cancelled";
+  const { data: parent } = useQuery(workshopQueryOptions(detail.workshop.id));
+
+  const previewContent = useMemo((): PreviewContent | null => {
+    if (!parent) return null;
+
+    return {
+      kind: "workshop",
+      model: buildSessionPreview(toWorkshopPreviewSource(parent), values)
+    };
+  }, [parent, values]);
 
   const refresh = () =>
     Promise.all([
@@ -167,6 +195,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
         isSaving={save.isPending}
         isDirty={isDirty && !isLocked}
         onSave={() => save.mutate()}
+        preview={previewContent && <PreviewButton content={previewContent} />}
         aside={
           <FormSection title="Workshop">
             <Link

@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { z } from "zod";
+import { emailList } from "./access";
 
 const envSchema = z.object({
   DATABASE_URL: z.url(),
@@ -7,15 +8,8 @@ const envSchema = z.object({
   BETTER_AUTH_URL: z.url(),
   GOOGLE_CLIENT_ID: z.string().min(1),
   GOOGLE_CLIENT_SECRET: z.string().min(1),
-  ADMIN_EMAILS: z
-    .string()
-    .default("")
-    .transform((value) =>
-      value
-        .split(",")
-        .map((email) => email.trim().toLowerCase())
-        .filter(Boolean)
-    )
+  ADMIN_EMAILS: z.string().default("").transform(emailList),
+  STAFF_EMAILS: z.string().default("").transform(emailList)
 });
 
 let env: z.infer<typeof envSchema> | undefined;

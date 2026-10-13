@@ -10,6 +10,7 @@ type StringListFieldProps = {
   onChange: (value: string[]) => void;
   placeholder?: string;
   addLabel?: string;
+  maxItems?: number;
 };
 
 type ListItem = {
@@ -26,10 +27,12 @@ export function StringListField({
   value,
   onChange,
   placeholder,
-  addLabel = "Add item"
+  addLabel = "Add item",
+  maxItems = Number.POSITIVE_INFINITY
 }: StringListFieldProps) {
   const [items, setItems] = useState(() => toItems(value));
   const [addedId, setAddedId] = useState<string | null>(null);
+  const isFull = items.length >= maxItems;
 
   const addItem = (afterIndex = items.length - 1) => {
     const id = crypto.randomUUID();
@@ -59,6 +62,7 @@ export function StringListField({
               onKeyDown={(event) => {
                 if (event.key !== "Enter") return;
                 event.preventDefault();
+                if (isFull) return;
                 addItem(index);
               }}
               onChange={(event) =>
@@ -86,6 +90,7 @@ export function StringListField({
         variant="outline"
         size="sm"
         className="self-start"
+        disabled={isFull}
         onClick={() => addItem()}
       >
         <Plus />
