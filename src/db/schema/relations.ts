@@ -2,7 +2,7 @@ import { defineRelations } from "drizzle-orm";
 
 import { activityLog } from "./activity-log";
 import { account, session, user, verification } from "./auth";
-import { corporateInquiry, crmEmailJob, registration } from "./crm";
+import { corporateInquiry, crmEmailJob } from "./crm";
 import { faq } from "./faq";
 import { media } from "./media";
 import { siteProfile } from "./profile";
@@ -29,7 +29,6 @@ export const relations = defineRelations(
     siteProfile,
     faq,
     activityLog,
-    registration,
     corporateInquiry,
     crmEmailJob
   },
@@ -54,19 +53,12 @@ export const relations = defineRelations(
       term: r.one.taxonomyTerm({ from: r.workshopTag.termId, to: r.taxonomyTerm.id })
     },
     workshopSession: {
-      workshop: r.one.workshop({ from: r.workshopSession.workshopId, to: r.workshop.id }),
-      registrations: r.many.registration({ from: r.workshopSession.id, to: r.registration.workshopSessionId })
-    },
-    registration: {
-      workshopSession: r.one.workshopSession({ from: r.registration.workshopSessionId, to: r.workshopSession.id }),
-      cancellationActor: r.one.user({ from: r.registration.cancelledBy, to: r.user.id }),
-      emailJobs: r.many.crmEmailJob({ from: r.registration.id, to: r.crmEmailJob.registrationId })
+      workshop: r.one.workshop({ from: r.workshopSession.workshopId, to: r.workshop.id })
     },
     corporateInquiry: {
       emailJobs: r.many.crmEmailJob({ from: r.corporateInquiry.id, to: r.crmEmailJob.corporateInquiryId })
     },
     crmEmailJob: {
-      registration: r.one.registration({ from: r.crmEmailJob.registrationId, to: r.registration.id }),
       corporateInquiry: r.one.corporateInquiry({ from: r.crmEmailJob.corporateInquiryId, to: r.corporateInquiry.id })
     },
     inhouseProgram: {

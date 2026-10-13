@@ -1,1 +1,0 @@
-ALTER TABLE "corporate_inquiry" DROP COLUMN "consent_at";

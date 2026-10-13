@@ -55,8 +55,7 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
     baselineFolder = await mkdtemp(path.join(tmpdir(), "corporate-migrations-"));
     const migrations = path.resolve("drizzle");
     for (const name of await readdir(migrations)) {
-      if (name.endsWith("_corporate_inquiry_lifecycle") || name.endsWith("_corporate_inquiry_dates")
-        || name.endsWith("_remove_inquiry_consent_timestamp") || name.endsWith("_corporate_inquiry_watchdog")) continue;
+      if (name.endsWith("_crm_corporate_inquiry")) continue;
       const destination = path.join(baselineFolder, name);
       await mkdir(destination);
       await cp(path.join(migrations, name), destination, { recursive: true });
@@ -73,12 +72,14 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
       const database = drizzle({ client, relations });
       if (index === 1) {
         await migrate(database, { migrationsFolder: baselineFolder });
+        expect((await raw`select to_regclass('public.corporate_inquiry') as table_name`)[0].table_name).toBeNull();
         await raw`insert into workshop (slug, title) values ('corporate-migration-sentinel', 'Preserved workshop')`;
       }
       await migrate(database, { migrationsFolder: migrations });
       await migrate(database, { migrationsFolder: migrations });
       const [ledger] = await raw`select count(*)::int as count from drizzle.__drizzle_migrations`;
-      expect(ledger.count).toBe(9);
+      expect(ledger.count).toBe(4);
+      expect((await raw`select to_regclass('public.registration') as table_name`)[0].table_name).toBeNull();
       if (index === 1) {
         expect((await raw`select title from workshop where slug = 'corporate-migration-sentinel'`)[0].title).toBe("Preserved workshop");
       } else { sql = raw; db = database; }
@@ -97,7 +98,19 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
     }
   });
 
-  it("saves NEW, its deadline, receipt and immutable email snapshots atomically", async () => {
+  it("allows only corporate email kinds and requires an inquiry owner", async () => {
+    const kinds = await sql`select enumlabel from pg_enum where enumtypid = 'crm_email_kind'::regtype order by enumsortorder`;
+    expect(kinds.map(row => row.enumlabel)).toEqual(["corporate_acknowledgment", "corporate_notification", "corporate_overdue"]);
+    const columns = await sql`select column_name from information_schema.columns
+      where table_name in ('crm_email_job', 'crm_submission_key') and column_name = 'registration_id'`;
+    expect(columns).toHaveLength(0);
+    await expect(sql`insert into crm_email_job (kind, payload) values ('corporate_notification', '{}'::jsonb)`)
+      .rejects.toSatisfy(error => code(error) === "23502");
+    await expect(sql`insert into crm_submission_key (key, payload_hash) values (${randomUUID()}, ${"a".repeat(64)})`)
+      .rejects.toSatisfy(error => code(error) === "23502");
+  });
+
+  it("saves NEW, its deadline, receipt and email snapshots atomically", async () => {
     const answers = input();
     const key = randomUUID();
     const ids = await acceptCorporateInquiry(db, answers, key, config, now);
@@ -117,7 +130,6 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
     expect(jobs.every(job => job.state === "pending" && job.attempt_count === 0)).toBe(true);
     expect(jobs.find(job => job.kind === "corporate_notification")!.payload.html).toContain("&lt;script&gt;");
     expect((await sql`select corporate_inquiry_id from crm_submission_key where key = ${key}`)[0].corporate_inquiry_id).toBe(row.id);
-    await expect(sql`update crm_email_job set payload = '{}'::jsonb where id = ${ids[0]}`).rejects.toSatisfy(error => code(error) === "23514");
   });
 
   it("serializes concurrent retries, rejects changed answers, and permits a new intended inquiry", async () => {
@@ -158,7 +170,7 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
     expect((await sql`select status from corporate_inquiry where id = ${row.id}`)[0].status).toBe("WON");
   });
 
-  it("claims delivery once, captures both immutable messages, and persists provider failure for retry", async () => {
+  it("claims delivery once and retries the original saved message and identity after failure", async () => {
     const [ack, notice] = await acceptCorporateInquiry(db, deliveryInput(), randomUUID(), deliveryConfig);
     const capture = vi.fn<EmailTransport>(async (_payload, id) => ({ id: `captured-${id}` }));
     await Promise.all([sendEmailJob(db, ack, "unused", capture), sendEmailJob(db, ack, "unused", capture)]);
@@ -166,12 +178,19 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
     expect(capture.mock.calls[0][0].to).toHaveLength(1);
     expect(capture.mock.calls[0][1]).toBe(ack);
     expect((await sql`select state from crm_email_job where id = ${ack}`)[0].state).toBe("sent");
-    await sendEmailJob(db, notice, "unused", async () => { throw new Error("private provider details"); });
+    const [original] = await sql`select id, corporate_inquiry_id, kind, payload, created_at from crm_email_job where id = ${notice}`;
+    const fail = vi.fn<EmailTransport>(async () => { throw new Error("private provider details"); });
+    await sendEmailJob(db, notice, "unused", fail);
+    expect(fail.mock.calls[0]).toEqual([original.payload, original.id]);
     const [failed] = await sql`select * from crm_email_job where id = ${notice}`;
     expect(failed.state).toBe("failed");
     expect(failed.last_error_code).toBe("provider_request_failed");
     expect(failed.lease_expires_at).toBeNull();
+    await sql`update corporate_inquiry set company = 'Changed after submission' where id = ${original.corporate_inquiry_id}`;
     await sendEmailJob(db, notice, "unused", capture);
+    expect(capture.mock.calls[1]).toEqual(fail.mock.calls[0]);
+    const [retried] = await sql`select id, corporate_inquiry_id, kind, payload, created_at from crm_email_job where id = ${notice}`;
+    expect(retried).toEqual(original);
     expect(capture.mock.calls[1][0].to).toEqual(deliveryConfig.CORPORATE_INQUIRY_RECIPIENTS);
     expect(capture.mock.calls[1][1]).toBe(notice);
     expect((await sql`select attempt_count from crm_email_job where id = ${notice}`)[0].attempt_count).toBe(2);
@@ -339,7 +358,6 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
     expect(jobs[0].corporate_inquiry_id).toBe(overdue.id);
     expect(jobs[0].payload.to).toEqual(deliveryConfig.CORPORATE_INQUIRY_RECIPIENTS);
     expect(jobs[0].payload.text).toContain(overdue.id);
-    await expect(sql`update crm_email_job set payload = '{}' where id = ${jobs[0].id}`).rejects.toSatisfy(error => code(error) === "23514");
   });
 
   it.each(["CONTACTED", "LOST", "SPAM"])("suppresses unclaimed reminders after %s", async status => {

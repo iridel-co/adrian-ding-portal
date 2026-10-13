@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "d0c701c3-aa6c-44bf-aa8d-af519a2272bb",
+  "id": "bd3b64f4-045b-49a7-ab56-07b2530c36e7",
   "prevIds": [
     "50b9e836-8da7-4d41-89f9-1111ce738c1e"
   ],
@@ -26,38 +26,6 @@
         "archived"
       ],
       "name": "content_status",
-      "entityType": "enums",
-      "schema": "public"
-    },
-    {
-      "values": [
-        "payment_instructions",
-        "corporate_acknowledgment",
-        "corporate_notification"
-      ],
-      "name": "crm_email_kind",
-      "entityType": "enums",
-      "schema": "public"
-    },
-    {
-      "values": [
-        "pending",
-        "sending",
-        "sent",
-        "failed",
-        "skipped",
-        "needs_reconciliation"
-      ],
-      "name": "crm_email_state",
-      "entityType": "enums",
-      "schema": "public"
-    },
-    {
-      "values": [
-        "unpaid",
-        "paid"
-      ],
-      "name": "registration_payment_status",
       "entityType": "enums",
       "schema": "public"
     },
@@ -101,6 +69,42 @@
       "schema": "public"
     },
     {
+      "values": [
+        "NEW",
+        "CONTACTED",
+        "PROPOSAL_SENT",
+        "WON",
+        "LOST",
+        "SPAM"
+      ],
+      "name": "corporate_inquiry_status",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "corporate_acknowledgment",
+        "corporate_notification",
+        "corporate_overdue"
+      ],
+      "name": "crm_email_kind",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "pending",
+        "sending",
+        "sent",
+        "failed",
+        "skipped",
+        "needs_reconciliation"
+      ],
+      "name": "crm_email_state",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
       "isRlsEnabled": false,
       "name": "activity_log",
       "entityType": "tables",
@@ -133,24 +137,6 @@
     {
       "isRlsEnabled": false,
       "name": "verification",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "corporate_inquiry",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "crm_email_job",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "registration",
       "entityType": "tables",
       "schema": "public"
     },
@@ -217,6 +203,24 @@
     {
       "isRlsEnabled": false,
       "name": "workshop_tag",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "corporate_inquiry",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "crm_email_job",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "crm_submission_key",
       "entityType": "tables",
       "schema": "public"
     },
@@ -778,656 +782,6 @@
       "entityType": "columns",
       "schema": "public",
       "table": "verification"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "full_name",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "email",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "phone",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "consent_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "idempotency_key",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "payload_hash",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "company",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "role",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "program",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "attendees",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "target_date",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "venue",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "context",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "jsonb",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "'[]'",
-      "generated": null,
-      "identity": null,
-      "name": "also_interested",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "registration_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "corporate_inquiry_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "type": "crm_email_kind",
-      "typeSchema": "public",
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "kind",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "type": "jsonb",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "payload",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "type": "crm_email_state",
-      "typeSchema": "public",
-      "notNull": true,
-      "dimensions": 0,
-      "default": "'pending'",
-      "generated": null,
-      "identity": null,
-      "name": "state",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "attempt_count",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "first_attempt_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "last_attempt_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "lease_expires_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "sent_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "provider_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "last_error_code",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "full_name",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "email",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "phone",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "consent_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "idempotency_key",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "payload_hash",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "workshop_session_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "occupation",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "salary_range",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "city",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "price_centavos",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "registration_payment_status",
-      "typeSchema": "public",
-      "notNull": true,
-      "dimensions": 0,
-      "default": "'unpaid'",
-      "generated": null,
-      "identity": null,
-      "name": "payment_status",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "cancelled_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "cancelled_by",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "cancellation_reason",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "registration"
     },
     {
       "type": "uuid",
@@ -3341,6 +2695,565 @@
       "table": "workshop_tag"
     },
     {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "full_name",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "email",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "phone",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "idempotency_key",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "payload_hash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "company",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "role",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "program",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "attendees",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "target_date_from",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "target_date_to",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "target_date",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "venue",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "context",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'[]'",
+      "generated": null,
+      "identity": null,
+      "name": "also_interested",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "corporate_inquiry_status",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'NEW'",
+      "generated": null,
+      "identity": null,
+      "name": "status",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "sla_due_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "contacted_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "proposal_sent_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "closed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "estimated_value_centavos",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "lost_reason",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "corporate_inquiry_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "type": "crm_email_kind",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "kind",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "payload",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "type": "crm_email_state",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'pending'",
+      "generated": null,
+      "identity": null,
+      "name": "state",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "attempt_count",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "first_attempt_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "last_attempt_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "lease_expires_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "sent_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "provider_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "last_error_code",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "key",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_submission_key"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "payload_hash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_submission_key"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "corporate_inquiry_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_submission_key"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crm_submission_key"
+    },
+    {
       "nameExplicit": true,
       "columns": [
         {
@@ -3451,153 +3364,6 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "verification"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "created_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "corporate_inquiry_created_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "registration_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "kind",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "crm_email_job_registration_kind_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "corporate_inquiry_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "kind",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "crm_email_job_inquiry_kind_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "workshop_session_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "email",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": "\"cancelled_at\" IS NULL",
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "registration_active_email_session_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "workshop_session_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "created_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "registration_session_created_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "registration"
     },
     {
       "nameExplicit": true,
@@ -3754,6 +3520,174 @@
       "table": "workshop_tag"
     },
     {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "created_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "corporate_inquiry_created_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "created_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "corporate_inquiry_status_created_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "sla_due_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": "\"status\" = 'NEW'",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "corporate_inquiry_overdue_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "corporate_inquiry_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "kind",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "crm_email_job_inquiry_kind_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "updated_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": "\"state\" IN ('pending', 'failed', 'sending')",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "crm_email_job_corporate_recovery_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "corporate_inquiry_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "crm_submission_key_inquiry_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "crm_submission_key"
+    },
+    {
       "nameExplicit": false,
       "columns": [
         "user_id"
@@ -3803,74 +3737,6 @@
       "entityType": "fks",
       "schema": "public",
       "table": "session"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "registration_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "registration",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "RESTRICT",
-      "name": "crm_email_job_registration_id_registration_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "corporate_inquiry_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "corporate_inquiry",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "RESTRICT",
-      "name": "crm_email_job_corporate_inquiry_id_corporate_inquiry_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "workshop_session_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "workshop_session",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "RESTRICT",
-      "name": "registration_workshop_session_id_workshop_session_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "cancelled_by"
-      ],
-      "schemaTo": "public",
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "name": "registration_cancelled_by_user_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "registration"
     },
     {
       "nameExplicit": false,
@@ -4400,6 +4266,40 @@
       "table": "workshop_tag"
     },
     {
+      "nameExplicit": false,
+      "columns": [
+        "corporate_inquiry_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "corporate_inquiry",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "crm_email_job_corporate_inquiry_id_corporate_inquiry_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "corporate_inquiry_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "corporate_inquiry",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "crm_submission_key_wrz8RcBufAzd_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "crm_submission_key"
+    },
+    {
       "columns": [
         "workshop_id",
         "term_id"
@@ -4468,36 +4368,6 @@
       "name": "verification_pkey",
       "schema": "public",
       "table": "verification",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "corporate_inquiry_pkey",
-      "schema": "public",
-      "table": "corporate_inquiry",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "crm_email_job_pkey",
-      "schema": "public",
-      "table": "crm_email_job",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "registration_pkey",
-      "schema": "public",
-      "table": "registration",
       "entityType": "pks"
     },
     {
@@ -4601,6 +4471,36 @@
       "entityType": "pks"
     },
     {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "corporate_inquiry_pkey",
+      "schema": "public",
+      "table": "corporate_inquiry",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "crm_email_job_pkey",
+      "schema": "public",
+      "table": "crm_email_job",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "key"
+      ],
+      "nameExplicit": false,
+      "name": "crm_submission_key_pkey",
+      "schema": "public",
+      "table": "crm_submission_key",
+      "entityType": "pks"
+    },
+    {
       "nameExplicit": false,
       "columns": [
         "token"
@@ -4620,28 +4520,6 @@
       "name": "user_email_key",
       "schema": "public",
       "table": "user",
-      "entityType": "uniques"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "idempotency_key"
-      ],
-      "nullsNotDistinct": false,
-      "name": "corporate_inquiry_idempotency_key_key",
-      "schema": "public",
-      "table": "corporate_inquiry",
-      "entityType": "uniques"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "idempotency_key"
-      ],
-      "nullsNotDistinct": false,
-      "name": "registration_idempotency_key_key",
-      "schema": "public",
-      "table": "registration",
       "entityType": "uniques"
     },
     {
@@ -4678,95 +4556,15 @@
       "entityType": "uniques"
     },
     {
-      "value": "\"email\" = lower(btrim(\"email\")) AND \"email\" <> ''",
-      "name": "corporate_inquiry_email_normalized",
-      "entityType": "checks",
+      "nameExplicit": false,
+      "columns": [
+        "idempotency_key"
+      ],
+      "nullsNotDistinct": false,
+      "name": "corporate_inquiry_idempotency_key_key",
       "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "value": "\"payload_hash\" ~ '^[0-9a-f]{64}$'",
-      "name": "corporate_inquiry_payload_hash_sha256",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "value": "jsonb_typeof(\"also_interested\") = 'array'",
-      "name": "corporate_inquiry_programs_array",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "corporate_inquiry"
-    },
-    {
-      "value": "\n    (\"kind\" = 'payment_instructions' AND \"registration_id\" IS NOT NULL AND \"corporate_inquiry_id\" IS NULL)\n    OR (\"kind\" IN ('corporate_acknowledgment', 'corporate_notification')\n      AND \"corporate_inquiry_id\" IS NOT NULL AND \"registration_id\" IS NULL)\n  ",
-      "name": "crm_email_job_owner_kind",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "value": "jsonb_typeof(\"payload\") = 'object'",
-      "name": "crm_email_job_payload_object",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "value": "\n    (\"attempt_count\" = 0 AND \"first_attempt_at\" IS NULL AND \"last_attempt_at\" IS NULL)\n    OR (\"attempt_count\" > 0 AND \"first_attempt_at\" IS NOT NULL\n      AND \"last_attempt_at\" IS NOT NULL AND \"last_attempt_at\" >= \"first_attempt_at\")\n  ",
-      "name": "crm_email_job_attempts_consistent",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "value": "\n    (\"state\" = 'sending' AND \"attempt_count\" > 0 AND \"lease_expires_at\" IS NOT NULL)\n    OR (\"state\" <> 'sending' AND \"lease_expires_at\" IS NULL)\n  ",
-      "name": "crm_email_job_lease_consistent",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "value": "\n    (\"state\" = 'sent' AND \"attempt_count\" > 0 AND \"sent_at\" IS NOT NULL\n      AND \"provider_id\" IS NOT NULL AND btrim(\"provider_id\") <> '')\n    OR (\"state\" <> 'sent' AND \"sent_at\" IS NULL AND \"provider_id\" IS NULL)\n  ",
-      "name": "crm_email_job_sent_consistent",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "value": "\"last_error_code\" ~ '^[a-z][a-z0-9_]{0,63}$'",
-      "name": "crm_email_job_safe_error_code",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "crm_email_job"
-    },
-    {
-      "value": "\"email\" = lower(btrim(\"email\")) AND \"email\" <> ''",
-      "name": "registration_email_normalized",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "value": "\"payload_hash\" ~ '^[0-9a-f]{64}$'",
-      "name": "registration_payload_hash_sha256",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "value": "\"price_centavos\" >= 0",
-      "name": "registration_price_non_negative",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "registration"
-    },
-    {
-      "value": "\n    (\"cancelled_at\" IS NULL AND \"cancelled_by\" IS NULL AND \"cancellation_reason\" IS NULL)\n    OR (\"cancelled_at\" IS NOT NULL AND \"payment_status\" = 'unpaid'\n      AND \"cancellation_reason\" IS NOT NULL AND btrim(\"cancellation_reason\") <> '')\n  ",
-      "name": "registration_cancellation_consistent",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "registration"
+      "table": "corporate_inquiry",
+      "entityType": "uniques"
     },
     {
       "value": "\"id\" = 'main'",
@@ -4809,6 +4607,97 @@
       "entityType": "checks",
       "schema": "public",
       "table": "workshop_session"
+    },
+    {
+      "value": "\"email\" = lower(btrim(\"email\")) AND \"email\" <> ''",
+      "name": "corporate_inquiry_email_normalized",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "value": "\"payload_hash\" ~ '^[0-9a-f]{64}$'",
+      "name": "corporate_inquiry_payload_hash_sha256",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "value": "jsonb_typeof(\"also_interested\") = 'array'",
+      "name": "corporate_inquiry_programs_array",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "value": "\n    (\"target_date_from\" IS NOT NULL AND \"target_date\" IS NULL\n      AND (\"target_date_to\" IS NULL OR \"target_date_to\" >= \"target_date_from\"))\n    OR (\"target_date_from\" IS NULL AND \"target_date_to\" IS NULL\n      AND \"target_date\" IS NOT NULL AND btrim(\"target_date\") <> '')\n  ",
+      "name": "corporate_inquiry_target_dates_consistent",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "value": "\"estimated_value_centavos\" >= 0",
+      "name": "corporate_inquiry_value_non_negative",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "value": "\"sla_due_at\" > \"created_at\"",
+      "name": "corporate_inquiry_deadline_after_creation",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "value": "\n    (\"status\" IN ('NEW', 'SPAM') AND \"contacted_at\" IS NULL AND \"proposal_sent_at\" IS NULL\n      AND \"closed_at\" IS NULL AND \"lost_reason\" IS NULL)\n    OR (\"status\" = 'CONTACTED' AND \"contacted_at\" IS NOT NULL AND \"proposal_sent_at\" IS NULL\n      AND \"closed_at\" IS NULL AND \"lost_reason\" IS NULL)\n    OR (\"status\" = 'PROPOSAL_SENT' AND \"contacted_at\" IS NOT NULL AND \"proposal_sent_at\" IS NOT NULL\n      AND \"estimated_value_centavos\" IS NOT NULL AND \"closed_at\" IS NULL AND \"lost_reason\" IS NULL)\n    OR (\"status\" = 'WON' AND \"contacted_at\" IS NOT NULL AND \"proposal_sent_at\" IS NOT NULL\n      AND \"estimated_value_centavos\" IS NOT NULL AND \"closed_at\" IS NOT NULL AND \"lost_reason\" IS NULL)\n    OR (\"status\" = 'LOST' AND \"closed_at\" IS NOT NULL AND \"lost_reason\" IS NOT NULL\n      AND btrim(\"lost_reason\") <> ''\n      AND (\"proposal_sent_at\" IS NULL OR (\"contacted_at\" IS NOT NULL AND \"estimated_value_centavos\" IS NOT NULL)))\n  ",
+      "name": "corporate_inquiry_lifecycle_consistent",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "corporate_inquiry"
+    },
+    {
+      "value": "jsonb_typeof(\"payload\") = 'object'",
+      "name": "crm_email_job_payload_object",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "value": "\n    (\"attempt_count\" = 0 AND \"first_attempt_at\" IS NULL AND \"last_attempt_at\" IS NULL)\n    OR (\"attempt_count\" > 0 AND \"first_attempt_at\" IS NOT NULL\n      AND \"last_attempt_at\" IS NOT NULL AND \"last_attempt_at\" >= \"first_attempt_at\")\n  ",
+      "name": "crm_email_job_attempts_consistent",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "value": "\n    (\"state\" = 'sending' AND \"attempt_count\" > 0 AND \"lease_expires_at\" IS NOT NULL)\n    OR (\"state\" <> 'sending' AND \"lease_expires_at\" IS NULL)\n  ",
+      "name": "crm_email_job_lease_consistent",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "value": "\n    (\"state\" = 'sent' AND \"attempt_count\" > 0 AND \"sent_at\" IS NOT NULL\n      AND \"provider_id\" IS NOT NULL AND btrim(\"provider_id\") <> '')\n    OR (\"state\" <> 'sent' AND \"sent_at\" IS NULL AND \"provider_id\" IS NULL)\n  ",
+      "name": "crm_email_job_sent_consistent",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "value": "\"last_error_code\" ~ '^[a-z][a-z0-9_]{0,63}$'",
+      "name": "crm_email_job_safe_error_code",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "crm_email_job"
+    },
+    {
+      "value": "\"payload_hash\" ~ '^[0-9a-f]{64}$'",
+      "name": "crm_submission_key_hash_sha256",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "crm_submission_key"
     }
   ],
   "renames": []
