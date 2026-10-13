@@ -47,6 +47,12 @@ export const corporateInquirySchema = z.strictObject({
   }
 });
 
+// The request body of the public inquiry endpoint: the answers, a honeypot field and a Turnstile token.
+export const corporateInquirySubmissionSchema = corporateInquirySchema.safeExtend({
+  website: z.string().max(200).default(""),
+  turnstileToken: z.string().min(1).max(2048)
+});
+
 // Validate the Idempotency-Key header separately from the submission body.
 export const idempotencyKeySchema = z.uuidv4().transform((value) => value.toLowerCase());
 

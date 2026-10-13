@@ -47,7 +47,8 @@ export const CACHE_CONTROL = {
 export function corsHeaders(origin: string | null, allowedOrigins: string[]) {
   const headers: Record<string, string> = {
     "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type"
+    "Access-Control-Allow-Headers": "Content-Type, If-None-Match",
+    "Access-Control-Expose-Headers": "ETag"
   };
 
   if (allowedOrigins.length === 0) {
@@ -80,6 +81,7 @@ export function json(
 export enum HttpStatus {
   Ok = 200,
   NoContent = 204,
+  NotModified = 304,
   BadRequest = 400,
   NotFound = 404,
   MethodNotAllowed = 405,
@@ -103,6 +105,35 @@ export function apiError(
   return json({ error: { code, message } }, cacheControl, cors, status);
 }
 
+/* A strong ETag: the base64url SHA-256 of the response body. */
+export async function computeEtag(body: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(digest)));
+  return `"${base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")}"`;
+}
+
+/* Weak comparison, as RFC 9110 defines for If-None-Match. */
+export function matchesEtag(ifNoneMatch: string | null, etag: string) {
+  if (!ifNoneMatch) return false;
+  const opaque = (tag: string) => tag.trim().replace(/^W\//, "");
+  return ifNoneMatch.split(",").some((tag) => tag.trim() === "*" || opaque(tag) === opaque(etag));
+}
+
+/* A 200 JSON response with an ETag, or a 304 when the client copy is current. */
+export async function conditionalJson(request: Request, data: unknown, cors: Record<string, string>) {
+  const body = JSON.stringify(data);
+  const etag = await computeEtag(body);
+  const headers = { ...cors, "Cache-Control": CACHE_CONTROL.ok, ETag: etag };
+
+  if (matchesEtag(request.headers.get("If-None-Match"), etag)) {
+    return new Response(null, { status: HttpStatus.NotModified, headers });
+  }
+  return new Response(body, {
+    status: HttpStatus.Ok,
+    headers: { ...headers, "Content-Type": "application/json" }
+  });
+}
+
 function describeIssues(error: z.ZodError) {
   return error.issues
     .map((issue) =>
@@ -118,7 +149,7 @@ type HandlerContext = {
 
 /*
   Wraps a public GET handler: validates query string and route params together,
-  then adds the cache and CORS headers. Internal errors never reach the caller.
+  then adds the cache, ETag and CORS headers. Internal errors never reach the caller.
 */
 export function publicGet<Schema extends z.ZodType>(
   schema: Schema,
@@ -134,7 +165,7 @@ export function publicGet<Schema extends z.ZodType>(
     }
 
     try {
-      return json(await load(parsed.data), CACHE_CONTROL.ok, cors);
+      return await conditionalJson(request, await load(parsed.data), cors);
     } catch (error) {
       if (error instanceof NotFoundError) {
         return apiError(HttpStatus.NotFound, ApiErrorCode.NotFound, error.message, cors);
@@ -177,9 +208,3 @@ export function publicHandlers<Schema extends z.ZodType>(
     DELETE: methodNotAllowed
   };
 }
-
-/* Query-string booleans: only "true" counts as true. */
-export const booleanParam = z
-  .enum(["true", "false"])
-  .optional()
-  .transform((value) => value === "true");

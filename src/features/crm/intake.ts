@@ -1,18 +1,12 @@
 import "@tanstack/react-start/server-only";
-import { z } from "zod";
 import { getDb } from "@/db";
 import { getCorporateConfig, getCorporateOrigins } from "./config";
 import { sendEmailJob } from "./email";
 import { IntakeError, IntakeErrorCode } from "./errors";
 import { readJson } from "./http";
-import { corporateInquirySchema, idempotencyKeySchema } from "./schemas";
+import { corporateInquirySubmissionSchema, idempotencyKeySchema } from "./schemas";
 import { acceptCorporateInquiry } from "./service";
 import { verifyCorporateTurnstile } from "./turnstile";
-
-const submissionSchema = corporateInquirySchema.safeExtend({
-  website: z.string().max(200).default(""),
-  turnstileToken: z.string().min(1).max(2048)
-});
 
 export async function handleCorporateInquiry(request: Request) {
   const headers = new Headers({ Vary: "Origin", "Cache-Control": "no-store" });
@@ -43,7 +37,7 @@ async function handlePost(request: Request, headers: Headers, origins: string[])
   const config = getCorporateConfig();
   const key = idempotencyKeySchema.safeParse(request.headers.get("idempotency-key"));
   if (!key.success) throw new IntakeError(400, IntakeErrorCode.InvalidIdempotencyKey);
-  const parsed = submissionSchema.safeParse(await readJson(request));
+  const parsed = corporateInquirySubmissionSchema.safeParse(await readJson(request));
   if (!parsed.success) throw new IntakeError(400, IntakeErrorCode.InvalidSubmission);
   const { website, turnstileToken, ...answers } = parsed.data;
   if (website) throw new IntakeError(400, IntakeErrorCode.SubmissionRejected);
