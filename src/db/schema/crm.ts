@@ -2,6 +2,9 @@ import { sql } from "drizzle-orm";
 import { check, date, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { stringList } from "./columns";
+import { user } from "./auth";
+import { paymentMethod } from "./payments";
+import { workshopSession } from "./workshops";
 
 export const corporateInquiryStatus = pgEnum("corporate_inquiry_status", [
   "NEW", "CONTACTED", "PROPOSAL_SENT", "WON", "LOST", "SPAM"
@@ -9,7 +12,9 @@ export const corporateInquiryStatus = pgEnum("corporate_inquiry_status", [
 export const crmEmailKind = pgEnum("crm_email_kind", [
   "corporate_acknowledgment",
   "corporate_notification",
-  "corporate_overdue"
+  "corporate_overdue",
+  "payment_instructions",
+  "payment_acknowledgment"
 ]);
 // "sent" means accepted by the provider, not delivered to the recipient's inbox.
 export const crmEmailState = pgEnum("crm_email_state", [
@@ -96,15 +101,73 @@ export const corporateInquiry = pgTable("corporate_inquiry", {
   `)
 ]);
 
-// Remember every accepted inquiry submission key.
+export const registrationPaymentStatus = pgEnum("registration_payment_status", ["unpaid", "paid"]);
+
+// Key by code so reusing a former course code cannot reuse its issued numbers.
+export const registrationReferenceCounter = pgTable("registration_reference_counter", {
+  courseCode: text("course_code").primaryKey(),
+  lastNumber: integer("last_number").notNull()
+}, (table) => [
+  check("registration_reference_counter_code_format", sql`${table.courseCode} ~ '^[A-Z0-9]{2,8}$'`),
+  check("registration_reference_counter_positive", sql`${table.lastNumber} > 0`)
+]);
+
+export const registration = pgTable("registration", {
+  ...submissionColumns(),
+  workshopSessionId: uuid("workshop_session_id").notNull().references(() => workshopSession.id, { onDelete: "restrict" }),
+  reference: text("reference").notNull().unique(),
+  occupation: text("occupation").notNull(),
+  salaryRange: text("salary_range").notNull(),
+  city: text("city"),
+  consentAt: timestamp("consent_at", { withTimezone: true }).notNull(),
+  priceCentavos: integer("price_centavos").notNull(),
+  paymentStatus: registrationPaymentStatus("payment_status").default("unpaid").notNull(),
+  paymentMethod: paymentMethod("payment_method"),
+  paidAmountCentavos: integer("paid_amount_centavos"),
+  payerName: text("payer_name"),
+  providerTransactionReference: text("provider_transaction_reference"),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  verifiedBy: text("verified_by").references(() => user.id, { onDelete: "restrict" }),
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+  cancelledBy: text("cancelled_by").references(() => user.id, { onDelete: "restrict" }),
+  cancellationReason: text("cancellation_reason")
+}, (table) => [
+  uniqueIndex("registration_active_email_session_idx").on(table.workshopSessionId, table.email).where(sql`${table.cancelledAt} IS NULL`),
+  index("registration_session_created_idx").on(table.workshopSessionId, table.createdAt, table.id),
+  check("registration_reference_format", sql`${table.reference} ~ '^AD-[A-Z0-9]{2,8}-[0-9]{4,}$'`),
+  check("registration_email_normalized", sql`${table.email} = lower(btrim(${table.email})) AND ${table.email} <> ''`),
+  check("registration_payload_hash_sha256", sql`${table.payloadHash} ~ '^[0-9a-f]{64}$'`),
+  check("registration_price_non_negative", sql`${table.priceCentavos} >= 0`),
+  check("registration_paid_amount_non_negative", sql`${table.paidAmountCentavos} >= 0`),
+  // Keep the last verification when correcting Paid back to Unpaid; audit records hold each change.
+  check("registration_verification_consistent", sql`
+    (${table.paymentStatus} = 'unpaid' AND ${table.paymentMethod} IS NULL AND ${table.paidAmountCentavos} IS NULL
+      AND ${table.payerName} IS NULL AND ${table.providerTransactionReference} IS NULL
+      AND ${table.verifiedAt} IS NULL AND ${table.verifiedBy} IS NULL)
+    OR (${table.paymentMethod} IS NOT NULL AND ${table.paidAmountCentavos} IS NOT NULL
+      AND ${table.payerName} IS NOT NULL AND btrim(${table.payerName}) <> ''
+      AND ${table.providerTransactionReference} IS NOT NULL AND btrim(${table.providerTransactionReference}) <> ''
+      AND ${table.verifiedAt} IS NOT NULL AND ${table.verifiedBy} IS NOT NULL)
+  `),
+  check("registration_cancellation_consistent", sql`
+    (${table.cancelledAt} IS NULL AND ${table.cancelledBy} IS NULL AND ${table.cancellationReason} IS NULL)
+    OR (${table.cancelledAt} IS NOT NULL AND ${table.cancelledBy} IS NOT NULL AND ${table.paymentStatus} = 'unpaid'
+      AND ${table.cancellationReason} IS NOT NULL AND btrim(${table.cancellationReason}) <> '')
+  `)
+]);
+
+// Remember every accepted submission key, including duplicate registration requests.
 // The submission's own key remains its original request identifier.
 export const crmSubmissionKey = pgTable("crm_submission_key", {
   key: uuid("key").primaryKey(),
   payloadHash: text("payload_hash").notNull(),
-  corporateInquiryId: uuid("corporate_inquiry_id").notNull().references(() => corporateInquiry.id, { onDelete: "restrict" }),
+  corporateInquiryId: uuid("corporate_inquiry_id").references(() => corporateInquiry.id, { onDelete: "restrict" }),
+  registrationId: uuid("registration_id").references(() => registration.id, { onDelete: "restrict" }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 }, (table) => [
   index("crm_submission_key_inquiry_idx").on(table.corporateInquiryId),
+  index("crm_submission_key_registration_idx").on(table.registrationId),
+  check("crm_submission_key_one_owner", sql`(${table.corporateInquiryId} IS NOT NULL) <> (${table.registrationId} IS NOT NULL)`),
   check("crm_submission_key_hash_sha256", sql`${table.payloadHash} ~ '^[0-9a-f]{64}$'`)
 ]);
 
@@ -112,7 +175,8 @@ export const crmSubmissionKey = pgTable("crm_submission_key", {
 // Use the job UUID as the provider idempotency key on retries.
 export const crmEmailJob = pgTable("crm_email_job", {
   id: uuid("id").primaryKey().defaultRandom(),
-  corporateInquiryId: uuid("corporate_inquiry_id").notNull().references(() => corporateInquiry.id, { onDelete: "restrict" }),
+  corporateInquiryId: uuid("corporate_inquiry_id").references(() => corporateInquiry.id, { onDelete: "restrict" }),
+  registrationId: uuid("registration_id").references(() => registration.id, { onDelete: "restrict" }),
   kind: crmEmailKind("kind").notNull(),
   payload: jsonb("payload").$type<CrmEmailPayload>().notNull(),
   state: crmEmailState("state").default("pending").notNull(),
@@ -126,6 +190,13 @@ export const crmEmailJob = pgTable("crm_email_job", {
   ...timestamps()
 }, (table) => [
   uniqueIndex("crm_email_job_inquiry_kind_idx").on(table.corporateInquiryId, table.kind),
+  uniqueIndex("crm_email_job_registration_kind_idx").on(table.registrationId, table.kind),
+  check("crm_email_job_owner_kind", sql`
+    (${table.registrationId} IS NOT NULL AND ${table.corporateInquiryId} IS NULL
+      AND ${table.kind}::text IN ('payment_instructions', 'payment_acknowledgment'))
+    OR (${table.corporateInquiryId} IS NOT NULL AND ${table.registrationId} IS NULL
+      AND ${table.kind}::text IN ('corporate_acknowledgment', 'corporate_notification', 'corporate_overdue'))
+  `),
   index("crm_email_job_corporate_recovery_idx").on(table.updatedAt, table.id)
     .where(sql`${table.state} IN ('pending', 'failed', 'sending')`),
   check("crm_email_job_payload_object", sql`jsonb_typeof(${table.payload}) = 'object'`),

@@ -43,7 +43,8 @@ export async function sendEmailJob(db: DbOrTx, id: string, apiKey: string,
     await tx.execute(sql`set local lock_timeout = '5s'`);
     await tx.execute(sql`set local statement_timeout = '10s'`);
     const [lookup] = await tx.select({ corporateInquiryId: crmEmailJob.corporateInquiryId }).from(crmEmailJob).where(eq(crmEmailJob.id, id));
-    if (!lookup) return null;
+    // Workshop delivery is implemented separately; this worker handles inquiries only.
+    if (!lookup?.corporateInquiryId) return null;
     // Staff changes lock the owning record before its jobs. Use that order here
     // too, and release all locks before the provider call.
     const [inquiry] = await tx.select().from(corporateInquiry)

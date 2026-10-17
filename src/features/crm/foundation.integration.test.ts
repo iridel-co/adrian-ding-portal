@@ -6,10 +6,15 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { eq } from "drizzle-orm";
 
 vi.mock("@tanstack/react-start/server-only", () => ({}));
 import { queueOverdueInquiries, runCorporateScheduler } from "./scheduler";
-import { relations } from "@/db/schema";
+import { relations, registration, workshop } from "@/db/schema";
+import { allocateRegistrationReference } from "./registration-reference";
+import { isCourseCodeLocked } from "@/features/workshops/course-code-lock";
+import { updateWorkshop } from "@/features/workshops/service";
+import { workshopSaveSchema } from "@/features/workshops/schemas";
 import { acceptCorporateInquiry } from "./service";
 import { corporateInquirySchema } from "./schemas";
 import { sendEmailJob, type EmailTransport } from "./email";
@@ -26,14 +31,15 @@ if (isolatedUrl) {
   }
 }
 
-describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
+describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
   const suffix = randomUUID().replaceAll("-", "");
-  const databaseNames = [`corp_clean_${suffix}`, `corp_baseline_${suffix}`];
+  const databaseNames = [`corp_clean_${suffix}`, `corp_baseline_${suffix}`, `workshop_baseline_${suffix}`];
   const admin = postgres(isolatedUrl ?? "postgres://unused@127.0.0.1:55432/adrian_ding_portal", { max: 1 });
   const clients: ReturnType<typeof postgres>[] = [];
   let sql: ReturnType<typeof postgres>;
   let db: ReturnType<typeof drizzle<typeof relations>>;
   let baselineFolder: string | undefined;
+  let corporateFolder: string | undefined;
   const createdDatabases: string[] = [];
   const actor: PortalActor = { id: `staff-${suffix}`, name: "Synthetic Staff", email: "staff@company.test", role: "staff" };
   const config = { EMAIL_FROM: "Test <test@example.invalid>", EMAIL_REPLY_TO: "sales@example.invalid",
@@ -53,12 +59,16 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
 
   beforeAll(async () => {
     baselineFolder = await mkdtemp(path.join(tmpdir(), "corporate-migrations-"));
+    corporateFolder = await mkdtemp(path.join(tmpdir(), "workshop-migrations-"));
     const migrations = path.resolve("drizzle");
-    for (const name of await readdir(migrations)) {
-      if (name.endsWith("_crm_corporate_inquiry")) continue;
-      const destination = path.join(baselineFolder, name);
-      await mkdir(destination);
-      await cp(path.join(migrations, name), destination, { recursive: true });
+    const migrationNames = (await readdir(migrations)).sort();
+    for (const name of migrationNames) {
+      for (const [folder, cutoff] of [[baselineFolder, "20261013135747"], [corporateFolder, "20261016132854"]]) {
+        if (name >= cutoff!) continue;
+        const destination = path.join(folder!, name);
+        await mkdir(destination);
+        await cp(path.join(migrations, name), destination, { recursive: true });
+      }
     }
     for (const [index, name] of databaseNames.entries()) {
       await admin`create database ${admin(name)}`;
@@ -75,13 +85,33 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
         expect((await raw`select to_regclass('public.corporate_inquiry') as table_name`)[0].table_name).toBeNull();
         await raw`insert into workshop (slug, title) values ('corporate-migration-sentinel', 'Preserved workshop')`;
       }
+      const sentinelKey = randomUUID();
+      let savedInquiry: { id: string } | undefined;
+      let savedJob: { id: string } | undefined;
+      if (index === 2) {
+        await migrate(database, { migrationsFolder: corporateFolder });
+        [savedInquiry] = await raw<{ id: string }[]>`insert into corporate_inquiry
+          (full_name, email, phone, idempotency_key, payload_hash, company, role, program, attendees,
+            target_date, venue, sla_due_at)
+          values ('Preserved Lead', 'preserved@example.invalid', '09171234567', ${sentinelKey}, ${"a".repeat(64)},
+            'Preserved Company', 'HR', 'Leadership', '10', 'Next year', 'Office', now() + interval '2 days') returning *`;
+        [savedJob] = await raw<{ id: string }[]>`insert into crm_email_job (corporate_inquiry_id, kind, payload)
+          values (${savedInquiry!.id}, 'corporate_acknowledgment', '{"subject":"Preserved snapshot"}'::jsonb) returning *`;
+        await raw`insert into crm_submission_key (key, payload_hash, corporate_inquiry_id)
+          values (${sentinelKey}, ${"a".repeat(64)}, ${savedInquiry!.id})`;
+      }
       await migrate(database, { migrationsFolder: migrations });
       await migrate(database, { migrationsFolder: migrations });
       const [ledger] = await raw`select count(*)::int as count from drizzle.__drizzle_migrations`;
-      expect(ledger.count).toBe(4);
-      expect((await raw`select to_regclass('public.registration') as table_name`)[0].table_name).toBeNull();
+      expect(ledger.count).toBe(migrationNames.length);
+      expect((await raw`select to_regclass('public.registration') as table_name`)[0].table_name).toBe("registration");
       if (index === 1) {
         expect((await raw`select title from workshop where slug = 'corporate-migration-sentinel'`)[0].title).toBe("Preserved workshop");
+      } else if (index === 2) {
+        expect((await raw`select * from corporate_inquiry where id = ${savedInquiry!.id}`)[0]).toEqual(savedInquiry);
+        expect((await raw`select * from crm_email_job where id = ${savedJob!.id}`)[0]).toEqual({ ...savedJob, registration_id: null });
+        expect((await raw`select * from crm_submission_key where key = ${sentinelKey}`)[0])
+          .toMatchObject({ corporate_inquiry_id: savedInquiry!.id, registration_id: null, payload_hash: "a".repeat(64) });
       } else { sql = raw; db = database; }
     }
     await sql`insert into "user" (id, name, email, email_verified) values (${actor.id}, ${actor.name}, ${actor.email}, true)`;
@@ -95,19 +125,21 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
     } finally {
       await admin.end();
       if (baselineFolder) await rm(baselineFolder, { recursive: true });
+      if (corporateFolder) await rm(corporateFolder, { recursive: true });
     }
   });
 
-  it("allows only corporate email kinds and requires an inquiry owner", async () => {
+  it("extends mail kinds and still requires exactly one matching owner", async () => {
     const kinds = await sql`select enumlabel from pg_enum where enumtypid = 'crm_email_kind'::regtype order by enumsortorder`;
-    expect(kinds.map(row => row.enumlabel)).toEqual(["corporate_acknowledgment", "corporate_notification", "corporate_overdue"]);
+    expect(kinds.map(row => row.enumlabel)).toEqual(["corporate_acknowledgment", "corporate_notification", "corporate_overdue",
+      "payment_instructions", "payment_acknowledgment"]);
     const columns = await sql`select column_name from information_schema.columns
       where table_name in ('crm_email_job', 'crm_submission_key') and column_name = 'registration_id'`;
-    expect(columns).toHaveLength(0);
+    expect(columns).toHaveLength(2);
     await expect(sql`insert into crm_email_job (kind, payload) values ('corporate_notification', '{}'::jsonb)`)
-      .rejects.toSatisfy(error => code(error) === "23502");
+      .rejects.toSatisfy(error => code(error) === "23514");
     await expect(sql`insert into crm_submission_key (key, payload_hash) values (${randomUUID()}, ${"a".repeat(64)})`)
-      .rejects.toSatisfy(error => code(error) === "23502");
+      .rejects.toSatisfy(error => code(error) === "23514");
   });
 
   it("saves NEW, its deadline, receipt and email snapshots atomically", async () => {
@@ -452,6 +484,162 @@ describe.skipIf(!isolatedUrl)("Corporate database foundation", () => {
     expect(await queueOverdueInquiries(db, schedulerConfig)).toBeGreaterThanOrEqual(5);
     expect((await sql`select count(*)::int as count from crm_email_job where kind = 'corporate_overdue'
       and corporate_inquiry_id in ${sql(ids)}`)[0].count).toBe(55);
+  });
+
+  async function workshopFixture() {
+    const courseCode = `W${randomUUID().slice(0, 6).toUpperCase()}`;
+    const [course] = await sql`insert into workshop (slug, title, course_code)
+      values (${randomUUID()}, 'Synthetic workshop', ${courseCode}) returning id`;
+    const sessions = await sql`insert into workshop_session
+      (workshop_id, date, end_date, start_time, end_time, price_centavos, capacity)
+      values (${course.id}, '2027-01-12', '2027-01-12', '09:00', '17:00', 10000, 20),
+        (${course.id}, '2027-02-12', '2027-02-12', '09:00', '17:00', 10000, 20) returning id`;
+    return { courseId: course.id as string, courseCode, sessions: sessions.map(row => row.id as string) };
+  }
+
+  function saveRegistration(sessionId: string, courseCode: string, overrides: Partial<typeof registration.$inferInsert> = {}) {
+    return db.transaction(async tx => {
+      const reference = await allocateRegistrationReference(tx, courseCode);
+      const [row] = await tx.insert(registration).values({
+        fullName: "Synthetic Registrant", email: `${randomUUID()}@example.invalid`, phone: "+639171234567",
+        workshopSessionId: sessionId, reference, occupation: "Trainer", salaryRange: "Prefer not to say",
+        consentAt: now, priceCentavos: 10000, idempotencyKey: randomUUID(), payloadHash: "b".repeat(64), ...overrides
+      }).returning();
+      return row;
+    });
+  }
+
+  it("allocates unique course-wide references concurrently across runs and independent courses", async () => {
+    const fixture = await workshopFixture();
+    const rows = await Promise.all(Array.from({ length: 12 }, (_, index) =>
+      saveRegistration(fixture.sessions[index % 2], fixture.courseCode)));
+    expect(rows.map(row => row.reference).sort()).toEqual(Array.from({ length: 12 }, (_, index) =>
+      `AD-${fixture.courseCode}-${String(index + 1).padStart(4, "0")}`));
+    const other = await workshopFixture();
+    expect((await saveRegistration(other.sessions[0], other.courseCode)).reference).toBe(`AD-${other.courseCode}-0001`);
+    await sql`update registration_reference_counter set last_number = 9999 where course_code = ${other.courseCode}`;
+    expect((await saveRegistration(other.sessions[0], other.courseCode)).reference).toBe(`AD-${other.courseCode}-10000`);
+    await expect(db.transaction(tx => allocateRegistrationReference(tx, "invalid-code")))
+      .rejects.toSatisfy(error => code(error) === "23514");
+  });
+
+  it("rolls back a failed registration's counter, permits separate runs, and never reuses cancelled references", async () => {
+    const fixture = await workshopFixture();
+    const email = `${randomUUID()}@example.invalid`;
+    const attempts = await Promise.allSettled([0, 1].map(() => saveRegistration(fixture.sessions[0], fixture.courseCode, { email })));
+    expect(attempts.filter(result => result.status === "fulfilled")).toHaveLength(1);
+    expect(code((attempts.find(result => result.status === "rejected") as PromiseRejectedResult).reason)).toBe("23505");
+    const [first] = await sql`select * from registration where workshop_session_id = ${fixture.sessions[0]}`;
+    expect(first.reference).toBe(`AD-${fixture.courseCode}-0001`);
+    expect((await saveRegistration(fixture.sessions[1], fixture.courseCode, { email })).reference).toBe(`AD-${fixture.courseCode}-0002`);
+    await sql`update registration set cancelled_at = now(), cancelled_by = ${actor.id}, cancellation_reason = 'Requested'
+      where id = ${first.id}`;
+    expect((await saveRegistration(fixture.sessions[0], fixture.courseCode, { email })).reference).toBe(`AD-${fixture.courseCode}-0003`);
+    expect((await sql`select reference from registration where id = ${first.id}`)[0].reference).toBe(first.reference);
+  });
+
+  it("preserves submitted data, saved price and reference, and restricts missing/deleted sessions", async () => {
+    const fixture = await workshopFixture();
+    const row = await saveRegistration(fixture.sessions[0], fixture.courseCode, { city: "Cebu City" });
+    expect(row).toMatchObject({ city: "Cebu City", occupation: "Trainer", salaryRange: "Prefer not to say",
+      consentAt: now, priceCentavos: 10000, paymentStatus: "unpaid", cancelledAt: null });
+    await sql`update workshop_session set price_centavos = 20000 where id = ${fixture.sessions[0]}`;
+    expect((await sql`select price_centavos from registration where id = ${row.id}`)[0].price_centavos).toBe(10000);
+    await expect(sql`update registration set reference = 'AD-TEST-9999' where id = ${row.id}`)
+      .rejects.toSatisfy(error => code(error) === "23514");
+    await expect(sql`delete from workshop_session where id = ${fixture.sessions[0]}`)
+      .rejects.toMatchObject({ constraint_name: "registration_workshop_session_id_workshop_session_id_fkey" });
+    await expect(saveRegistration(randomUUID(), fixture.courseCode)).rejects.toSatisfy(error => code(error) === "23503");
+    for (const invalid of [{ email: " Mixed@Example.invalid " }, { payloadHash: "bad" }, { priceCentavos: -1 }, { reference: "invalid" }]) {
+      await expect(saveRegistration(fixture.sessions[0], fixture.courseCode, invalid))
+        .rejects.toSatisfy(error => code(error) === "23514");
+    }
+  });
+
+  it("requires complete payment verification, retains it on correction, and validates cancellation", async () => {
+    const fixture = await workshopFixture();
+    const row = await saveRegistration(fixture.sessions[0], fixture.courseCode);
+    await expect(sql`update registration set payment_status = 'paid' where id = ${row.id}`)
+      .rejects.toSatisfy(error => code(error) === "23514");
+    await expect(sql`update registration set paid_amount_centavos = -1 where id = ${row.id}`)
+      .rejects.toSatisfy(error => code(error) === "23514");
+    await sql`update registration set payment_status = 'paid', payment_method = 'bank', paid_amount_centavos = 10000,
+      payer_name = 'Synthetic Payer', provider_transaction_reference = 'SYNTHETIC-001', verified_at = now(), verified_by = ${actor.id}
+      where id = ${row.id}`;
+    await expect(sql`update registration set cancelled_at = now(), cancelled_by = ${actor.id}, cancellation_reason = 'Test'
+      where id = ${row.id}`).rejects.toSatisfy(error => code(error) === "23514");
+    await sql`update registration set payment_status = 'unpaid' where id = ${row.id}`;
+    const [corrected] = await sql`select * from registration where id = ${row.id}`;
+    expect(corrected).toMatchObject({ payment_status: "unpaid", cancelled_at: null, paid_amount_centavos: 10000,
+      verified_by: actor.id, payer_name: "Synthetic Payer", provider_transaction_reference: "SYNTHETIC-001" });
+    await expect(sql`update registration set cancelled_at = now(), cancelled_by = ${actor.id}, cancellation_reason = ' '
+      where id = ${row.id}`).rejects.toSatisfy(error => code(error) === "23514");
+    await expect(sql`delete from "user" where id = ${actor.id}`)
+      .rejects.toMatchObject({ constraint_name: "registration_verified_by_user_id_fkey" });
+  });
+
+  it("locks course-code edits while any run has an active registration", async () => {
+    const fixture = await workshopFixture();
+    expect(await isCourseCodeLocked(db, fixture.courseId)).toBe(false);
+    const row = await saveRegistration(fixture.sessions[1], fixture.courseCode);
+    expect(await isCourseCodeLocked(db, fixture.courseId)).toBe(true);
+    const [course] = await db.select().from(workshop).where(eq(workshop.id, fixture.courseId));
+    const values = workshopSaveSchema.parse({ ...course, courseCode: `C${fixture.courseCode.slice(1)}`, tagIds: [],
+      primerVideoUrl: course.primerVideoUrl ?? "", defaultVenueMapUrl: course.defaultVenueMapUrl ?? "" });
+    await expect(updateWorkshop(db, actor, { id: fixture.courseId, values })).rejects.toThrow("course code is locked");
+    await sql`update registration set cancelled_at = now(), cancelled_by = ${actor.id}, cancellation_reason = 'Requested'
+      where id = ${row.id}`;
+    expect(await isCourseCodeLocked(db, fixture.courseId)).toBe(false);
+    await updateWorkshop(db, actor, { id: fixture.courseId, values });
+    expect((await sql`select course_code from workshop where id = ${fixture.courseId}`)[0].course_code).toBe(values.courseCode);
+    expect((await sql`select reference from registration where id = ${row.id}`)[0].reference).toBe(row.reference);
+  });
+
+  it("requires exactly one owner for request keys and the correct owner for each email kind", async () => {
+    const fixture = await workshopFixture();
+    const row = await saveRegistration(fixture.sessions[0], fixture.courseCode);
+    const inquiry = await savedInquiry();
+    await sql`insert into crm_submission_key (key, payload_hash, registration_id)
+      values (${row.idempotencyKey}, ${row.payloadHash}, ${row.id})`;
+    const duplicateKey = randomUUID();
+    await sql`insert into crm_submission_key (key, payload_hash, registration_id)
+      values (${duplicateKey}, ${"c".repeat(64)}, ${row.id})`;
+    const [original] = await sql`select idempotency_key, payload_hash from registration where id = ${row.id}`;
+    expect(original).toMatchObject({ idempotency_key: row.idempotencyKey, payload_hash: row.payloadHash });
+    expect((await sql`select key from crm_submission_key where registration_id = ${row.id}`)).toHaveLength(2);
+    await expect(sql`insert into crm_submission_key (key, payload_hash, corporate_inquiry_id, registration_id)
+      values (${randomUUID()}, ${row.payloadHash}, ${inquiry.id}, ${row.id})`).rejects.toSatisfy(error => code(error) === "23514");
+    await expect(sql`insert into crm_submission_key (key, payload_hash, registration_id)
+      values (${row.idempotencyKey}, ${row.payloadHash}, ${row.id})`).rejects.toSatisfy(error => code(error) === "23505");
+    await expect(sql`insert into crm_submission_key (key, payload_hash, registration_id)
+      values (${randomUUID()}, ${row.payloadHash}, ${randomUUID()})`).rejects.toSatisfy(error => code(error) === "23503");
+    for (const kind of ["corporate_acknowledgment", "corporate_notification", "corporate_overdue"]) {
+      await expect(sql`insert into crm_email_job (registration_id, kind, payload) values (${row.id}, ${kind}, '{}'::jsonb)`)
+        .rejects.toSatisfy(error => code(error) === "23514");
+    }
+    await expect(sql`insert into crm_email_job (corporate_inquiry_id, kind, payload)
+      values (${inquiry.id}, 'payment_instructions', '{}'::jsonb)`).rejects.toSatisfy(error => code(error) === "23514");
+    await expect(sql`insert into crm_email_job (corporate_inquiry_id, registration_id, kind, payload)
+      values (${inquiry.id}, ${row.id}, 'payment_instructions', '{}'::jsonb)`).rejects.toSatisfy(error => code(error) === "23514");
+  });
+
+  it("stores one job of each registration kind and leaves them unclaimed by corporate delivery", async () => {
+    const fixture = await workshopFixture();
+    const row = await saveRegistration(fixture.sessions[0], fixture.courseCode);
+    const jobs = await sql`insert into crm_email_job (registration_id, kind, payload)
+      values (${row.id}, 'payment_instructions', '{"subject":"Synthetic E1"}'::jsonb),
+        (${row.id}, 'payment_acknowledgment', '{"subject":"Synthetic E2"}'::jsonb) returning id`;
+    const capture = vi.fn<EmailTransport>(async (_payload, id) => ({ id: `captured-${id}` }));
+    for (const job of jobs) await sendEmailJob(db, job.id, "unused", capture);
+    expect(capture).not.toHaveBeenCalled();
+    expect((await sql`select state from crm_email_job where registration_id = ${row.id}`).every(job => job.state === "pending")).toBe(true);
+    for (const kind of ["payment_instructions", "payment_acknowledgment"]) {
+      await expect(sql`insert into crm_email_job (registration_id, kind, payload) values (${row.id}, ${kind}, '{}'::jsonb)`)
+        .rejects.toSatisfy(error => code(error) === "23505");
+    }
+    const linked = await db.query.registration.findFirst({ where: { id: row.id }, with: { workshopSession: true, emailJobs: true } });
+    expect(linked?.workshopSession?.id).toBe(fixture.sessions[0]);
+    expect(linked?.emailJobs).toHaveLength(2);
   });
 
 });
