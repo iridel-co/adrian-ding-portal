@@ -2,7 +2,7 @@ import { defineRelations } from "drizzle-orm";
 
 import { activityLog } from "./activity-log";
 import { account, session, user, verification } from "./auth";
-import { corporateInquiry, crmEmailJob } from "./crm";
+import { corporateInquiry, crmEmailJob, crmSubmissionKey, registration } from "./crm";
 import { faq } from "./faq";
 import { media } from "./media";
 import { siteProfile } from "./profile";
@@ -30,7 +30,9 @@ export const relations = defineRelations(
     faq,
     activityLog,
     corporateInquiry,
-    crmEmailJob
+    crmEmailJob,
+    crmSubmissionKey,
+    registration
   },
   (r) => ({
     user: {
@@ -53,13 +55,24 @@ export const relations = defineRelations(
       term: r.one.taxonomyTerm({ from: r.workshopTag.termId, to: r.taxonomyTerm.id })
     },
     workshopSession: {
-      workshop: r.one.workshop({ from: r.workshopSession.workshopId, to: r.workshop.id })
+      workshop: r.one.workshop({ from: r.workshopSession.workshopId, to: r.workshop.id }),
+      registrations: r.many.registration({ from: r.workshopSession.id, to: r.registration.workshopSessionId })
     },
     corporateInquiry: {
       emailJobs: r.many.crmEmailJob({ from: r.corporateInquiry.id, to: r.crmEmailJob.corporateInquiryId })
     },
     crmEmailJob: {
-      corporateInquiry: r.one.corporateInquiry({ from: r.crmEmailJob.corporateInquiryId, to: r.corporateInquiry.id })
+      corporateInquiry: r.one.corporateInquiry({ from: r.crmEmailJob.corporateInquiryId, to: r.corporateInquiry.id }),
+      registration: r.one.registration({ from: r.crmEmailJob.registrationId, to: r.registration.id })
+    },
+    registration: {
+      workshopSession: r.one.workshopSession({ from: r.registration.workshopSessionId, to: r.workshopSession.id }),
+      emailJobs: r.many.crmEmailJob({ from: r.registration.id, to: r.crmEmailJob.registrationId }),
+      submissionKeys: r.many.crmSubmissionKey({ from: r.registration.id, to: r.crmSubmissionKey.registrationId })
+    },
+    crmSubmissionKey: {
+      registration: r.one.registration({ from: r.crmSubmissionKey.registrationId, to: r.registration.id }),
+      corporateInquiry: r.one.corporateInquiry({ from: r.crmSubmissionKey.corporateInquiryId, to: r.corporateInquiry.id })
     },
     inhouseProgram: {
       image: r.one.media({ from: r.inhouseProgram.imageMediaId, to: r.media.id })
