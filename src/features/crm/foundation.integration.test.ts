@@ -10,13 +10,19 @@ import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { eq } from "drizzle-orm";
 
 vi.mock("@tanstack/react-start/server-only", () => ({}));
+vi.mock("@/db", () => ({ getDb: vi.fn() }));
 vi.mock("@/features/media/r2", () => ({
   publicMediaUrl: vi.fn((key: string) => `https://media.company.test/${key}`),
   readPaymentQr: vi.fn(async () => ({ filename: "payment-qr.png", content: "synthetic-base64", contentType: "image/png" }))
 }));
+import { getDb } from "@/db";
+import { handleRegistration } from "./registration-intake";
+import { updateSession, setSessionStatus } from "@/features/sessions/service";
+import { sessionSaveSchema } from "@/features/sessions/schemas";
+import { getPublicWorkshopBySlug } from "@/features/workshops/public";
 import { readPaymentQr } from "@/features/media/r2";
 import { queueOverdueInquiries, runCorporateScheduler } from "./scheduler";
-import { relations, registration, workshop } from "@/db/schema";
+import { relations, registration, workshop, workshopSession } from "@/db/schema";
 import { allocateRegistrationReference } from "./registration-reference";
 import { isCourseCodeLocked } from "@/features/workshops/course-code-lock";
 import { updateWorkshop } from "@/features/workshops/service";
@@ -864,6 +870,154 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
       await sql`drop function reject_synthetic_e1()`;
     }
     expect((await saveRegistrationIntake(db, fixture.answers, key, registrationConfig, now)).jobs).toHaveLength(1);
+  });
+
+  async function editSession(fixture: Awaited<ReturnType<typeof intakeFixture>>, changes: Record<string, unknown>) {
+    const [row] = await db.select().from(workshopSession).where(eq(workshopSession.id, fixture.sessions[0]));
+    const values = sessionSaveSchema.parse({ ...row, venueName: "Synthetic Room", city: "Cebu",
+      venueMapUrl: "", registrationCutoff: "", ...changes });
+    await updateSession(db, actor, { id: row.id, values });
+  }
+
+  it.each(["closed", "cancelled", "cutoff"] as const)("rechecks CMS %s changes made during QR download without saving a rejected request", async change => {
+    const fixture = await intakeFixture();
+    const key = randomUUID();
+    vi.mocked(readPaymentQr).mockImplementationOnce(async () => {
+      if (change === "cutoff") await editSession(fixture, { registrationCutoff: "2026-10-16T09:00" });
+      else await setSessionStatus(db, actor, { id: fixture.sessions[0], status: change });
+      return { filename: "payment-qr.png", content: "synthetic-base64", contentType: "image/png" };
+    });
+    await expect(saveRegistrationIntake(db, fixture.answers, key, registrationConfig, now))
+      .rejects.toMatchObject({ code: "session_unavailable" });
+    expect(await sql`select id from registration where idempotency_key = ${key}`).toHaveLength(0);
+    expect(await sql`select key from crm_submission_key where key = ${key}`).toHaveLength(0);
+    expect(await sql`select * from registration_reference_counter where course_code = ${fixture.courseCode}`).toHaveLength(0);
+    expect(await sql`select j.id from crm_email_job j join registration r on r.id = j.registration_id where r.workshop_session_id = ${fixture.sessions[0]}`).toHaveLength(0);
+  });
+
+  it("rechecks a CMS capacity reduction during QR download against existing reservations", async () => {
+    const fixture = await intakeFixture(2);
+    await acceptRegistration(db, { ...fixture.answers, email: `${randomUUID()}@company.test` }, randomUUID(), now);
+    const key = randomUUID();
+    vi.mocked(readPaymentQr).mockImplementationOnce(async () => {
+      await editSession(fixture, { capacity: 1 });
+      return { filename: "payment-qr.png", content: "synthetic-base64", contentType: "image/png" };
+    });
+    await expect(saveRegistrationIntake(db, fixture.answers, key, registrationConfig, now)).rejects.toMatchObject({ code: "sold_out" });
+    expect(await sql`select id from registration where idempotency_key = ${key}`).toHaveLength(0);
+    expect(await sql`select key from crm_submission_key where key = ${key}`).toHaveLength(0);
+    expect((await sql`select last_number from registration_reference_counter where course_code = ${fixture.courseCode}`)[0].last_number).toBe(1);
+    expect((await registrationSessionDetail(db, fixture.sessions[0])).counts).toMatchObject({ reserved: 1, remaining: 0 });
+  });
+
+  it("saves the latest CMS price and schedule when they change during QR download", async () => {
+    const fixture = await intakeFixture();
+    const key = randomUUID();
+    vi.mocked(readPaymentQr).mockImplementationOnce(async () => {
+      await editSession(fixture, { priceCentavos: 234500, date: "2027-01-13", endDate: "2027-01-13", venueName: "Updated Room" });
+      return { filename: "payment-qr.png", content: "synthetic-base64", contentType: "image/png" };
+    });
+    const result = await saveRegistrationIntake(db, fixture.answers, key, registrationConfig, now);
+    expect((await sql`select price_centavos from registration where idempotency_key = ${key}`)[0].price_centavos).toBe(234500);
+    const [job] = await sql`select payload from crm_email_job where id = ${result.jobs[0]}`;
+    expect(job.payload.text).toContain("₱2,345");
+    expect(job.payload.text).toContain("2027-01-13");
+    expect(job.payload.text).toContain("Updated Room");
+    expect(job.payload.text).not.toContain("2027-01-12");
+  });
+
+  it("uses a CMS course-code edit before reservation and locks subsequent edits after intake commits", async () => {
+    const fixture = await intakeFixture();
+    const [tag] = await sql`insert into taxonomy_term (kind, name) values ('workshop_tag', ${randomUUID()}) returning id`;
+    const [course] = await db.select().from(workshop).where(eq(workshop.id, fixture.courseId));
+    const values = workshopSaveSchema.parse({ ...course, summary: "Synthetic summary", intro: "Synthetic introduction",
+      heroMediaId: qrMediaId, defaultPriceCentavos: 10000, defaultCapacity: 20, tagIds: [tag.id],
+      outcomes: ["Synthetic outcome"], curriculum: ["Synthetic curriculum"], defaultVenueMapUrl: "" });
+    await updateWorkshop(db, actor, { id: fixture.courseId, values });
+    const nextCode = `C${fixture.courseCode.slice(1)}`;
+    vi.mocked(readPaymentQr).mockImplementationOnce(async () => {
+      await updateWorkshop(db, actor, { id: fixture.courseId, values: { ...values, courseCode: nextCode } });
+      return { filename: "payment-qr.png", content: "synthetic-base64", contentType: "image/png" };
+    });
+    const accepted = await saveRegistrationIntake(db, fixture.answers, randomUUID(), registrationConfig, now);
+    expect(accepted.response.reference).toBe(`AD-${nextCode}-0001`);
+    expect(await sql`select * from registration_reference_counter where course_code = ${fixture.courseCode}`).toHaveLength(0);
+    await expect(updateWorkshop(db, actor, { id: fixture.courseId, values })).rejects.toThrow("course code is locked");
+    expect((await sql`select reference from registration where email = ${fixture.answers.email}`)[0].reference).toBe(accepted.response.reference);
+  });
+
+  it("processes real registration HTTP requests through E1, staff verification and E2 without leaking duplicate or catalogue data", async () => {
+    const fixture = await intakeFixture(1);
+    const key = randomUUID();
+    vi.mocked(getDb).mockReturnValue(db);
+    const settings = { SITE_ORIGINS: "https://website.test", TURNSTILE_SECRET_KEY: "synthetic-secret",
+      REGISTRATION_INTAKE_ENABLED: "true", REGISTRATION_EMAIL_ENABLED: "true",
+      REGISTRATION_PAYMENT_ACCOUNT_ID: registrationConfig.REGISTRATION_PAYMENT_ACCOUNT_ID,
+      REGISTRATION_EMAIL_FROM: registrationConfig.EMAIL_FROM, REGISTRATION_REPLY_TO: registrationConfig.EMAIL_REPLY_TO,
+      RESEND_API_KEY: "synthetic-key", STAFF_EMAILS: actor.email, ADMIN_EMAILS: "" };
+    for (const [name, value] of Object.entries(settings)) vi.stubEnv(name, value);
+    const messages: { key: string | null; payload: Record<string, unknown> }[] = [];
+    const tokens: string[] = [];
+    const network = vi.fn<typeof fetch>(async (url, options) => {
+      if (url === "https://challenges.cloudflare.com/turnstile/v0/siteverify") {
+        tokens.push(JSON.parse(String(options?.body)).response);
+        return Response.json({ success: true, action: "workshop-registration", hostname: "website.test" });
+      }
+      expect(url).toBe("https://api.resend.com/emails");
+      messages.push({ key: new Headers(options?.headers).get("idempotency-key"), payload: JSON.parse(String(options?.body)) });
+      return Response.json({ id: `captured-${messages.length}` });
+    });
+    vi.stubGlobal("fetch", network);
+    let attempt = 0;
+    const submit = (requestKey = key, changes = {}) => handleRegistration(new Request("https://portal.test/api/registrations", {
+      method: "POST", headers: { Origin: "https://website.test", "Content-Type": "application/json", "Idempotency-Key": requestKey },
+      body: JSON.stringify({ ...fixture.answers, city: fixture.answers.city ?? "", turnstileToken: `fresh-${++attempt}`, website: "", ...changes })
+    }));
+    try {
+      const preflight = await handleRegistration(new Request("https://portal.test/api/registrations", { method: "OPTIONS",
+        headers: { Origin: "https://website.test", "Access-Control-Request-Method": "POST",
+          "Access-Control-Request-Headers": "Content-Type, Idempotency-Key" } }));
+      expect(preflight.status).toBe(204); expect(network).not.toHaveBeenCalled();
+      const response = await submit();
+      const accepted = await response.json();
+      expect(response.status).toBe(202);
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(response.headers.get("access-control-allow-origin")).toBe("https://website.test");
+      expect(accepted).toEqual({ accepted: true, reference: `AD-${fixture.courseCode}-0001`, isPaid: false });
+      expect(await (await submit()).json()).toEqual(accepted);
+      const aliasKey = randomUUID();
+      expect(await (await submit(aliasKey)).json()).toEqual({ accepted: true });
+      expect(await (await submit(aliasKey)).json()).toEqual({ accepted: true });
+      const soldOut = await submit(randomUUID(), { email: `${randomUUID()}@company.test` });
+      expect(soldOut.status).toBe(409); expect(await soldOut.json()).toEqual({ error: "sold_out" });
+      const mismatch = await submit(key, { occupation: "Changed answers" });
+      expect(mismatch.status).toBe(409); expect(await mismatch.json()).toEqual({ error: "idempotency_key_mismatch" });
+      expect(messages).toHaveLength(1);
+      const [row] = await sql`select * from registration where idempotency_key = ${key}`;
+      const verifiedActor = await authorizePortalUser(db, actor.id, "staff");
+      const paid = await saveRegistrationChange(db, verifiedActor, staffInput(row, RegistrationAction.MarkPaid),
+        { ...registrationConfig, REGISTRATION_EMAIL_ENABLED: true, RESEND_API_KEY: "synthetic-key" });
+      for (const jobId of paid.jobs) await sendEmailJob(db, jobId, "synthetic-key");
+      const [paidRow] = await sql`select * from registration where id = ${row.id}`;
+      await changeRegistration(db, verifiedActor, staffInput(paidRow, RegistrationAction.CorrectPayment));
+      const [unpaid] = await sql`select * from registration where id = ${row.id}`;
+      expect((await changeRegistration(db, verifiedActor, staffInput(unpaid, RegistrationAction.MarkPaid))).jobs).toEqual([]);
+      expect(await (await submit()).json()).toEqual(accepted);
+      expect(messages).toHaveLength(2);
+      expect(tokens).toHaveLength(7); expect(new Set(tokens).size).toBe(tokens.length);
+      const jobs = await sql`select id, kind, state from crm_email_job where registration_id = ${row.id} order by kind`;
+      expect(jobs).toHaveLength(2); expect(jobs.every(job => job.state === "sent")).toBe(true);
+      expect(messages.map(message => message.key).sort()).toEqual(jobs.map(job => job.id).sort());
+      expect(messages[0].payload).toMatchObject({ reply_to: registrationConfig.EMAIL_REPLY_TO, to: [fixture.answers.email] });
+      expect(messages[0].payload.attachments).toHaveLength(1);
+      expect(messages[1].payload.attachments).toBeUndefined();
+      expect(messages[1].payload.subject).toContain("Payment acknowledged");
+      const [course] = await sql`select slug from workshop where id = ${fixture.courseId}`;
+      const catalogue = await getPublicWorkshopBySlug(db, course.slug);
+      expect(catalogue.sessions.find(session => session.id === fixture.sessions[0])).toMatchObject({ capacity: 1, status: "open" });
+      for (const privateValue of [fixture.answers.email, row.reference, "1234567890", "idempotencyKey", "emailJobs", "reserved"])
+        expect(JSON.stringify(catalogue)).not.toContain(privateValue);
+    } finally { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.mocked(getDb).mockReset(); }
   });
 
   async function staffRegistration(capacity = 20) {
