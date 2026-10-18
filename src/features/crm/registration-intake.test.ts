@@ -30,13 +30,13 @@ describe("Workshop public intake", () => {
       EMAIL_REPLY_TO: "registrations@company.test", REGISTRATION_EMAIL_FROM: "team@company.test", REGISTRATION_REPLY_TO: "registrations@company.test" });
     vi.mocked(sendEmailJob).mockResolvedValue(undefined);
     vi.mocked(verifyTurnstile).mockResolvedValue(undefined);
-    vi.mocked(acceptRegistration).mockResolvedValue({ response: { accepted: true, reference: "AD-PSW-0001", paymentStatus: "unpaid" }, jobs: ["e1-job"] });
+    vi.mocked(acceptRegistration).mockResolvedValue({ response: { accepted: true, reference: "AD-PSW-0001", isPaid: false }, jobs: ["e1-job"] });
   });
   it("verifies before database access and returns the committed result with CORS and no caching", async () => {
     vi.mocked(verifyTurnstile).mockImplementation(async () => { expect(getDb).not.toHaveBeenCalled(); });
     const response = await handleRegistration(request());
     expect(response.status).toBe(202);
-    expect(await response.json()).toEqual({ accepted: true, reference: "AD-PSW-0001", paymentStatus: "unpaid" });
+    expect(await response.json()).toEqual({ accepted: true, reference: "AD-PSW-0001", isPaid: false });
     expect(response.headers.get("access-control-allow-origin")).toBe("https://website.test");
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(verifyTurnstile).toHaveBeenCalledWith("fresh-token", "secret", ["https://website.test"], "workshop-registration");
@@ -49,7 +49,7 @@ describe("Workshop public intake", () => {
     let committed = false;
     vi.mocked(acceptRegistration).mockImplementation(async () => {
       committed = true;
-      return { response: { accepted: true, reference: "AD-PSW-0001", paymentStatus: "unpaid" }, jobs: ["e1-job"] };
+      return { response: { accepted: true, reference: "AD-PSW-0001", isPaid: false }, jobs: ["e1-job"] };
     });
     vi.mocked(sendEmailJob).mockImplementation(async () => {
       expect(committed).toBe(true);
@@ -57,7 +57,7 @@ describe("Workshop public intake", () => {
     });
     const response = await handleRegistration(request());
     expect(response.status).toBe(202);
-    expect(await response.json()).toEqual({ accepted: true, reference: "AD-PSW-0001", paymentStatus: "unpaid" });
+    expect(await response.json()).toEqual({ accepted: true, reference: "AD-PSW-0001", isPaid: false });
     expect(sendEmailJob).toHaveBeenCalledWith("database", "e1-job", "synthetic-key");
   });
   it("leaves the saved job pending when workshop email sending is disabled", async () => {
@@ -70,7 +70,7 @@ describe("Workshop public intake", () => {
     { ...answers, consent: false }, { ...answers, website: "spam" }, { ...answers, turnstileToken: "" },
     { ...answers, workshopSessionId: "bad" }, { ...answers, email: "bad" }, { ...answers, phone: "123" },
     { ...answers, occupation: "" }, { ...answers, salaryRange: "" }, { ...answers, priceCentavos: 1 },
-    { ...answers, paymentStatus: "paid" }, { ...answers, proof: "file" }
+    { ...answers, isPaid: true }, { ...answers, isPaid: false }, { ...answers, paymentStatus: "paid" }, { ...answers, proof: "file" }
   ])("rejects invalid answers and server-controlled fields before verification or persistence", async body => {
     expect((await handleRegistration(request(body))).status).toBe(400);
     expect(verifyTurnstile).not.toHaveBeenCalled();

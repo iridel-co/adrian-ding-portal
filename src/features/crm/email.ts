@@ -61,7 +61,7 @@ export async function sendEmailJob(db: DbOrTx, id: string, apiKey: string,
       await tx.update(crmEmailJob).set({ state: "skipped", leaseExpiresAt: null, lastErrorCode: "inquiry_reminder_obsolete" }).where(eq(crmEmailJob.id, id));
       return null;
     }
-    if (job.registrationId && (!owner || owner.cancelledAt !== null || owner.paymentStatus !== "unpaid")) {
+    if (job.registrationId && (!owner || owner.cancelledAt !== null || owner.isPaid)) {
       await tx.update(crmEmailJob).set({ state: "skipped", leaseExpiresAt: null, lastErrorCode: "payment_instructions_obsolete" })
         .where(eq(crmEmailJob.id, id));
       return null;
@@ -75,8 +75,10 @@ export async function sendEmailJob(db: DbOrTx, id: string, apiKey: string,
     const [claimed] = await tx.update(crmEmailJob).set({ state: "sending", attemptCount: job.attemptCount + 1,
       firstAttemptAt: job.firstAttemptAt ?? now, lastAttemptAt: now, leaseExpiresAt: new Date(now.getTime() + LEASE_MS), lastErrorCode: null })
       .where(eq(crmEmailJob.id, id)).returning();
-    if (actor && job.corporateInquiryId) {
-      await logActivity(tx, { userId: actor.id, action: "update", entityType: "corporate_inquiry", entityId: job.corporateInquiryId,
+    const ownerId = job.corporateInquiryId ?? job.registrationId;
+    if (actor && ownerId) {
+      await logActivity(tx, { userId: actor.id, action: "update", entityType: job.corporateInquiryId ? "corporate_inquiry" : "registration",
+        entityId: ownerId,
         changes: { emailRetry: { from: { jobId: id, state: job.state, attemptCount: job.attemptCount },
           to: { jobId: id, state: "sending", attemptCount: claimed.attemptCount } },
           actor: { from: null, to: { id: actor.id, name: actor.name, email: actor.email } } } });

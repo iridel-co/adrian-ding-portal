@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, date, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, date, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { stringList } from "./columns";
 import { user } from "./auth";
@@ -101,8 +101,6 @@ export const corporateInquiry = pgTable("corporate_inquiry", {
   `)
 ]);
 
-export const registrationPaymentStatus = pgEnum("registration_payment_status", ["unpaid", "paid"]);
-
 // Key by code so reusing a former course code cannot reuse its issued numbers.
 export const registrationReferenceCounter = pgTable("registration_reference_counter", {
   courseCode: text("course_code").primaryKey(),
@@ -121,7 +119,7 @@ export const registration = pgTable("registration", {
   city: text("city"),
   consentAt: timestamp("consent_at", { withTimezone: true }).notNull(),
   priceCentavos: integer("price_centavos").notNull(),
-  paymentStatus: registrationPaymentStatus("payment_status").default("unpaid").notNull(),
+  isPaid: boolean("is_paid").default(false).notNull(),
   paymentMethod: paymentMethod("payment_method"),
   paidAmountCentavos: integer("paid_amount_centavos"),
   payerName: text("payer_name"),
@@ -141,7 +139,7 @@ export const registration = pgTable("registration", {
   check("registration_paid_amount_non_negative", sql`${table.paidAmountCentavos} >= 0`),
   // Keep the last verification when correcting Paid back to Unpaid; audit records hold each change.
   check("registration_verification_consistent", sql`
-    (${table.paymentStatus} = 'unpaid' AND ${table.paymentMethod} IS NULL AND ${table.paidAmountCentavos} IS NULL
+    (NOT ${table.isPaid} AND ${table.paymentMethod} IS NULL AND ${table.paidAmountCentavos} IS NULL
       AND ${table.payerName} IS NULL AND ${table.providerTransactionReference} IS NULL
       AND ${table.verifiedAt} IS NULL AND ${table.verifiedBy} IS NULL)
     OR (${table.paymentMethod} IS NOT NULL AND ${table.paidAmountCentavos} IS NOT NULL
@@ -151,7 +149,7 @@ export const registration = pgTable("registration", {
   `),
   check("registration_cancellation_consistent", sql`
     (${table.cancelledAt} IS NULL AND ${table.cancelledBy} IS NULL AND ${table.cancellationReason} IS NULL)
-    OR (${table.cancelledAt} IS NOT NULL AND ${table.cancelledBy} IS NOT NULL AND ${table.paymentStatus} = 'unpaid'
+    OR (${table.cancelledAt} IS NOT NULL AND ${table.cancelledBy} IS NOT NULL AND NOT ${table.isPaid}
       AND ${table.cancellationReason} IS NOT NULL AND btrim(${table.cancellationReason}) <> '')
   `)
 ]);
