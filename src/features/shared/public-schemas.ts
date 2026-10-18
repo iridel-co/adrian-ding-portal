@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { faqGroup, sessionStatus, STAT_PAGES } from "@/db/schema";
+import { faqGroup, sessionStatus, SOCIAL_NETWORKS, STAT_PAGES } from "@/db/schema";
 import { ApiErrorCode } from "@/features/shared/public-api";
 
 /* Query-string booleans: only "true" counts as true. */
@@ -74,7 +74,7 @@ export const profileSchema = z
     footerTopics: z.array(z.string()),
     socialLinks: z.array(
       z.object({
-        network: z.enum(["linkedin", "facebook", "instagram", "tiktok", "youtube"]),
+        network: z.enum(SOCIAL_NETWORKS),
         url: z.string()
       })
     ),

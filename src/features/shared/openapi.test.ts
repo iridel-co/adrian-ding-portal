@@ -10,6 +10,7 @@ import type { getPublicProfile } from "@/features/profile/public";
 import {
   buildOpenApiDocument,
   CORPORATE_INQUIRY_ROUTE,
+  getOpenApiDocument,
   PUBLIC_READ_OPERATIONS,
   toOpenApiPath
 } from "@/features/shared/openapi";
@@ -80,6 +81,10 @@ describe("OpenAPI document", () => {
         { name: "If-None-Match", in: "header" }
       ]
     });
+  });
+
+  it("builds the served document once", () => {
+    expect(getOpenApiDocument()).toBe(getOpenApiDocument());
   });
 
   it("converts route ids to OpenAPI paths", () => {

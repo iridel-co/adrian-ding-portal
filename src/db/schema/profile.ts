@@ -4,7 +4,9 @@ import { check, jsonb, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { auditColumns, stringList } from "./columns";
 import { media } from "./media";
 
-export type SocialNetwork = "linkedin" | "facebook" | "instagram" | "tiktok" | "youtube";
+export const SOCIAL_NETWORKS = ["linkedin", "facebook", "instagram", "tiktok", "youtube"] as const;
+
+export type SocialNetwork = (typeof SOCIAL_NETWORKS)[number];
 
 export type SocialLink = {
   network: SocialNetwork;

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { IntakeErrorCode } from "@/features/crm/errors";
 import { corporateInquirySubmissionSchema } from "@/features/crm/schemas";
 import {
   clientSchema,
@@ -16,12 +17,20 @@ import {
 
 type JsonSchema = Record<string, unknown>;
 
+export enum OpenApiTag {
+  CorporateTraining = "Corporate training",
+  Workshops = "Workshops",
+  Profile = "Profile",
+  Faq = "FAQ",
+  Meta = "Meta"
+}
+
 type ReadOperation = {
   /* The TanStack file route id, such as "/api/public/programs/$slug". */
   route: string;
   summary: string;
   description: string;
-  tag: string;
+  tag: OpenApiTag;
   input: z.ZodObject;
   response: z.ZodType | null;
 };
@@ -31,7 +40,7 @@ export const PUBLIC_READ_OPERATIONS: ReadOperation[] = [
     route: "/api/public/profile",
     summary: "Get the site profile",
     description: "Hero copy, bio, contacts, stats, timeline, credentials and the corporate primer.",
-    tag: "Profile",
+    tag: OpenApiTag.Profile,
     input: publicInputs.profile,
     response: profileSchema
   },
@@ -39,7 +48,7 @@ export const PUBLIC_READ_OPERATIONS: ReadOperation[] = [
     route: "/api/public/workshops/",
     summary: "List published workshops",
     description: "Workshops with an upcoming session come first, sorted by that session date.",
-    tag: "Workshops",
+    tag: OpenApiTag.Workshops,
     input: publicInputs.workshops,
     response: z.array(workshopListItemSchema)
   },
@@ -47,7 +56,7 @@ export const PUBLIC_READ_OPERATIONS: ReadOperation[] = [
     route: "/api/public/workshops/$slug",
     summary: "Get one published workshop",
     description: "Returns the workshop with all its upcoming open and closed sessions.",
-    tag: "Workshops",
+    tag: OpenApiTag.Workshops,
     input: publicInputs.workshop,
     response: workshopDetailSchema
   },
@@ -55,7 +64,7 @@ export const PUBLIC_READ_OPERATIONS: ReadOperation[] = [
     route: "/api/public/programs/",
     summary: "List corporate training programs",
     description: "Published in-house corporate training programs in CMS order.",
-    tag: "Corporate training",
+    tag: OpenApiTag.CorporateTraining,
     input: publicInputs.programs,
     response: z.array(programSchema)
   },
@@ -63,7 +72,7 @@ export const PUBLIC_READ_OPERATIONS: ReadOperation[] = [
     route: "/api/public/programs/$slug",
     summary: "Get one corporate training program",
     description: "Returns one published in-house program.",
-    tag: "Corporate training",
+    tag: OpenApiTag.CorporateTraining,
     input: publicInputs.program,
     response: programSchema
   },
@@ -71,7 +80,7 @@ export const PUBLIC_READ_OPERATIONS: ReadOperation[] = [
     route: "/api/public/clients",
     summary: "List published clients",
     description: "Clients for the logo wall, in CMS order.",
-    tag: "Corporate training",
+    tag: OpenApiTag.CorporateTraining,
     input: publicInputs.clients,
     response: z.array(clientSchema)
   },
@@ -79,7 +88,7 @@ export const PUBLIC_READ_OPERATIONS: ReadOperation[] = [
     route: "/api/public/industries",
     summary: "List client industries",
     description: "Industries that are not archived, for the logo wall filter.",
-    tag: "Corporate training",
+    tag: OpenApiTag.CorporateTraining,
     input: publicInputs.industries,
     response: z.array(industrySchema)
   },
@@ -87,7 +96,7 @@ export const PUBLIC_READ_OPERATIONS: ReadOperation[] = [
     route: "/api/public/testimonials",
     summary: "List published testimonials",
     description: "Testimonials in CMS order.",
-    tag: "Corporate training",
+    tag: OpenApiTag.CorporateTraining,
     input: publicInputs.testimonials,
     response: z.array(testimonialSchema)
   },
@@ -95,7 +104,7 @@ export const PUBLIC_READ_OPERATIONS: ReadOperation[] = [
     route: "/api/public/faqs",
     summary: "List published FAQs",
     description: "FAQs sorted by group, then by CMS position.",
-    tag: "FAQ",
+    tag: OpenApiTag.Faq,
     input: publicInputs.faqs,
     response: z.array(faqSchema)
   },
@@ -103,7 +112,7 @@ export const PUBLIC_READ_OPERATIONS: ReadOperation[] = [
     route: "/api/public/openapi.json",
     summary: "Get this OpenAPI document",
     description: "The OpenAPI 3.1 description of the public API.",
-    tag: "Meta",
+    tag: OpenApiTag.Meta,
     input: publicInputs.openapi,
     response: null
   }
@@ -111,16 +120,23 @@ export const PUBLIC_READ_OPERATIONS: ReadOperation[] = [
 
 export const CORPORATE_INQUIRY_ROUTE = "/api/corporate-inquiries";
 
-const INQUIRY_ERROR_CODES = {
-  400: ["invalid_json", "invalid_submission", "invalid_idempotency_key", "submission_rejected", "verification_failed", "headers_not_allowed"],
-  403: ["origin_not_allowed"],
-  405: ["method_not_allowed"],
-  408: ["request_timeout"],
-  409: ["idempotency_key_mismatch"],
-  413: ["body_too_large"],
-  415: ["unsupported_content_type"],
-  503: ["intake_unavailable", "verification_unavailable"]
-} as const;
+const INQUIRY_ERROR_CODES: Record<number, IntakeErrorCode[]> = {
+  400: [
+    IntakeErrorCode.InvalidJson,
+    IntakeErrorCode.InvalidSubmission,
+    IntakeErrorCode.InvalidIdempotencyKey,
+    IntakeErrorCode.SubmissionRejected,
+    IntakeErrorCode.VerificationFailed,
+    IntakeErrorCode.HeadersNotAllowed
+  ],
+  403: [IntakeErrorCode.OriginNotAllowed],
+  405: [IntakeErrorCode.MethodNotAllowed],
+  408: [IntakeErrorCode.RequestTimeout],
+  409: [IntakeErrorCode.IdempotencyKeyMismatch],
+  413: [IntakeErrorCode.BodyTooLarge],
+  415: [IntakeErrorCode.UnsupportedContentType],
+  503: [IntakeErrorCode.IntakeUnavailable, IntakeErrorCode.VerificationUnavailable]
+};
 
 /* "/api/public/programs/$slug" -> "/api/public/programs/{slug}", without a trailing slash. */
 export function toOpenApiPath(route: string) {
@@ -226,7 +242,7 @@ function inquiryOperation(components: Record<string, JsonSchema>) {
   );
 
   return {
-    tags: ["Corporate training"],
+    tags: [OpenApiTag.CorporateTraining],
     summary: "Submit a corporate training inquiry",
     description:
       "Accepts an inquiry from an allowed site origin. Every attempt needs a fresh Cloudflare Turnstile token. " +
@@ -267,7 +283,7 @@ function inquiryOperation(components: Record<string, JsonSchema>) {
   };
 }
 
-export function buildOpenApiDocument(serverUrl?: string) {
+export function buildOpenApiDocument() {
   const components: Record<string, JsonSchema> = {};
   hoistDefs(toSchema(publicErrorSchema, "output"), components);
   const paths: Record<string, Record<string, unknown>> = {};
@@ -286,15 +302,22 @@ export function buildOpenApiDocument(serverUrl?: string) {
         "Read-only CMS content for the public website, and the corporate training inquiry form. " +
         "Every GET is public, cached and supports ETag revalidation."
     },
-    ...(serverUrl ? { servers: [{ url: serverUrl }] } : {}),
     tags: [
-      { name: "Corporate training", description: "Programs, clients, industries, testimonials and inquiries" },
-      { name: "Workshops" },
-      { name: "Profile" },
-      { name: "FAQ" },
-      { name: "Meta" }
+      { name: OpenApiTag.CorporateTraining, description: "Programs, clients, industries, testimonials and inquiries" },
+      { name: OpenApiTag.Workshops },
+      { name: OpenApiTag.Profile },
+      { name: OpenApiTag.Faq },
+      { name: OpenApiTag.Meta }
     ],
     paths,
     components: { schemas: components }
   };
+}
+
+let cachedDocument: ReturnType<typeof buildOpenApiDocument> | undefined;
+
+/* The OpenAPI document, built on first use. */
+export function getOpenApiDocument() {
+  cachedDocument ??= buildOpenApiDocument();
+  return cachedDocument;
 }
