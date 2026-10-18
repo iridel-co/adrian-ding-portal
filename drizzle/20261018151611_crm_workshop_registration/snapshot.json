@@ -1,9 +1,10 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "01a89e4a-a358-4fad-8bb0-36e5f758182c",
+  "id": "f4ba119e-0f29-4a11-be92-d61a8db75645",
   "prevIds": [
-    "ae320cbe-4dfd-4f10-a935-21e3909d01a4"
+    "92cc909c-2a0c-4d76-8c44-dfb083d35691",
+    "bd3b64f4-045b-49a7-ab56-07b2530c36e7"
   ],
   "ddl": [
     {
@@ -5444,7 +5445,5 @@
       "table": "registration_reference_counter"
     }
   ],
-  "renames": [
-    "public.registration.payment_status->public.registration.is_paid"
-  ]
+  "renames": []
 }
