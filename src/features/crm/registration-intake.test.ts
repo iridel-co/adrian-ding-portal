@@ -70,7 +70,7 @@ describe("Workshop public intake", () => {
     { ...answers, consent: false }, { ...answers, website: "spam" }, { ...answers, turnstileToken: "" },
     { ...answers, workshopSessionId: "bad" }, { ...answers, email: "bad" }, { ...answers, phone: "123" },
     { ...answers, occupation: "" }, { ...answers, salaryRange: "" }, { ...answers, priceCentavos: 1 },
-    { ...answers, isPaid: true }, { ...answers, isPaid: false }, { ...answers, paymentStatus: "paid" }, { ...answers, proof: "file" }
+    { ...answers, reference: "AD-TEST-9999" }, { ...answers, isPaid: true }, { ...answers, isPaid: false }, { ...answers, paymentStatus: "paid" }, { ...answers, proof: "file" }
   ])("rejects invalid answers and server-controlled fields before verification or persistence", async body => {
     expect((await handleRegistration(request(body))).status).toBe(400);
     expect(verifyTurnstile).not.toHaveBeenCalled();

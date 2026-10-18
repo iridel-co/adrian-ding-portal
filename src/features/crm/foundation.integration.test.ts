@@ -50,14 +50,13 @@ if (isolatedUrl) {
 
 describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
   const suffix = randomUUID().replaceAll("-", "");
-  const databaseNames = [`corp_clean_${suffix}`, `corp_baseline_${suffix}`, `workshop_baseline_${suffix}`, `enum_baseline_${suffix}`];
+  const databaseNames = [`corp_clean_${suffix}`, `corp_baseline_${suffix}`, `workshop_baseline_${suffix}`];
   const admin = postgres(isolatedUrl ?? "postgres://unused@127.0.0.1:55432/adrian_ding_portal", { max: 1 });
   const clients: ReturnType<typeof postgres>[] = [];
   let sql: ReturnType<typeof postgres>;
   let db: ReturnType<typeof drizzle<typeof relations>>;
   let baselineFolder: string | undefined;
   let corporateFolder: string | undefined;
-  let registrationFolder: string | undefined;
   const createdDatabases: string[] = [];
   const actor: PortalActor = { id: `staff-${suffix}`, name: "Synthetic Staff", email: "staff@company.test", role: "staff" };
   const config = { EMAIL_FROM: "Test <test@example.invalid>", EMAIL_REPLY_TO: "sales@example.invalid",
@@ -89,11 +88,10 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
   beforeAll(async () => {
     baselineFolder = await mkdtemp(path.join(tmpdir(), "corporate-migrations-"));
     corporateFolder = await mkdtemp(path.join(tmpdir(), "workshop-migrations-"));
-    registrationFolder = await mkdtemp(path.join(tmpdir(), "registration-boolean-migrations-"));
     const migrations = path.resolve("drizzle");
     const migrationNames = (await readdir(migrations)).sort();
     for (const name of migrationNames) {
-      for (const [folder, cutoff] of [[baselineFolder, "20261013135747"], [corporateFolder, "20261016132854"], [registrationFolder, "20261018075245"]]) {
+      for (const [folder, cutoff] of [[baselineFolder, "20261013135747"], [corporateFolder, "20261016132854"]]) {
         if (name >= cutoff!) continue;
         const destination = path.join(folder!, name);
         await mkdir(destination);
@@ -130,59 +128,17 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
         await raw`insert into crm_submission_key (key, payload_hash, corporate_inquiry_id)
           values (${sentinelKey}, ${"a".repeat(64)}, ${savedInquiry!.id})`;
       }
-      let legacyRows: postgres.Row[] = [];
-      let legacyHistory: postgres.Row[] = [];
-      let legacyEmail: postgres.Row | undefined;
-      let legacyReceipt: postgres.Row | undefined;
-      if (index === 3) {
-        await migrate(database, { migrationsFolder: registrationFolder });
-        const staffId = `legacy-${suffix}`;
-        await raw`insert into "user" (id, name, email, email_verified) values (${staffId}, 'Legacy Staff', 'legacy@company.test', true)`;
-        const [course] = await raw`insert into workshop (slug, title, course_code) values ('boolean-migration', 'Preserved Workshop', 'BOOL') returning id`;
-        const [session] = await raw`insert into workshop_session (workshop_id, date, end_date, start_time, end_time, price_centavos, capacity)
-          values (${course.id}, '2027-01-12', '2027-01-12', '09:00', '17:00', 10000, 20) returning id`;
-        for (let position = 0; position < 4; position++) {
-          const verified = position === 1 || position === 3;
-          const cancelled = position === 2;
-          const [row] = await raw`insert into registration (full_name, email, phone, idempotency_key, payload_hash, workshop_session_id,
-            reference, occupation, salary_range, consent_at, price_centavos, payment_status, payment_method,
-            paid_amount_centavos, payer_name, provider_transaction_reference, verified_at, verified_by,
-            cancelled_at, cancelled_by, cancellation_reason)
-            values ('Preserved Registrant', ${`legacy-${position}@company.test`}, '09171234567', ${randomUUID()}, ${"a".repeat(64)},
-              ${session.id}, ${`AD-BOOL-${String(position + 1).padStart(4, "0")}`}, 'Trainer', 'Prefer not to say', now(), 10000,
-              ${position === 1 ? "paid" : "unpaid"}, ${verified ? "bank" : null}, ${verified ? 10000 : null},
-              ${verified ? "Preserved Payer" : null}, ${verified ? "transaction-legacy" : null}, ${verified ? now : null}, ${verified ? staffId : null},
-              ${cancelled ? now : null}, ${cancelled ? staffId : null}, ${cancelled ? "Preserved cancellation" : null}) returning *`;
-          legacyRows.push(row);
-          const changes = { paymentStatus: { from: position === 1 ? "unpaid" : position === 3 ? "paid" : null,
-            to: position === 1 ? "paid" : "unpaid" }, reason: { from: null, to: "Preserved reason" } };
-          const [history] = await raw`insert into activity_log (user_id, action, entity_type, entity_id, changes)
-            values (${staffId}, 'status_change', 'registration', ${row.id}, ${raw.json(changes)}) returning *`;
-          expect(history.changes).toEqual(changes);
-          legacyHistory.push(history);
-        }
-        const [unchanged] = await raw`insert into activity_log (user_id, action, entity_type, entity_id, changes)
-          values (${staffId}, 'update', 'corporate_inquiry', 'unrelated', '{"paymentStatus":{"from":"unpaid","to":"paid"}}') returning *`;
-        legacyHistory.push(unchanged);
-        await raw`insert into registration_reference_counter (course_code, last_number) values ('BOOL', 4)`;
-        [legacyEmail] = await raw`insert into crm_email_job (registration_id, kind, payload)
-          values (${legacyRows[1].id}, 'payment_instructions', '{"subject":"Preserved E1 snapshot"}') returning *`;
-        [legacyReceipt] = await raw`insert into crm_submission_key (key, payload_hash, registration_id)
-          values (${legacyRows[1].idempotency_key}, ${legacyRows[1].payload_hash}, ${legacyRows[1].id}) returning *`;
-        const [invalidHistory] = await raw`insert into activity_log (user_id, action, entity_type, entity_id, changes)
-          values (${staffId}, 'status_change', 'registration', ${legacyRows[0].id},
-            '{"paymentStatus":{"from":"unknown-state","to":"paid"}}') returning id`;
-        await expect(migrate(database, { migrationsFolder: migrations })).rejects.toSatisfy(error => code(error) === "22P02");
-        expect((await raw`select payment_status from registration where id = ${legacyRows[1].id}`)[0].payment_status).toBe("paid");
-        expect(await raw`select column_name from information_schema.columns where table_schema = 'public'
-          and table_name = 'registration' and column_name = 'is_paid'`).toHaveLength(0);
-        await raw`delete from activity_log where id = ${invalidHistory.id}`;
-      }
       await migrate(database, { migrationsFolder: migrations });
       await migrate(database, { migrationsFolder: migrations });
       const [ledger] = await raw`select count(*)::int as count from drizzle.__drizzle_migrations`;
       expect(ledger.count).toBe(migrationNames.length);
       expect((await raw`select to_regclass('public.registration') as table_name`)[0].table_name).toBe("registration");
+      expect(await raw`select typname from pg_type where typname = 'registration_payment_status'`).toHaveLength(0);
+      const [column] = await raw`select data_type, column_default, is_nullable from information_schema.columns
+        where table_schema = 'public' and table_name = 'registration' and column_name = 'is_paid'`;
+      expect(column).toMatchObject({ data_type: 'boolean', column_default: 'false', is_nullable: 'NO' });
+      expect(await raw`select column_name from information_schema.columns where table_schema = 'public'
+        and table_name = 'registration' and column_name = 'payment_status'`).toHaveLength(0);
       if (index === 1) {
         expect((await raw`select title from workshop where slug = 'corporate-migration-sentinel'`)[0].title).toBe("Preserved workshop");
       } else if (index === 2) {
@@ -190,28 +146,6 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
         expect((await raw`select * from crm_email_job where id = ${savedJob!.id}`)[0]).toEqual({ ...savedJob, registration_id: null });
         expect((await raw`select * from crm_submission_key where key = ${sentinelKey}`)[0])
           .toMatchObject({ corporate_inquiry_id: savedInquiry!.id, registration_id: null, payload_hash: "a".repeat(64) });
-      } else if (index === 3) {
-        for (const old of legacyRows) {
-          const { payment_status, ...preserved } = old;
-          expect((await raw`select * from registration where id = ${old.id}`)[0]).toEqual({ ...preserved, is_paid: payment_status === "paid" });
-        }
-        for (const old of legacyHistory) {
-          const changes = old.changes as { paymentStatus: { from: string | null; to: string } };
-          if (old.entity_type !== "registration") {
-            expect((await raw`select * from activity_log where id = ${old.id}`)[0]).toEqual(old);
-            continue;
-          }
-          const { paymentStatus, ...otherChanges } = changes;
-          expect((await raw`select * from activity_log where id = ${old.id}`)[0]).toEqual({ ...old,
-            changes: { ...otherChanges, isPaid: { from: paymentStatus.from === null ? null : paymentStatus.from === "paid", to: paymentStatus.to === "paid" } } });
-        }
-        expect((await raw`select * from crm_email_job where id = ${legacyEmail!.id}`)[0]).toEqual(legacyEmail);
-        expect((await raw`select * from crm_submission_key where key = ${legacyReceipt!.key}`)[0]).toEqual(legacyReceipt);
-        expect((await raw`select last_number from registration_reference_counter where course_code = 'BOOL'`)[0].last_number).toBe(4);
-        expect(await raw`select typname from pg_type where typname = 'registration_payment_status'`).toHaveLength(0);
-        const [column] = await raw`select data_type, column_default, is_nullable from information_schema.columns
-          where table_schema = 'public' and table_name = 'registration' and column_name = 'is_paid'`;
-        expect(column).toMatchObject({ data_type: 'boolean', column_default: 'false', is_nullable: 'NO' });
       } else { sql = raw; db = database; }
     }
     await sql`insert into media (id, key, file_name, content_type, size_bytes)
@@ -230,7 +164,6 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
       await admin.end();
       if (baselineFolder) await rm(baselineFolder, { recursive: true });
       if (corporateFolder) await rm(corporateFolder, { recursive: true });
-      if (registrationFolder) await rm(registrationFolder, { recursive: true });
     }
   });
 
@@ -1084,13 +1017,13 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     const marked = await changeRegistration(db, actor, staffInput(fixture.row, RegistrationAction.MarkPaid));
     expect(marked.isPaid).toBe(true);
     const [paid] = await sql`select * from registration where id = ${fixture.id}`;
-    expect(paid).toMatchObject({ payment_method: "bank", paid_amount_centavos: 10000, payer_name: "Synthetic Payer",
+    expect(paid).toMatchObject({ reference: fixture.row.reference, payment_method: "bank", paid_amount_centavos: 10000, payer_name: "Synthetic Payer",
       provider_transaction_reference: "synthetic-transaction", verified_by: actor.id });
     expect(paid.verified_at).toBeInstanceOf(Date);
     const corrected = await changeRegistration(db, actor, staffInput(paid, RegistrationAction.CorrectPayment, { reason: "Wrong registration selected" }));
     expect(corrected.isPaid).toBe(false);
     const [unpaid] = await sql`select * from registration where id = ${fixture.id}`;
-    expect(unpaid).toMatchObject({ payment_method: paid.payment_method, paid_amount_centavos: paid.paid_amount_centavos,
+    expect(unpaid).toMatchObject({ reference: fixture.row.reference, payment_method: paid.payment_method, paid_amount_centavos: paid.paid_amount_centavos,
       payer_name: paid.payer_name, verified_at: paid.verified_at, verified_by: paid.verified_by });
     expect((await registrationSessionDetail(db, fixture.sessions[0])).counts.reserved).toBe(1);
     expect((await sql`select kind, state from crm_email_job where registration_id = ${fixture.id}`))
@@ -1103,6 +1036,7 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     expect(history[1].changes.actor.to).toEqual({ id: actor.id, name: actor.name, email: actor.email });
     const again = await changeRegistration(db, actor, staffInput(unpaid, RegistrationAction.MarkPaid, { providerTransactionReference: "correct-transaction" }));
     expect(again.isPaid).toBe(true);
+    expect((await sql`select reference from registration where id = ${fixture.id}`)[0].reference).toBe(fixture.row.reference);
     expect((await sql`select count(*)::int as total from crm_email_job where registration_id = ${fixture.id}`)[0].total).toBe(2);
   });
 
@@ -1128,7 +1062,7 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     const result = await changeRegistration(db, actor, staffInput(fixture.row, RegistrationAction.Cancel, { reason: "Customer withdrew" }));
     expect(result.cancelledAt).toBeInstanceOf(Date);
     const [cancelled] = await sql`select * from registration where id = ${fixture.id}`;
-    expect(cancelled).toMatchObject({ cancelled_by: actor.id, cancellation_reason: "Customer withdrew", is_paid: false });
+    expect(cancelled).toMatchObject({ reference: fixture.row.reference, cancelled_by: actor.id, cancellation_reason: "Customer withdrew", is_paid: false });
     expect((await registrationSessionDetail(db, fixture.sessions[0])).counts).toEqual({ reserved: 0, remaining: 1, paid: 0, unpaid: 0, cancelled: 1 });
     await expect(changeRegistration(db, actor, staffInput(cancelled, RegistrationAction.MarkPaid))).rejects.toMatchObject({ code: "registration_cancelled" });
     await expect(changeRegistration(db, actor, staffInput(cancelled, RegistrationAction.Cancel))).rejects.toMatchObject({ code: "registration_cancelled" });
@@ -1417,8 +1351,6 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
       consentAt: now, priceCentavos: 10000, isPaid: false, cancelledAt: null });
     await sql`update workshop_session set price_centavos = 20000 where id = ${fixture.sessions[0]}`;
     expect((await sql`select price_centavos from registration where id = ${row.id}`)[0].price_centavos).toBe(10000);
-    await expect(sql`update registration set reference = 'AD-TEST-9999' where id = ${row.id}`)
-      .rejects.toSatisfy(error => code(error) === "23514");
     await expect(sql`delete from workshop_session where id = ${fixture.sessions[0]}`)
       .rejects.toMatchObject({ constraint_name: "registration_workshop_session_id_workshop_session_id_fkey" });
     await expect(saveRegistration(randomUUID(), fixture.courseCode)).rejects.toSatisfy(error => code(error) === "23503");
