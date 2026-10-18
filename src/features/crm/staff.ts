@@ -2,7 +2,7 @@ import "@tanstack/react-start/server-only";
 import { and, desc, eq, getTableColumns, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db";
-import { activityLog, corporateInquiry, corporateInquiryStatus, crmEmailJob } from "@/db/schema";
+import { CrmEmailKind, CrmEmailState, activityLog, corporateInquiry, corporateInquiryStatus, crmEmailJob } from "@/db/schema";
 import { diffChanges, logActivity } from "@/features/shared/audit";
 import type { PortalActor } from "@/lib/access";
 import { sendEmailJob, type EmailTransport } from "./email";
@@ -80,9 +80,9 @@ export async function changeInquiry(db: Db, id: string, actor: PortalActor, inpu
       closedAt: corporateInquiry.closedAt, estimatedValueCentavos: corporateInquiry.estimatedValueCentavos, lostReason: corporateInquiry.lostReason
     });
     // An in-flight provider request cannot be retracted; only skip unclaimed reminders.
-    await tx.update(crmEmailJob).set({ state: "skipped", leaseExpiresAt: null, lastErrorCode: "inquiry_reminder_obsolete" })
-      .where(and(eq(crmEmailJob.corporateInquiryId, id), eq(crmEmailJob.kind, "corporate_overdue"),
-        inArray(crmEmailJob.state, ["pending", "failed"])));
+    await tx.update(crmEmailJob).set({ state: CrmEmailState.Skipped, leaseExpiresAt: null, lastErrorCode: "inquiry_reminder_obsolete" })
+      .where(and(eq(crmEmailJob.corporateInquiryId, id), eq(crmEmailJob.kind, CrmEmailKind.CorporateOverdue),
+        inArray(crmEmailJob.state, [CrmEmailState.Pending, CrmEmailState.Failed])));
     await logActivity(tx, {
       userId: actor.id, action: "status_change", entityType: "corporate_inquiry", entityId: id,
       changes: { ...diffChanges(before, after), actor: { from: null, to: { id: actor.id, name: actor.name, email: actor.email } } }
@@ -96,8 +96,8 @@ export async function retryInquiryEmail(db: Db, inquiryId: string, jobId: string
   const [job] = await db.select({ ...emailFields, now: sql<Date>`clock_timestamp()` }).from(crmEmailJob)
     .where(and(eq(crmEmailJob.id, jobId), eq(crmEmailJob.corporateInquiryId, inquiryId)));
   if (!job) throw new IntakeError(404, IntakeErrorCode.EmailJobNotFound);
-  if (!["pending", "failed", "sending"].includes(job.state)
-    || (job.state === "sending" && job.leaseExpiresAt && job.leaseExpiresAt > new Date(job.now))) {
+  if (![CrmEmailState.Pending, CrmEmailState.Failed, CrmEmailState.Sending].some(state => state === job.state)
+    || (job.state === CrmEmailState.Sending && job.leaseExpiresAt && job.leaseExpiresAt > new Date(job.now))) {
     throw new IntakeError(409, IntakeErrorCode.EmailNotRetryable);
   }
   await sendEmailJob(db, jobId, apiKey, transport, actor);

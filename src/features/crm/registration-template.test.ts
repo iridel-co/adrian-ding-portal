@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { registrationPaymentMessage, registrationMessageHasPlaceholders } from "./registration-template";
+import { registrationAcknowledgmentMessage, registrationPaymentMessage, registrationMessageHasPlaceholders } from "./registration-template";
 const config = { EMAIL_FROM: "Team <team@company.test>", EMAIL_REPLY_TO: "registrations@company.test",
   REGISTRATION_PAYMENT_ACCOUNT_ID: "synthetic", REGISTRATION_EMAIL_ENABLED: false, RESEND_API_KEY: "" };
 const make = () => registrationPaymentMessage(config,
@@ -24,4 +24,21 @@ it("escapes customer content in HTML and identifies local placeholders", () => {
   expect(payload.html).toContain("&lt;script&gt;");
   expect(registrationMessageHasPlaceholders({ ...payload, replyTo: "registrations@example.invalid" })).toBe(true);
   expect(registrationMessageHasPlaceholders({ ...payload, text: "[PAYMENT_ACCOUNT]" })).toBe(true);
+});
+
+it("acknowledges the verified amount with reference and schedule, escapes HTML and removes subject newlines", () => {
+  const payload = registrationAcknowledgmentMessage(config,
+    { fullName: '<script>customer</script>', email: "customer@company.test", reference: "AD-PSW-0042", paidAmountCentavos: 123450 },
+    { title: "Sales\r\n& Leadership" },
+    { date: "2027-01-12", endDate: "2027-01-13", startTime: "09:00:00", endTime: "17:00:00", venueName: "Training Room", city: "Cebu" });
+  expect(payload.to).toEqual(["customer@company.test"]);
+  expect(payload.replyTo).toBe(config.EMAIL_REPLY_TO);
+  expect(payload.subject).not.toMatch(/[\r\n]/);
+  for (const text of ["AD-PSW-0042", "₱1,234.5", "now Paid", "2027-01-12", "09:00 to 17:00", "Asia/Manila", "Training Room, Cebu"])
+    expect(payload.text).toContain(text);
+  expect(payload.html).toContain("&lt;script&gt;customer&lt;/script&gt;");
+  expect(payload.html).not.toContain("<script>");
+  expect(payload.attachments).toBeUndefined();
+  expect(payload.text).not.toMatch(/pay to|payment proof|refund|48.hour|expir|waiting list/i);
+  expect(registrationMessageHasPlaceholders(payload)).toBe(false);
 });

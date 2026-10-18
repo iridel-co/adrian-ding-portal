@@ -1,6 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { and, eq, sql } from "drizzle-orm";
-import { corporateInquiry, crmEmailJob, registration, type CrmEmailPayload } from "@/db/schema";
+import { CrmEmailKind, CrmEmailState, corporateInquiry, crmEmailJob, registration, type CrmEmailPayload } from "@/db/schema";
 import type { DbOrTx } from "@/features/shared/db-types";
 import { logActivity } from "@/features/shared/audit";
 import type { PortalActor } from "@/lib/access";
@@ -43,9 +43,8 @@ export async function sendEmailJob(db: DbOrTx, id: string, apiKey: string,
   const claimed = await db.transaction(async tx => {
     await tx.execute(sql`set local lock_timeout = '5s'`);
     await tx.execute(sql`set local statement_timeout = '10s'`);
-    const [lookup] = await tx.select({ corporateInquiryId: crmEmailJob.corporateInquiryId, registrationId: crmEmailJob.registrationId, kind: crmEmailJob.kind }).from(crmEmailJob).where(eq(crmEmailJob.id, id));
-    // E2 delivery belongs to the payment acknowledgment step.
-    if (!lookup || (lookup.registrationId && lookup.kind !== "payment_instructions")) return null;
+    const [lookup] = await tx.select({ corporateInquiryId: crmEmailJob.corporateInquiryId, registrationId: crmEmailJob.registrationId }).from(crmEmailJob).where(eq(crmEmailJob.id, id));
+    if (!lookup) return null;
     // Staff changes lock the owning record before its jobs. Use that order here
     // too, and release all locks before the provider call.
     const [inquiry] = lookup.corporateInquiryId ? await tx.select().from(corporateInquiry)
@@ -53,26 +52,28 @@ export async function sendEmailJob(db: DbOrTx, id: string, apiKey: string,
     const [owner] = lookup.registrationId ? await tx.select().from(registration)
       .where(eq(registration.id, lookup.registrationId)).for("share") : [];
     const [job] = await tx.select().from(crmEmailJob).where(eq(crmEmailJob.id, id)).for("update");
-    if (!job || ["sent", "skipped", "needs_reconciliation"].includes(job.state)) return null;
+    if (!job || [CrmEmailState.Sent, CrmEmailState.Skipped, CrmEmailState.NeedsReconciliation].some(state => state === job.state)) return null;
     const [{ instant }] = await tx.execute<{ instant: string }>(sql`select clock_timestamp() as instant`);
     const now = new Date(instant);
-    if (job.state === "sending" && job.leaseExpiresAt && job.leaseExpiresAt > now) return null;
-    if (job.kind === "corporate_overdue" && (!inquiry || inquiry.status !== "NEW" || inquiry.slaDueAt >= now)) {
-      await tx.update(crmEmailJob).set({ state: "skipped", leaseExpiresAt: null, lastErrorCode: "inquiry_reminder_obsolete" }).where(eq(crmEmailJob.id, id));
+    if (job.state === CrmEmailState.Sending && job.leaseExpiresAt && job.leaseExpiresAt > now) return null;
+    if (job.kind === CrmEmailKind.CorporateOverdue && (!inquiry || inquiry.status !== "NEW" || inquiry.slaDueAt >= now)) {
+      await tx.update(crmEmailJob).set({ state: CrmEmailState.Skipped, leaseExpiresAt: null, lastErrorCode: "inquiry_reminder_obsolete" }).where(eq(crmEmailJob.id, id));
       return null;
     }
-    if (job.registrationId && (!owner || owner.cancelledAt !== null || owner.isPaid)) {
-      await tx.update(crmEmailJob).set({ state: "skipped", leaseExpiresAt: null, lastErrorCode: "payment_instructions_obsolete" })
+    if (job.registrationId && (!owner || owner.cancelledAt !== null || (job.kind === CrmEmailKind.PaymentInstructions && owner.isPaid))) {
+      await tx.update(crmEmailJob).set({ state: CrmEmailState.Skipped, leaseExpiresAt: null, lastErrorCode: job.kind === CrmEmailKind.PaymentInstructions ? "payment_instructions_obsolete" : "payment_acknowledgment_obsolete" })
         .where(eq(crmEmailJob.id, id));
       return null;
     }
+    // Keep the original snapshot and provider key available if staff mark Paid again.
+    if (job.kind === CrmEmailKind.PaymentAcknowledgment && !owner?.isPaid) return null;
     if (job.firstAttemptAt && now.getTime() - job.firstAttemptAt.getTime() >= RETRY_WINDOW_MS) {
-      await tx.update(crmEmailJob).set({ state: "needs_reconciliation", leaseExpiresAt: null, lastErrorCode: "idempotency_window_expired" }).where(eq(crmEmailJob.id, id));
+      await tx.update(crmEmailJob).set({ state: CrmEmailState.NeedsReconciliation, leaseExpiresAt: null, lastErrorCode: "idempotency_window_expired" }).where(eq(crmEmailJob.id, id));
       return null;
     }
     if (job.corporateInquiryId && corporateMessageHasPlaceholders(job.payload)) throw new IntakeError(503, IntakeErrorCode.EmailUnavailable);
     if (job.registrationId && registrationMessageHasPlaceholders(job.payload)) throw new IntakeError(503, IntakeErrorCode.EmailUnavailable);
-    const [claimed] = await tx.update(crmEmailJob).set({ state: "sending", attemptCount: job.attemptCount + 1,
+    const [claimed] = await tx.update(crmEmailJob).set({ state: CrmEmailState.Sending, attemptCount: job.attemptCount + 1,
       firstAttemptAt: job.firstAttemptAt ?? now, lastAttemptAt: now, leaseExpiresAt: new Date(now.getTime() + LEASE_MS), lastErrorCode: null })
       .where(eq(crmEmailJob.id, id)).returning();
     const ownerId = job.corporateInquiryId ?? job.registrationId;
@@ -80,7 +81,7 @@ export async function sendEmailJob(db: DbOrTx, id: string, apiKey: string,
       await logActivity(tx, { userId: actor.id, action: "update", entityType: job.corporateInquiryId ? "corporate_inquiry" : "registration",
         entityId: ownerId,
         changes: { emailRetry: { from: { jobId: id, state: job.state, attemptCount: job.attemptCount },
-          to: { jobId: id, state: "sending", attemptCount: claimed.attemptCount } },
+          to: { jobId: id, state: CrmEmailState.Sending, attemptCount: claimed.attemptCount } },
           actor: { from: null, to: { id: actor.id, name: actor.name, email: actor.email } } } });
     }
     return claimed;
@@ -91,13 +92,13 @@ export async function sendEmailJob(db: DbOrTx, id: string, apiKey: string,
     result = await transport(claimed.payload, claimed.id);
     if (!result.id?.trim() || result.id.length > 256) throw new DeliveryError("provider_response_invalid");
   } catch (error) {
-    await db.update(crmEmailJob).set({ state: "failed", leaseExpiresAt: null,
+    await db.update(crmEmailJob).set({ state: CrmEmailState.Failed, leaseExpiresAt: null,
       lastErrorCode: error instanceof DeliveryError ? error.code : "provider_request_failed" })
-      .where(and(eq(crmEmailJob.id, id), eq(crmEmailJob.state, "sending"), eq(crmEmailJob.attemptCount, claimed.attemptCount)));
+      .where(and(eq(crmEmailJob.id, id), eq(crmEmailJob.state, CrmEmailState.Sending), eq(crmEmailJob.attemptCount, claimed.attemptCount)));
     return;
   }
   // The attempt number prevents a late response from overwriting a newer claim.
   // If this write fails, the lease remains recoverable with the SAME provider key.
-  await db.update(crmEmailJob).set({ state: "sent", sentAt: sql`clock_timestamp()`, providerId: result.id, leaseExpiresAt: null, lastErrorCode: null })
-    .where(and(eq(crmEmailJob.id, id), eq(crmEmailJob.state, "sending"), eq(crmEmailJob.attemptCount, claimed.attemptCount)));
+  await db.update(crmEmailJob).set({ state: CrmEmailState.Sent, sentAt: sql`clock_timestamp()`, providerId: result.id, leaseExpiresAt: null, lastErrorCode: null })
+    .where(and(eq(crmEmailJob.id, id), eq(crmEmailJob.state, CrmEmailState.Sending), eq(crmEmailJob.attemptCount, claimed.attemptCount)));
 }

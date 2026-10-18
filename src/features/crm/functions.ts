@@ -4,10 +4,11 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { staffMiddleware } from "@/lib/access.functions";
 import { getCorporateMailConfig, getRegistrationMailConfig } from "./config";
+import { sendEmailJob } from "./email";
 import { IntakeError, IntakeErrorCode } from "./errors";
 import { inquiryListSchema, inquiryPageSchema, inquiryTransitionSchema } from "./schemas";
 import { changeInquiry, inquiryDetail, listInquiries, retryInquiryEmail } from "./staff";
-import { registrationActionSchema, registrationDetailSchema, registrationEmailRetrySchema, registrationListSchema,
+import { RegistrationAction, registrationActionSchema, registrationDetailSchema, registrationEmailRetrySchema, registrationListSchema,
   registrationSessionListSchema } from "./registration-staff-schemas";
 import { changeRegistration, listRegistrations, listRegistrationSessions, registrationDetail,
   registrationSessionDetail, retryRegistrationEmail } from "./registration-staff";
@@ -55,7 +56,16 @@ export const $getRegistration = createServerFn({ method: "GET" }).middleware([st
   .validator(registrationDetailSchema).handler(({ data }) => staffAction(() => registrationDetail(getDb(), data.id, data)));
 
 export const $changeRegistration = createServerFn({ method: "POST" }).middleware([staffMiddleware])
-  .validator(registrationActionSchema).handler(({ data, context }) => staffAction(() => changeRegistration(getDb(), context.actor, data)));
+  .validator(registrationActionSchema).handler(({ data, context }) => staffAction(async () => {
+    const config = data.action === RegistrationAction.MarkPaid ? getRegistrationMailConfig() : undefined;
+    const db = getDb();
+    const { jobs, ...response } = await changeRegistration(db, context.actor, data, config);
+    // A delivery failure cannot undo the committed payment verification and saved message.
+    if (config?.REGISTRATION_EMAIL_ENABLED) {
+      await Promise.allSettled(jobs.map(id => sendEmailJob(db, id, config.RESEND_API_KEY)));
+    }
+    return response;
+  }));
 
 export const $retryRegistrationEmail = createServerFn({ method: "POST" }).middleware([staffMiddleware])
   .validator(registrationEmailRetrySchema).handler(({ data, context }) => staffAction(async () => {

@@ -5,7 +5,7 @@ const harness = vi.hoisted(() => ({
   request: null as Request | null,
   sessionUser: null as null | { id: string },
   identity: null as null | { id: string; name: string; email: string; emailVerified: boolean },
-  crmCall: vi.fn(), registrationCall: vi.fn(), dbCall: vi.fn(), responseStatus: vi.fn()
+  crmCall: vi.fn(), registrationCall: vi.fn(), sendCall: vi.fn(), dbCall: vi.fn(), responseStatus: vi.fn()
 }));
 vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@tanstack/react-start/server", () => ({ getRequest: () => harness.request!, setResponseHeader: vi.fn(), setResponseStatus: harness.responseStatus }));
@@ -57,13 +57,14 @@ vi.mock("@/db", () => ({ getDb: () => ({
     return chain;
   }
 }) }));
+vi.mock("@/features/crm/email", () => ({ sendEmailJob: harness.sendCall }));
 vi.mock("@/features/crm/staff", () => ({ changeInquiry: harness.crmCall, inquiryDetail: harness.crmCall,
   listInquiries: harness.crmCall, retryInquiryEmail: harness.crmCall }));
 vi.mock("@/features/crm/registration-staff", () => ({ listRegistrationSessions: harness.registrationCall,
   registrationSessionDetail: harness.registrationCall, listRegistrations: harness.registrationCall,
   registrationDetail: harness.registrationCall, changeRegistration: harness.registrationCall, retryRegistrationEmail: harness.registrationCall }));
 vi.mock("@/lib/env", () => ({ getEnv: () => ({ BETTER_AUTH_URL: "https://portal.test" }) }));
-import { RegistrationAction } from "@/features/crm/registration-staff-schemas";
+import { RegistrationAction, registrationActionSchema } from "@/features/crm/registration-staff-schemas";
 import { $changeInquiry, $crmAccess, $listInquiries, $listRegistrationSessions, $getRegistrationSession,
   $listRegistrations, $getRegistration, $changeRegistration, $retryRegistrationEmail } from "@/features/crm/functions";
 
@@ -76,7 +77,8 @@ beforeEach(() => {
   harness.sessionUser = { id: "current-user" };
   harness.identity = { id: "current-user", name: "Staff", email: "staff@company.test", emailVerified: true };
   harness.crmCall.mockResolvedValue([]);
-  harness.registrationCall.mockResolvedValue([]);
+  harness.registrationCall.mockResolvedValue({ jobs: [] });
+  harness.sendCall.mockResolvedValue(undefined);
   vi.stubEnv("REGISTRATION_EMAIL_ENABLED", "true");
   vi.stubEnv("REGISTRATION_PAYMENT_ACCOUNT_ID", "12345678-abcd-4000-8000-123456789abc");
   vi.stubEnv("REGISTRATION_EMAIL_FROM", "Team <registrations@company.test>");
@@ -211,6 +213,40 @@ describe("Registered workshop staff functions", () => {
     harness.request = new Request("https://portal.test/_server/action", { method: "POST", headers: { Origin: "https://portal.test" } });
     await $changeRegistration({ data: markPaidInput });
     expect(harness.registrationCall.mock.calls[0][1]).toEqual({ id: "current-user", name: "Staff", email: "staff@company.test", role: "staff" });
+  });
+  it("sends acknowledgment jobs after saving payment, hides internal job IDs and tolerates delivery failure", async () => {
+    harness.request = new Request("https://portal.test/_server/action", { method: "POST", headers: { Origin: "https://portal.test" } });
+    harness.registrationCall.mockResolvedValue({ changed: true, isPaid: true, jobs: [registrationId] });
+    harness.sendCall.mockImplementation(async () => {
+      expect(harness.registrationCall).toHaveBeenCalledOnce();
+      throw new Error("Synthetic delivery failure");
+    });
+    await expect($changeRegistration({ data: markPaidInput })).resolves.toEqual({ changed: true, isPaid: true });
+    expect(harness.sendCall).toHaveBeenCalledWith(expect.anything(), registrationId, "synthetic-key");
+    expect(harness.registrationCall.mock.calls[0][3]).toMatchObject({ REGISTRATION_EMAIL_ENABLED: true });
+  });
+  it("queues without sending when mail is disabled and never sends after a failed payment save", async () => {
+    harness.request = new Request("https://portal.test/_server/action", { method: "POST", headers: { Origin: "https://portal.test" } });
+    vi.stubEnv("REGISTRATION_EMAIL_ENABLED", "false");
+    harness.registrationCall.mockResolvedValue({ changed: true, isPaid: true, jobs: [registrationId] });
+    await $changeRegistration({ data: markPaidInput });
+    expect(harness.sendCall).not.toHaveBeenCalled();
+    vi.stubEnv("REGISTRATION_EMAIL_ENABLED", "true");
+    harness.registrationCall.mockRejectedValue(new Error("Synthetic transaction failure"));
+    await expect($changeRegistration({ data: markPaidInput })).rejects.toThrow("crm_unavailable");
+    expect(harness.sendCall).not.toHaveBeenCalled();
+  });
+  it("allows corrections and cancellation without mail configuration", async () => {
+    harness.request = new Request("https://portal.test/_server/action", { method: "POST", headers: { Origin: "https://portal.test" } });
+    vi.stubEnv("REGISTRATION_PAYMENT_ACCOUNT_ID", "");
+    for (const action of [RegistrationAction.CorrectPayment, RegistrationAction.Cancel]) {
+      await $changeRegistration({ data: registrationActionSchema.parse({ id: registrationId, action, expectedIsPaid: action === RegistrationAction.CorrectPayment,
+        expectedUpdatedAt: markPaidInput.expectedUpdatedAt, reason: "Synthetic correction" }) });
+    }
+    expect(harness.registrationCall).toHaveBeenCalledTimes(2);
+    expect(harness.sendCall).not.toHaveBeenCalled();
+    await expect($changeRegistration({ data: markPaidInput })).rejects.toThrow("intake_unavailable");
+    expect(harness.registrationCall).toHaveBeenCalledTimes(2);
   });
   it("does not retry workshop mail while sending is disabled", async () => {
     vi.stubEnv("REGISTRATION_EMAIL_ENABLED", "false");
