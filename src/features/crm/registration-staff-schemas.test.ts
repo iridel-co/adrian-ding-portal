@@ -41,3 +41,12 @@ it.each([
   };
   expect(registrationActionSchema.parse(input).action).toBe(expectedAction);
 });
+
+it.each([RegistrationAction.MarkPaid, RegistrationAction.CorrectPayment, RegistrationAction.Cancel])(
+  "rejects a caller-supplied reference on %s", action => {
+    const input = action === RegistrationAction.MarkPaid ? paid : {
+      ...base, action, expectedIsPaid: action === RegistrationAction.CorrectPayment, reason: "Staff reason"
+    };
+    expect(registrationActionSchema.safeParse({ ...input, reference: "AD-TEST-9999" }).success).toBe(false);
+  }
+);
