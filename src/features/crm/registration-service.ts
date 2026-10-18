@@ -15,8 +15,8 @@ const secureUrl = z.url().refine(value => {
   return url.protocol === "https:" && !url.username && !url.password;
 });
 
-type Acceptance = { accepted: true; reference?: string; paymentStatus?: "unpaid" };
-const originalResult = (reference: string): Acceptance => ({ accepted: true, reference, paymentStatus: "unpaid" });
+type Acceptance = { accepted: true; reference?: string; isPaid?: false };
+const originalResult = (reference: string): Acceptance => ({ accepted: true, reference, isPaid: false });
 
 export async function acceptRegistration(db: DbOrTx, data: RegistrationInput, key: string, config: RegistrationMailConfig, now?: Date) {
   if (data.consent !== true) throw new IntakeError(400, IntakeErrorCode.ConsentRequired);

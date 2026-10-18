@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import postgres from "postgres";
+import { z } from "zod";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { eq } from "drizzle-orm";
@@ -27,6 +28,9 @@ import { corporateInquirySchema } from "./schemas";
 import { sendEmailJob, type EmailTransport } from "./email";
 import { changeInquiry, inquiryDetail, listInquiries, retryInquiryEmail } from "./staff";
 import { inquiryListSchema, inquiryPageSchema, inquiryTransitionSchema } from "./schemas";
+import { changeRegistration, listRegistrations, listRegistrationSessions, registrationDetail,
+  registrationSessionDetail, retryRegistrationEmail } from "./registration-staff";
+import { RegistrationAction, registrationActionSchema, registrationDetailSchema, registrationListSchema, registrationSessionListSchema } from "./registration-staff-schemas";
 import { authorizePortalUser, type PortalActor } from "@/lib/access";
 
 // Explicit opt-in only. Never use DATABASE_URL or the application's DB client.
@@ -40,13 +44,14 @@ if (isolatedUrl) {
 
 describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
   const suffix = randomUUID().replaceAll("-", "");
-  const databaseNames = [`corp_clean_${suffix}`, `corp_baseline_${suffix}`, `workshop_baseline_${suffix}`];
+  const databaseNames = [`corp_clean_${suffix}`, `corp_baseline_${suffix}`, `workshop_baseline_${suffix}`, `enum_baseline_${suffix}`];
   const admin = postgres(isolatedUrl ?? "postgres://unused@127.0.0.1:55432/adrian_ding_portal", { max: 1 });
   const clients: ReturnType<typeof postgres>[] = [];
   let sql: ReturnType<typeof postgres>;
   let db: ReturnType<typeof drizzle<typeof relations>>;
   let baselineFolder: string | undefined;
   let corporateFolder: string | undefined;
+  let registrationFolder: string | undefined;
   const createdDatabases: string[] = [];
   const actor: PortalActor = { id: `staff-${suffix}`, name: "Synthetic Staff", email: "staff@company.test", role: "staff" };
   const config = { EMAIL_FROM: "Test <test@example.invalid>", EMAIL_REPLY_TO: "sales@example.invalid",
@@ -74,10 +79,11 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
   beforeAll(async () => {
     baselineFolder = await mkdtemp(path.join(tmpdir(), "corporate-migrations-"));
     corporateFolder = await mkdtemp(path.join(tmpdir(), "workshop-migrations-"));
+    registrationFolder = await mkdtemp(path.join(tmpdir(), "registration-boolean-migrations-"));
     const migrations = path.resolve("drizzle");
     const migrationNames = (await readdir(migrations)).sort();
     for (const name of migrationNames) {
-      for (const [folder, cutoff] of [[baselineFolder, "20261013135747"], [corporateFolder, "20261016132854"]]) {
+      for (const [folder, cutoff] of [[baselineFolder, "20261013135747"], [corporateFolder, "20261016132854"], [registrationFolder, "20261018075245"]]) {
         if (name >= cutoff!) continue;
         const destination = path.join(folder!, name);
         await mkdir(destination);
@@ -114,6 +120,54 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
         await raw`insert into crm_submission_key (key, payload_hash, corporate_inquiry_id)
           values (${sentinelKey}, ${"a".repeat(64)}, ${savedInquiry!.id})`;
       }
+      let legacyRows: postgres.Row[] = [];
+      let legacyHistory: postgres.Row[] = [];
+      let legacyEmail: postgres.Row | undefined;
+      let legacyReceipt: postgres.Row | undefined;
+      if (index === 3) {
+        await migrate(database, { migrationsFolder: registrationFolder });
+        const staffId = `legacy-${suffix}`;
+        await raw`insert into "user" (id, name, email, email_verified) values (${staffId}, 'Legacy Staff', 'legacy@company.test', true)`;
+        const [course] = await raw`insert into workshop (slug, title, course_code) values ('boolean-migration', 'Preserved Workshop', 'BOOL') returning id`;
+        const [session] = await raw`insert into workshop_session (workshop_id, date, end_date, start_time, end_time, price_centavos, capacity)
+          values (${course.id}, '2027-01-12', '2027-01-12', '09:00', '17:00', 10000, 20) returning id`;
+        for (let position = 0; position < 4; position++) {
+          const verified = position === 1 || position === 3;
+          const cancelled = position === 2;
+          const [row] = await raw`insert into registration (full_name, email, phone, idempotency_key, payload_hash, workshop_session_id,
+            reference, occupation, salary_range, consent_at, price_centavos, payment_status, payment_method,
+            paid_amount_centavos, payer_name, provider_transaction_reference, verified_at, verified_by,
+            cancelled_at, cancelled_by, cancellation_reason)
+            values ('Preserved Registrant', ${`legacy-${position}@company.test`}, '09171234567', ${randomUUID()}, ${"a".repeat(64)},
+              ${session.id}, ${`AD-BOOL-${String(position + 1).padStart(4, "0")}`}, 'Trainer', 'Prefer not to say', now(), 10000,
+              ${position === 1 ? "paid" : "unpaid"}, ${verified ? "bank" : null}, ${verified ? 10000 : null},
+              ${verified ? "Preserved Payer" : null}, ${verified ? "transaction-legacy" : null}, ${verified ? now : null}, ${verified ? staffId : null},
+              ${cancelled ? now : null}, ${cancelled ? staffId : null}, ${cancelled ? "Preserved cancellation" : null}) returning *`;
+          legacyRows.push(row);
+          const changes = { paymentStatus: { from: position === 1 ? "unpaid" : position === 3 ? "paid" : null,
+            to: position === 1 ? "paid" : "unpaid" }, reason: { from: null, to: "Preserved reason" } };
+          const [history] = await raw`insert into activity_log (user_id, action, entity_type, entity_id, changes)
+            values (${staffId}, 'status_change', 'registration', ${row.id}, ${raw.json(changes)}) returning *`;
+          expect(history.changes).toEqual(changes);
+          legacyHistory.push(history);
+        }
+        const [unchanged] = await raw`insert into activity_log (user_id, action, entity_type, entity_id, changes)
+          values (${staffId}, 'update', 'corporate_inquiry', 'unrelated', '{"paymentStatus":{"from":"unpaid","to":"paid"}}') returning *`;
+        legacyHistory.push(unchanged);
+        await raw`insert into registration_reference_counter (course_code, last_number) values ('BOOL', 4)`;
+        [legacyEmail] = await raw`insert into crm_email_job (registration_id, kind, payload)
+          values (${legacyRows[1].id}, 'payment_instructions', '{"subject":"Preserved E1 snapshot"}') returning *`;
+        [legacyReceipt] = await raw`insert into crm_submission_key (key, payload_hash, registration_id)
+          values (${legacyRows[1].idempotency_key}, ${legacyRows[1].payload_hash}, ${legacyRows[1].id}) returning *`;
+        const [invalidHistory] = await raw`insert into activity_log (user_id, action, entity_type, entity_id, changes)
+          values (${staffId}, 'status_change', 'registration', ${legacyRows[0].id},
+            '{"paymentStatus":{"from":"unknown-state","to":"paid"}}') returning id`;
+        await expect(migrate(database, { migrationsFolder: migrations })).rejects.toSatisfy(error => code(error) === "22P02");
+        expect((await raw`select payment_status from registration where id = ${legacyRows[1].id}`)[0].payment_status).toBe("paid");
+        expect(await raw`select column_name from information_schema.columns where table_schema = 'public'
+          and table_name = 'registration' and column_name = 'is_paid'`).toHaveLength(0);
+        await raw`delete from activity_log where id = ${invalidHistory.id}`;
+      }
       await migrate(database, { migrationsFolder: migrations });
       await migrate(database, { migrationsFolder: migrations });
       const [ledger] = await raw`select count(*)::int as count from drizzle.__drizzle_migrations`;
@@ -126,6 +180,28 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
         expect((await raw`select * from crm_email_job where id = ${savedJob!.id}`)[0]).toEqual({ ...savedJob, registration_id: null });
         expect((await raw`select * from crm_submission_key where key = ${sentinelKey}`)[0])
           .toMatchObject({ corporate_inquiry_id: savedInquiry!.id, registration_id: null, payload_hash: "a".repeat(64) });
+      } else if (index === 3) {
+        for (const old of legacyRows) {
+          const { payment_status, ...preserved } = old;
+          expect((await raw`select * from registration where id = ${old.id}`)[0]).toEqual({ ...preserved, is_paid: payment_status === "paid" });
+        }
+        for (const old of legacyHistory) {
+          const changes = old.changes as { paymentStatus: { from: string | null; to: string } };
+          if (old.entity_type !== "registration") {
+            expect((await raw`select * from activity_log where id = ${old.id}`)[0]).toEqual(old);
+            continue;
+          }
+          const { paymentStatus, ...otherChanges } = changes;
+          expect((await raw`select * from activity_log where id = ${old.id}`)[0]).toEqual({ ...old,
+            changes: { ...otherChanges, isPaid: { from: paymentStatus.from === null ? null : paymentStatus.from === "paid", to: paymentStatus.to === "paid" } } });
+        }
+        expect((await raw`select * from crm_email_job where id = ${legacyEmail!.id}`)[0]).toEqual(legacyEmail);
+        expect((await raw`select * from crm_submission_key where key = ${legacyReceipt!.key}`)[0]).toEqual(legacyReceipt);
+        expect((await raw`select last_number from registration_reference_counter where course_code = 'BOOL'`)[0].last_number).toBe(4);
+        expect(await raw`select typname from pg_type where typname = 'registration_payment_status'`).toHaveLength(0);
+        const [column] = await raw`select data_type, column_default, is_nullable from information_schema.columns
+          where table_schema = 'public' and table_name = 'registration' and column_name = 'is_paid'`;
+        expect(column).toMatchObject({ data_type: 'boolean', column_default: 'false', is_nullable: 'NO' });
       } else { sql = raw; db = database; }
     }
     await sql`insert into media (id, key, file_name, content_type, size_bytes)
@@ -144,6 +220,7 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
       await admin.end();
       if (baselineFolder) await rm(baselineFolder, { recursive: true });
       if (corporateFolder) await rm(corporateFolder, { recursive: true });
+      if (registrationFolder) await rm(registrationFolder, { recursive: true });
     }
   });
 
@@ -529,7 +606,7 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     const key = randomUUID();
     const results = await Promise.all(Array.from({ length: 5 }, () => acceptRegistration(db, fixture.answers, key, now)));
     expect(results.every(result => JSON.stringify(result) === JSON.stringify(results[0]))).toBe(true);
-    expect(results[0]).toEqual({ accepted: true, reference: `AD-${fixture.courseCode}-0001`, paymentStatus: "unpaid" });
+    expect(results[0]).toEqual({ accepted: true, reference: `AD-${fixture.courseCode}-0001`, isPaid: false });
     const [saved] = await sql`select * from registration where idempotency_key = ${key}`;
     expect(saved.price_centavos).toBe(10000);
     expect(saved.consent_at).toEqual(now);
@@ -616,7 +693,7 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
   it("counts paid registrations as occupied seats", async () => {
     const fixture = await intakeFixture(1);
     const accepted = await acceptRegistration(db, fixture.answers, randomUUID(), now);
-    await sql`update registration set payment_status = 'paid', payment_method = 'bank', paid_amount_centavos = 10000,
+    await sql`update registration set is_paid = true, payment_method = 'bank', paid_amount_centavos = 10000,
       payer_name = 'Synthetic Payer', provider_transaction_reference = 'synthetic-payment', verified_at = ${now}, verified_by = ${actor.id}
       where reference = ${accepted.reference!}`;
     await expect(acceptRegistration(db, { ...fixture.answers, email: 'other@example.invalid' }, randomUUID(), now))
@@ -682,7 +759,7 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
       await sql`update registration set cancelled_at = ${now}, cancelled_by = ${actor.id}, cancellation_reason = 'Cancelled by staff'
         where id = ${job.registration_id}`;
     } else {
-      await sql`update registration set payment_status = 'paid', payment_method = 'bank', paid_amount_centavos = 10000,
+      await sql`update registration set is_paid = true, payment_method = 'bank', paid_amount_centavos = 10000,
         payer_name = 'Synthetic Payer', provider_transaction_reference = 'synthetic-paid', verified_at = ${now}, verified_by = ${actor.id}
         where id = ${job.registration_id}`;
     }
@@ -785,6 +862,209 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     expect((await saveRegistrationIntake(db, fixture.answers, key, registrationConfig, now)).jobs).toHaveLength(1);
   });
 
+  async function staffRegistration(capacity = 20) {
+    const fixture = await intakeFixture(capacity);
+    const key = randomUUID();
+    const accepted = await saveRegistrationIntake(db, fixture.answers, key, registrationConfig, now);
+    const [row] = await sql`select * from registration where idempotency_key = ${key}`;
+    return { ...fixture, id: row.id as string, row, accepted };
+  }
+
+  function staffInput(row: Record<string, unknown>, action: RegistrationAction, extra = {}) {
+    const reviewed = z.object({ id: z.uuid(), updated_at: z.date() }).parse(row);
+    return registrationActionSchema.parse({ id: reviewed.id, action, expectedUpdatedAt: reviewed.updated_at.toISOString(),
+      expectedIsPaid: action === RegistrationAction.CorrectPayment,
+      ...(action === RegistrationAction.MarkPaid ? { paymentMethod: "bank", paidAmountCentavos: 10000,
+        payerName: "Synthetic Payer", providerTransactionReference: "synthetic-transaction" } : { reason: "Synthetic staff reason" }), ...extra });
+  }
+
+  it("lists registrations with literal search, lifecycle filters and pagination before limiting", async () => {
+    const fixture = await intakeFixture();
+    const marker = `Filter_${randomUUID()}%`;
+    const ids: string[] = [];
+    for (let index = 0; index < 4; index++) {
+      const key = randomUUID();
+      await saveRegistrationIntake(db, { ...fixture.answers, email: `${randomUUID()}@company.test`,
+        fullName: index === 3 ? marker.replace("_", "X").replace("%", "anything") : marker }, key, registrationConfig, now);
+      const [row] = await sql`select * from registration where idempotency_key = ${key}`;
+      ids.push(row.id);
+      if (index === 1) await changeRegistration(db, actor, staffInput(row, RegistrationAction.MarkPaid));
+      if (index === 2) await changeRegistration(db, actor, staffInput(row, RegistrationAction.Cancel));
+    }
+    const list = (extra = {}) => registrationListSchema.parse({ workshopSessionId: fixture.sessions[0], search: marker, ...extra });
+    const first = await listRegistrations(db, list({ filter: "all", limit: 2 }));
+    const second = await listRegistrations(db, list({ filter: "all", limit: 2, offset: 2 }));
+    expect(first.hasMore).toBe(true); expect(second.hasMore).toBe(false);
+    expect([...first.items, ...second.items].map(row => row.id).sort()).toEqual(ids.slice(0, 3).sort());
+    for (const filter of ["paid", "unpaid", "cancelled"]) expect((await listRegistrations(db, list({ filter }))).items).toHaveLength(1);
+    const active = await listRegistrations(db, list());
+    expect(active.items).toHaveLength(2);
+    expect(active.items[0]).not.toHaveProperty("idempotencyKey");
+    expect(active.items[0]).not.toHaveProperty("payloadHash");
+    expect((await listRegistrations(db, list({ filter: "all", search: first.items[0].reference }))).items).toHaveLength(1);
+    expect((await listRegistrations(db, { ...list(), workshopSessionId: fixture.sessions[1] })).items).toHaveLength(0);
+    const session = await registrationSessionDetail(db, fixture.sessions[0]);
+    expect(session.counts).toEqual({ reserved: 3, remaining: 17, paid: 1, unpaid: 2, cancelled: 1 });
+  });
+
+  it("lists staff sessions with seat totals, workshop filtering, date filters and stable pagination", async () => {
+    const fixture = await staffRegistration();
+    await sql`update workshop_session set date = '2020-01-12', end_date = '2020-01-12' where id = ${fixture.sessions[1]}`;
+    const page = (extra = {}) => registrationSessionListSchema.parse({ workshopId: fixture.courseId, when: "all", ...extra });
+    const first = await listRegistrationSessions(db, page({ limit: 1 }));
+    const second = await listRegistrationSessions(db, page({ limit: 1, offset: 1 }));
+    expect(first.hasMore).toBe(true); expect(second.hasMore).toBe(false);
+    expect([...first.items, ...second.items].map(row => row.id).sort()).toEqual([...fixture.sessions].sort());
+    expect((await listRegistrationSessions(db, page({ when: "past" }))).items.map(row => row.id)).toEqual([fixture.sessions[1]]);
+    expect((await listRegistrationSessions(db, page({ when: "upcoming" }))).items.map(row => row.id)).toEqual([fixture.sessions[0]]);
+    expect((await registrationSessionDetail(db, fixture.sessions[0])).counts).toEqual({ reserved: 1, remaining: 19, paid: 0, unpaid: 1, cancelled: 0 });
+    await expect(registrationSessionDetail(db, randomUUID())).rejects.toMatchObject({ status: 404, code: "registration_session_not_found" });
+  });
+
+  it("records payment verification and a reasoned correction without releasing a seat or creating E2", async () => {
+    const fixture = await staffRegistration(1);
+    const marked = await changeRegistration(db, actor, staffInput(fixture.row, RegistrationAction.MarkPaid));
+    expect(marked.isPaid).toBe(true);
+    const [paid] = await sql`select * from registration where id = ${fixture.id}`;
+    expect(paid).toMatchObject({ payment_method: "bank", paid_amount_centavos: 10000, payer_name: "Synthetic Payer",
+      provider_transaction_reference: "synthetic-transaction", verified_by: actor.id });
+    expect(paid.verified_at).toBeInstanceOf(Date);
+    const corrected = await changeRegistration(db, actor, staffInput(paid, RegistrationAction.CorrectPayment, { reason: "Wrong registration selected" }));
+    expect(corrected.isPaid).toBe(false);
+    const [unpaid] = await sql`select * from registration where id = ${fixture.id}`;
+    expect(unpaid).toMatchObject({ payment_method: paid.payment_method, paid_amount_centavos: paid.paid_amount_centavos,
+      payer_name: paid.payer_name, verified_at: paid.verified_at, verified_by: paid.verified_by });
+    expect((await registrationSessionDetail(db, fixture.sessions[0])).counts.reserved).toBe(1);
+    expect((await sql`select kind, state from crm_email_job where registration_id = ${fixture.id}`))
+      .toEqual([expect.objectContaining({ kind: "payment_instructions", state: "skipped" })]);
+    const history = await sql`select changes from activity_log where entity_type = 'registration' and entity_id = ${fixture.id} order by created_at`;
+    expect(history).toHaveLength(2);
+    expect(history[0].changes.isPaid).toEqual({ from: false, to: true });
+    expect(history[1].changes.isPaid).toEqual({ from: true, to: false });
+    expect(history[1].changes.reason.to).toBe("Wrong registration selected");
+    expect(history[1].changes.actor.to).toEqual({ id: actor.id, name: actor.name, email: actor.email });
+    const again = await changeRegistration(db, actor, staffInput(unpaid, RegistrationAction.MarkPaid, { providerTransactionReference: "correct-transaction" }));
+    expect(again.isPaid).toBe(true);
+    expect((await sql`select count(*)::int as total from crm_email_job where registration_id = ${fixture.id}`)[0].total).toBe(1);
+  });
+
+  it("rejects concurrent and stale actions, including a Paid-to-Unpaid round trip", async () => {
+    const fixture = await staffRegistration();
+    const staleCancel = staffInput(fixture.row, RegistrationAction.Cancel);
+    const results = await Promise.allSettled([
+      changeRegistration(db, actor, staffInput(fixture.row, RegistrationAction.MarkPaid)),
+      changeRegistration(db, actor, staffInput(fixture.row, RegistrationAction.MarkPaid))
+    ]);
+    expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
+    const failure = results.find(result => result.status === "rejected") as PromiseRejectedResult;
+    expect(failure.reason).toMatchObject({ status: 409, code: "registration_status_changed" });
+    await expect(changeRegistration(db, actor, staleCancel)).rejects.toMatchObject({ code: "registration_status_changed" });
+    const [paid] = await sql`select * from registration where id = ${fixture.id}`;
+    await changeRegistration(db, actor, staffInput(paid, RegistrationAction.CorrectPayment));
+    await expect(changeRegistration(db, actor, staleCancel)).rejects.toMatchObject({ code: "registration_status_changed" });
+    expect((await sql`select count(*)::int as total from activity_log where entity_type = 'registration' and entity_id = ${fixture.id}`)[0].total).toBe(2);
+  });
+
+  it("cancels only unpaid registrations, releases capacity and prevents later changes", async () => {
+    const fixture = await staffRegistration(1);
+    const result = await changeRegistration(db, actor, staffInput(fixture.row, RegistrationAction.Cancel, { reason: "Customer withdrew" }));
+    expect(result.cancelledAt).toBeInstanceOf(Date);
+    const [cancelled] = await sql`select * from registration where id = ${fixture.id}`;
+    expect(cancelled).toMatchObject({ cancelled_by: actor.id, cancellation_reason: "Customer withdrew", is_paid: false });
+    expect((await registrationSessionDetail(db, fixture.sessions[0])).counts).toEqual({ reserved: 0, remaining: 1, paid: 0, unpaid: 0, cancelled: 1 });
+    await expect(changeRegistration(db, actor, staffInput(cancelled, RegistrationAction.MarkPaid))).rejects.toMatchObject({ code: "registration_cancelled" });
+    await expect(changeRegistration(db, actor, staffInput(cancelled, RegistrationAction.Cancel))).rejects.toMatchObject({ code: "registration_cancelled" });
+    expect((await saveRegistrationIntake(db, fixture.answers, randomUUID(), registrationConfig, now)).response.reference)
+      .toBe(`AD-${fixture.courseCode}-0002`);
+    expect((await sql`select count(*)::int as total from activity_log where entity_type = 'registration' and entity_id = ${fixture.id}`)[0].total).toBe(1);
+  });
+
+  it.each([RegistrationAction.MarkPaid, RegistrationAction.Cancel] as const)("rolls back %s and email suppression if audit persistence fails", async action => {
+    const fixture = await staffRegistration();
+    await sql`alter table activity_log add constraint registration_test_reject_audit check (entity_type <> 'registration') not valid`;
+    try {
+      await expect(changeRegistration(db, actor, staffInput(fixture.row, action))).rejects.toSatisfy(error => code(error) === "23514");
+      const [row] = await sql`select * from registration where id = ${fixture.id}`;
+      expect(row.is_paid).toBe(false); expect(row.cancelled_at).toBeNull(); expect(row.verified_at).toBeNull();
+      expect(row.updated_at).toEqual(fixture.row.updated_at);
+      expect((await sql`select state from crm_email_job where id = ${fixture.accepted.jobs[0]}`)[0].state).toBe("pending");
+    } finally { await sql`alter table activity_log drop constraint registration_test_reject_audit`; }
+  });
+
+  it("returns safe details, verification, seat counts and paginated history without request keys or email payloads", async () => {
+    const fixture = await staffRegistration();
+    await changeRegistration(db, actor, staffInput(fixture.row, RegistrationAction.MarkPaid));
+    const [paid] = await sql`select * from registration where id = ${fixture.id}`;
+    await changeRegistration(db, actor, staffInput(paid, RegistrationAction.CorrectPayment));
+    const page = registrationDetailSchema.parse({ id: fixture.id, limit: 1 });
+    const detail = await registrationDetail(db, fixture.id, page);
+    expect(detail).toMatchObject({ reference: fixture.accepted.response.reference, occupation: "Trainer", isPaid: false, verifiedBy: actor.id });
+    expect(detail).not.toHaveProperty("idempotencyKey"); expect(detail).not.toHaveProperty("payloadHash");
+    expect(detail.emailJobs[0]).not.toHaveProperty("payload"); expect(detail.emailJobs[0]).not.toHaveProperty("providerId");
+    expect(detail.session.counts.reserved).toBe(1);
+    expect(detail.history).toHaveLength(1); expect(detail.historyHasMore).toBe(true);
+    expect(detail.history[0].changes.reason?.to).toBe("Synthetic staff reason");
+    expect((await registrationDetail(db, fixture.id, { ...page, offset: 1 })).historyHasMore).toBe(false);
+    const missingId = randomUUID();
+    await expect(registrationDetail(db, missingId, { ...page, id: missingId })).rejects.toMatchObject({ status: 404, code: "registration_not_found" });
+    await expect(changeRegistration(db, actor, staffInput({ ...fixture.row, id: missingId }, RegistrationAction.MarkPaid)))
+      .rejects.toMatchObject({ status: 404, code: "registration_not_found" });
+  });
+
+  it("retries only E1 jobs belonging to that registration and audits the verified actor", async () => {
+    const fixture = await staffRegistration();
+    const other = await staffRegistration();
+    const jobId = fixture.accepted.jobs[0];
+    const capture = vi.fn<EmailTransport>(async (_payload, key) => ({ id: `captured-${key}` }));
+    await expect(retryRegistrationEmail(db, other.id, jobId, actor, "unused", capture)).rejects.toMatchObject({ code: "email_job_not_found" });
+    const corporate = await savedInquiry();
+    await expect(retryRegistrationEmail(db, fixture.id, corporate.jobs[0], actor, "unused", capture)).rejects.toMatchObject({ code: "email_job_not_found" });
+    const [e2] = await sql`insert into crm_email_job (registration_id, kind, payload) values (${fixture.id}, 'payment_acknowledgment', '{}') returning id`;
+    await expect(retryRegistrationEmail(db, fixture.id, e2.id, actor, "unused", capture)).rejects.toMatchObject({ code: "email_not_retryable" });
+    expect(capture).not.toHaveBeenCalled();
+    const result = await retryRegistrationEmail(db, fixture.id, jobId, actor, "unused", capture);
+    expect(result.state).toBe("sent"); expect(result).not.toHaveProperty("payload");
+    expect(capture.mock.calls[0][1]).toBe(jobId);
+    const detail = await registrationDetail(db, fixture.id, registrationDetailSchema.parse({ id: fixture.id }));
+    expect(detail.history[0].changes.emailRetry?.to).toMatchObject({ jobId, state: "sending", attemptCount: 1 });
+    expect(detail.history[0].changes.actor?.to).toEqual({ id: actor.id, name: actor.name, email: actor.email });
+    await expect(retryRegistrationEmail(db, fixture.id, jobId, actor, "unused", capture)).rejects.toMatchObject({ code: "email_not_retryable" });
+    expect(capture).toHaveBeenCalledOnce();
+  });
+
+  it("does not claim an active lease, permits expired-lease recovery and stops after the provider window", async () => {
+    const fixture = await staffRegistration();
+    const jobId = fixture.accepted.jobs[0];
+    await sql`update crm_email_job set state = 'sending', attempt_count = 1, first_attempt_at = now(), last_attempt_at = now(),
+      lease_expires_at = now() + interval '1 minute' where id = ${jobId}`;
+    const capture = vi.fn<EmailTransport>(async (_payload, key) => ({ id: `captured-${key}` }));
+    await expect(retryRegistrationEmail(db, fixture.id, jobId, actor, "unused", capture)).rejects.toMatchObject({ code: "email_not_retryable" });
+    expect(capture).not.toHaveBeenCalled();
+    await sql`update crm_email_job set lease_expires_at = now() - interval '1 minute' where id = ${jobId}`;
+    expect((await retryRegistrationEmail(db, fixture.id, jobId, actor, "unused", capture)).state).toBe("sent");
+    const expired = await staffRegistration();
+    await sql`update crm_email_job set state = 'failed', attempt_count = 1, first_attempt_at = now() - interval '25 hours',
+      last_attempt_at = now() - interval '25 hours' where id = ${expired.accepted.jobs[0]}`;
+    expect((await retryRegistrationEmail(db, expired.id, expired.accepted.jobs[0], actor, "unused", capture)).state).toBe("needs_reconciliation");
+    expect(capture).toHaveBeenCalledOnce();
+  });
+
+  it("keeps failed retries retryable and rolls back a claim when its audit write fails", async () => {
+    const fixture = await staffRegistration();
+    const jobId = fixture.accepted.jobs[0];
+    const fail = vi.fn<EmailTransport>(async () => { throw new Error("synthetic provider failure"); });
+    expect((await retryRegistrationEmail(db, fixture.id, jobId, actor, "unused", fail)).state).toBe("failed");
+    const capture = vi.fn<EmailTransport>(async (_payload, key) => ({ id: `captured-${key}` }));
+    await sql`alter table activity_log add constraint registration_test_reject_retry_audit check (entity_type <> 'registration') not valid`;
+    try {
+      await expect(retryRegistrationEmail(db, fixture.id, jobId, actor, "unused", capture)).rejects.toSatisfy(error => code(error) === "23514");
+      expect(capture).not.toHaveBeenCalled();
+      expect((await sql`select state, attempt_count from crm_email_job where id = ${jobId}`)[0]).toMatchObject({ state: "failed", attempt_count: 1 });
+    } finally { await sql`alter table activity_log drop constraint registration_test_reject_retry_audit`; }
+    expect((await retryRegistrationEmail(db, fixture.id, jobId, actor, "unused", capture)).state).toBe("sent");
+    expect(fail.mock.calls[0][1]).toBe(capture.mock.calls[0][1]);
+  });
+
   function saveRegistration(sessionId: string, courseCode: string, overrides: Partial<typeof registration.$inferInsert> = {}) {
     return db.transaction(async tx => {
       const reference = await allocateRegistrationReference(tx, courseCode);
@@ -830,7 +1110,7 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     const fixture = await workshopFixture();
     const row = await saveRegistration(fixture.sessions[0], fixture.courseCode, { city: "Cebu City" });
     expect(row).toMatchObject({ city: "Cebu City", occupation: "Trainer", salaryRange: "Prefer not to say",
-      consentAt: now, priceCentavos: 10000, paymentStatus: "unpaid", cancelledAt: null });
+      consentAt: now, priceCentavos: 10000, isPaid: false, cancelledAt: null });
     await sql`update workshop_session set price_centavos = 20000 where id = ${fixture.sessions[0]}`;
     expect((await sql`select price_centavos from registration where id = ${row.id}`)[0].price_centavos).toBe(10000);
     await expect(sql`update registration set reference = 'AD-TEST-9999' where id = ${row.id}`)
@@ -847,18 +1127,18 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
   it("requires complete payment verification, retains it on correction, and validates cancellation", async () => {
     const fixture = await workshopFixture();
     const row = await saveRegistration(fixture.sessions[0], fixture.courseCode);
-    await expect(sql`update registration set payment_status = 'paid' where id = ${row.id}`)
+    await expect(sql`update registration set is_paid = true where id = ${row.id}`)
       .rejects.toSatisfy(error => code(error) === "23514");
     await expect(sql`update registration set paid_amount_centavos = -1 where id = ${row.id}`)
       .rejects.toSatisfy(error => code(error) === "23514");
-    await sql`update registration set payment_status = 'paid', payment_method = 'bank', paid_amount_centavos = 10000,
+    await sql`update registration set is_paid = true, payment_method = 'bank', paid_amount_centavos = 10000,
       payer_name = 'Synthetic Payer', provider_transaction_reference = 'SYNTHETIC-001', verified_at = now(), verified_by = ${actor.id}
       where id = ${row.id}`;
     await expect(sql`update registration set cancelled_at = now(), cancelled_by = ${actor.id}, cancellation_reason = 'Test'
       where id = ${row.id}`).rejects.toSatisfy(error => code(error) === "23514");
-    await sql`update registration set payment_status = 'unpaid' where id = ${row.id}`;
+    await sql`update registration set is_paid = false where id = ${row.id}`;
     const [corrected] = await sql`select * from registration where id = ${row.id}`;
-    expect(corrected).toMatchObject({ payment_status: "unpaid", cancelled_at: null, paid_amount_centavos: 10000,
+    expect(corrected).toMatchObject({ is_paid: false, cancelled_at: null, paid_amount_centavos: 10000,
       verified_by: actor.id, payer_name: "Synthetic Payer", provider_transaction_reference: "SYNTHETIC-001" });
     await expect(sql`update registration set cancelled_at = now(), cancelled_by = ${actor.id}, cancellation_reason = ' '
       where id = ${row.id}`).rejects.toSatisfy(error => code(error) === "23514");
