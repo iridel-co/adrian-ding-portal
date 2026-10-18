@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { and, asc, eq, inArray, isNotNull, lt, notExists, or, sql } from "drizzle-orm";
 import { getDb } from "@/db";
-import { corporateInquiry, crmEmailJob } from "@/db/schema";
+import { CrmEmailKind, CrmEmailState, corporateInquiry, crmEmailJob } from "@/db/schema";
 import type { DbOrTx } from "@/features/shared/db-types";
 import { getCorporateMailConfig } from "./config";
 import { sendEmailJob, type EmailTransport } from "./email";
@@ -19,11 +19,11 @@ export async function queueOverdueInquiries(db: DbOrTx, config: CorporateMailCon
     const inquiries = await tx.select().from(corporateInquiry).where(and(
       eq(corporateInquiry.status, "NEW"), lt(corporateInquiry.slaDueAt, sql`clock_timestamp()`),
       notExists(tx.select({ id: crmEmailJob.id }).from(crmEmailJob).where(and(
-        eq(crmEmailJob.corporateInquiryId, corporateInquiry.id), eq(crmEmailJob.kind, "corporate_overdue"))))
+        eq(crmEmailJob.corporateInquiryId, corporateInquiry.id), eq(crmEmailJob.kind, CrmEmailKind.CorporateOverdue))))
     )).orderBy(asc(corporateInquiry.slaDueAt), asc(corporateInquiry.id)).limit(QUEUE_LIMIT).for("update", { skipLocked: true });
     if (!inquiries.length) return 0;
     const queued = await tx.insert(crmEmailJob).values(inquiries.map(inquiry => ({
-      corporateInquiryId: inquiry.id, kind: "corporate_overdue" as const, payload: corporateOverdueMessage(inquiry, config)
+      corporateInquiryId: inquiry.id, kind: CrmEmailKind.CorporateOverdue, payload: corporateOverdueMessage(inquiry, config)
     }))).onConflictDoNothing().returning({ id: crmEmailJob.id });
     return queued.length;
   });
@@ -34,8 +34,8 @@ export async function runCorporateScheduler(db: DbOrTx, config: ReturnType<typeo
   if (!config.CORPORATE_EMAIL_ENABLED) return { queued, processed: 0, errors: 0, sendingEnabled: false };
   const jobs = await db.select({ id: crmEmailJob.id }).from(crmEmailJob).where(and(
     isNotNull(crmEmailJob.corporateInquiryId),
-    or(inArray(crmEmailJob.state, ["pending", "failed"]),
-      and(eq(crmEmailJob.state, "sending"), lt(crmEmailJob.leaseExpiresAt, sql`clock_timestamp()`)))
+    or(inArray(crmEmailJob.state, [CrmEmailState.Pending, CrmEmailState.Failed]),
+      and(eq(crmEmailJob.state, CrmEmailState.Sending), lt(crmEmailJob.leaseExpiresAt, sql`clock_timestamp()`)))
   )).orderBy(asc(crmEmailJob.updatedAt), asc(crmEmailJob.id)).limit(RECOVERY_LIMIT);
   let errors = 0;
   // Two requests at a time keep the batch within the scheduler's timeout.
@@ -47,7 +47,7 @@ export async function runCorporateScheduler(db: DbOrTx, config: ReturnType<typeo
         // They remain visible for manual review instead of starving later jobs.
         if (error instanceof IntakeError && error.code === IntakeErrorCode.EmailUnavailable) {
           await db.update(crmEmailJob).set({ updatedAt: sql`clock_timestamp()`, lastErrorCode: IntakeErrorCode.EmailUnavailable })
-            .where(and(eq(crmEmailJob.id, job.id), inArray(crmEmailJob.state, ["pending", "failed", "sending"])));
+            .where(and(eq(crmEmailJob.id, job.id), inArray(crmEmailJob.state, [CrmEmailState.Pending, CrmEmailState.Failed, CrmEmailState.Sending])));
         }
         throw error;
       }

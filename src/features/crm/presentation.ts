@@ -1,3 +1,4 @@
+import { CrmEmailState } from "@/db/schema/crm-email-state";
 import { IntakeErrorCode } from "./errors";
 import type { InquiryStatus } from "./lifecycle";
 
@@ -17,8 +18,8 @@ export function isInquiryOverdue(inquiry: { status: InquiryStatus; slaDueAt: Dat
 }
 
 export function canRetryInquiryEmail(job: { state: string; leaseExpiresAt: Date | string | null }, now = Date.now()) {
-  return job.state === "pending" || job.state === "failed"
-    || (job.state === "sending" && (!job.leaseExpiresAt || new Date(job.leaseExpiresAt).getTime() <= now));
+  return job.state === CrmEmailState.Pending || job.state === CrmEmailState.Failed
+    || (job.state === CrmEmailState.Sending && (!job.leaseExpiresAt || new Date(job.leaseExpiresAt).getTime() <= now));
 }
 
 export function formatInquiryTime(value: Date | string | null) {
@@ -26,8 +27,8 @@ export function formatInquiryTime(value: Date | string | null) {
 }
 
 export const emailStateLabels: Record<string, string> = {
-  pending: "Awaiting attempt", sending: "Sending", failed: "Attempt failed", sent: "Accepted by email provider",
-  skipped: "Skipped", needs_reconciliation: "Needs manual reconciliation"
+  [CrmEmailState.Pending]: "Awaiting attempt", [CrmEmailState.Sending]: "Sending", [CrmEmailState.Failed]: "Attempt failed", [CrmEmailState.Sent]: "Accepted by email provider",
+  [CrmEmailState.Skipped]: "Skipped", [CrmEmailState.NeedsReconciliation]: "Needs manual reconciliation"
 };
 
 const messages: Record<string, string> = {

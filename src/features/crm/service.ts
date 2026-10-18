@@ -1,6 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { eq, sql } from "drizzle-orm";
-import { corporateInquiry, crmEmailJob, crmSubmissionKey } from "@/db/schema";
+import { CrmEmailKind, corporateInquiry, crmEmailJob, crmSubmissionKey } from "@/db/schema";
 import type { DbOrTx } from "@/features/shared/db-types";
 import { inquiryDeadline } from "./deadline";
 import { IntakeError, IntakeErrorCode } from "./errors";
@@ -28,8 +28,8 @@ export async function acceptCorporateInquiry(db: DbOrTx, data: CorporateInquiryI
       createdAt: now, slaDueAt: inquiryDeadline(now) }).returning({ id: corporateInquiry.id });
     const messages = corporateMessages(data, saved.id, config);
     const jobs = await tx.insert(crmEmailJob).values([
-      { corporateInquiryId: saved.id, kind: "corporate_acknowledgment", payload: messages.acknowledgment },
-      { corporateInquiryId: saved.id, kind: "corporate_notification", payload: messages.notification }
+      { corporateInquiryId: saved.id, kind: CrmEmailKind.CorporateAcknowledgment, payload: messages.acknowledgment },
+      { corporateInquiryId: saved.id, kind: CrmEmailKind.CorporateNotification, payload: messages.notification }
     ]).returning({ id: crmEmailJob.id });
     await tx.insert(crmSubmissionKey).values({ key, payloadHash: hash, corporateInquiryId: saved.id });
     return jobs.map(job => job.id);

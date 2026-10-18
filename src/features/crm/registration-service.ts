@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { z } from "zod";
 import { and, count, eq, isNull, sql } from "drizzle-orm";
-import { crmEmailJob, crmSubmissionKey, media, paymentAccount, registration, workshop, workshopSession } from "@/db/schema";
+import { CrmEmailKind, crmEmailJob, crmSubmissionKey, media, paymentAccount, registration, workshop, workshopSession } from "@/db/schema";
 import { publicMediaUrl, readPaymentQr } from "@/features/media/r2";
 import type { DbOrTx, Tx } from "@/features/shared/db-types";
 import { hasSessionStarted } from "@/features/shared/time";
@@ -50,7 +50,7 @@ export async function acceptRegistration(db: DbOrTx, data: RegistrationInput, ke
     if (config.REGISTRATION_EMAIL_ENABLED && registrationMessageHasPlaceholders(payload)) {
       throw new IntakeError(503, IntakeErrorCode.EmailUnavailable);
     }
-    const [job] = await tx.insert(crmEmailJob).values({ registrationId: saved.id, kind: "payment_instructions", payload })
+    const [job] = await tx.insert(crmEmailJob).values({ registrationId: saved.id, kind: CrmEmailKind.PaymentInstructions, payload })
       .returning({ id: crmEmailJob.id });
     return { response: originalResult(reference), jobs: [job.id] };
   });

@@ -1,3 +1,5 @@
+import { CrmEmailKind } from "@/db/schema/crm-email-kind";
+import { CrmEmailState } from "@/db/schema/crm-email-state";
 import { IntakeErrorCode } from "@/features/crm/errors";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -16,7 +18,7 @@ export function InquiryEmails({ inquiryId, jobs }: { inquiryId: string; jobs: Em
     mutationFn: (jobId: string) => $retryInquiryEmail({ data: { inquiryId, jobId } }),
     onSuccess: async result => {
       setSelected(null);
-      if (result?.state === "sent") toast.success("Email accepted by the provider.");
+      if (result?.state === CrmEmailState.Sent) toast.success("Email accepted by the provider.");
       else toast.info(result ? `Email state: ${emailStateLabels[result.state] ?? result.state}.` : "Refresh to check the email state.");
       await queryClient.invalidateQueries({ queryKey: inquiryQueryKey });
     },
@@ -28,10 +30,10 @@ export function InquiryEmails({ inquiryId, jobs }: { inquiryId: string; jobs: Em
   return <section className="space-y-3"><h2 className="text-xl font-medium">Email delivery</h2>
     <p className="text-sm text-muted-foreground">Provider acceptance does not confirm inbox delivery. Replies and proposals are handled outside the portal.</p>
     <div className="grid gap-3 sm:grid-cols-2">{jobs.map(job => <div className="space-y-2 rounded-lg border p-4" key={job.id}>
-      <h3 className="font-medium">{job.kind === "corporate_acknowledgment" ? "Customer acknowledgement" : job.kind === "corporate_overdue" ? "Overdue reply reminder" : "Staff notification"}</h3>
+      <h3 className="font-medium">{job.kind === CrmEmailKind.CorporateAcknowledgment ? "Customer acknowledgement" : job.kind === CrmEmailKind.CorporateOverdue ? "Overdue reply reminder" : "Staff notification"}</h3>
       <p>{emailStateLabels[job.state] ?? job.state}</p><p className="text-sm text-muted-foreground">Attempts: {job.attemptCount}<br />Last attempt: {formatInquiryTime(job.lastAttemptAt)}{job.sentAt && <><br />Accepted: {formatInquiryTime(job.sentAt)}</>}</p>
       {job.lastErrorCode && <p className="text-sm text-muted-foreground">Last result: {job.lastErrorCode.replaceAll("_", " ")}</p>}
-      {job.state === "needs_reconciliation" && <p className="text-sm">Ask an administrator to check the provider before attempting any new send.</p>}
+      {job.state === CrmEmailState.NeedsReconciliation && <p className="text-sm">Ask an administrator to check the provider before attempting any new send.</p>}
       {canRetryInquiryEmail(job) && <Button variant="outline" disabled={retry.isPending} onClick={() => { setSelected(job.id); retry.reset(); }}>Retry email</Button>}
     </div>)}</div>
     <Dialog open={selected !== null} onOpenChange={open => { if (!open && !retry.isPending) setSelected(null); }}>

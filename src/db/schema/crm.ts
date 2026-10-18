@@ -3,23 +3,17 @@ import { boolean, check, date, index, integer, jsonb, pgEnum, pgTable, text, tim
 
 import { stringList } from "./columns";
 import { user } from "./auth";
+import { CrmEmailKind } from "./crm-email-kind";
+import { CrmEmailState } from "./crm-email-state";
 import { paymentMethod } from "./payments";
 import { workshopSession } from "./workshops";
 
 export const corporateInquiryStatus = pgEnum("corporate_inquiry_status", [
   "NEW", "CONTACTED", "PROPOSAL_SENT", "WON", "LOST", "SPAM"
 ]);
-export const crmEmailKind = pgEnum("crm_email_kind", [
-  "corporate_acknowledgment",
-  "corporate_notification",
-  "corporate_overdue",
-  "payment_instructions",
-  "payment_acknowledgment"
-]);
+export const crmEmailKind = pgEnum("crm_email_kind", CrmEmailKind);
 // "sent" means accepted by the provider, not delivered to the recipient's inbox.
-export const crmEmailState = pgEnum("crm_email_state", [
-  "pending", "sending", "sent", "failed", "skipped", "needs_reconciliation"
-]);
+export const crmEmailState = pgEnum("crm_email_state", CrmEmailState);
 
 export type CrmEmailPayload = {
   from: string;
@@ -177,7 +171,7 @@ export const crmEmailJob = pgTable("crm_email_job", {
   registrationId: uuid("registration_id").references(() => registration.id, { onDelete: "restrict" }),
   kind: crmEmailKind("kind").notNull(),
   payload: jsonb("payload").$type<CrmEmailPayload>().notNull(),
-  state: crmEmailState("state").default("pending").notNull(),
+  state: crmEmailState("state").default(CrmEmailState.Pending).notNull(),
   attemptCount: integer("attempt_count").default(0).notNull(),
   firstAttemptAt: timestamp("first_attempt_at", { withTimezone: true }),
   lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),

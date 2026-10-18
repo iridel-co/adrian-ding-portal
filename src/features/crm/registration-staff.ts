@@ -3,12 +3,13 @@ import { and, asc, desc, eq, getTableColumns, ilike, inArray, isNotNull, isNull,
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { Db } from "@/db";
-import { activityLog, crmEmailJob, paymentMethod, registration, workshop, workshopSession } from "@/db/schema";
+import { CrmEmailKind, CrmEmailState, activityLog, crmEmailJob, paymentMethod, registration, workshop, workshopSession } from "@/db/schema";
 import { diffChanges, logActivity } from "@/features/shared/audit";
 import { manilaWallClock } from "@/features/shared/time";
 import type { PortalActor } from "@/lib/access";
 import { sendEmailJob, type EmailTransport } from "./email";
 import { IntakeError, IntakeErrorCode } from "./errors";
+import { registrationAcknowledgmentMessage, registrationMessageHasPlaceholders, type RegistrationMailConfig } from "./registration-template";
 import { RegistrationAction, type registrationActionSchema, type registrationDetailSchema, type registrationListSchema, type registrationSessionListSchema } from "./registration-staff-schemas";
 
 const { idempotencyKey: _key, payloadHash: _hash, ...registrationFields } = getTableColumns(registration);
@@ -91,7 +92,7 @@ export async function registrationDetail(db: Db, id: string, page: z.output<type
   })), historyHasMore: history.length > page.limit };
 }
 
-export async function changeRegistration(db: Db, actor: PortalActor, input: z.output<typeof registrationActionSchema>) {
+export async function changeRegistration(db: Db, actor: PortalActor, input: z.output<typeof registrationActionSchema>, config?: RegistrationMailConfig) {
   return db.transaction(async tx => {
     await tx.execute(sql`set local lock_timeout = '5s'`);
     await tx.execute(sql`set local statement_timeout = '10s'`);
@@ -99,8 +100,8 @@ export async function changeRegistration(db: Db, actor: PortalActor, input: z.ou
       .from(registration).innerJoin(workshopSession, eq(workshopSession.id, registration.workshopSessionId)).where(eq(registration.id, input.id));
     if (!lookup) throw new IntakeError(404, IntakeErrorCode.RegistrationNotFound);
     // Match intake's workshop -> session -> registration -> jobs lock order.
-    await tx.select({ id: workshop.id }).from(workshop).where(eq(workshop.id, lookup.workshopId)).for("share");
-    await tx.select({ id: workshopSession.id }).from(workshopSession).where(eq(workshopSession.id, lookup.sessionId)).for("update");
+    const [course] = await tx.select({ title: workshop.title }).from(workshop).where(eq(workshop.id, lookup.workshopId)).for("share");
+    const [session] = await tx.select().from(workshopSession).where(eq(workshopSession.id, lookup.sessionId)).for("update");
     const [before] = await tx.select().from(registration).where(eq(registration.id, input.id)).for("update");
     if (!before) throw new IntakeError(404, IntakeErrorCode.RegistrationNotFound);
     if (before.cancelledAt) throw new IntakeError(409, IntakeErrorCode.RegistrationCancelled);
@@ -126,16 +127,34 @@ export async function changeRegistration(db: Db, actor: PortalActor, input: z.ou
       values.cancellationReason = input.reason;
     }
     const [after] = await tx.update(registration).set(values).where(eq(registration.id, input.id)).returning();
+    const jobs: string[] = [];
+    if (input.action === RegistrationAction.MarkPaid) {
+      if (!config) throw new IntakeError(503, IntakeErrorCode.EmailUnavailable);
+      const [existing] = await tx.select().from(crmEmailJob)
+        .where(and(eq(crmEmailJob.registrationId, input.id), eq(crmEmailJob.kind, CrmEmailKind.PaymentAcknowledgment))).for("update");
+      if (existing) {
+        if ([CrmEmailState.Pending, CrmEmailState.Failed, CrmEmailState.Sending].some(state => state === existing.state)) jobs.push(existing.id);
+      } else {
+        const payload = registrationAcknowledgmentMessage(config,
+          { ...after, paidAmountCentavos: input.paidAmountCentavos }, course, session);
+        if (config.REGISTRATION_EMAIL_ENABLED && registrationMessageHasPlaceholders(payload)) {
+          throw new IntakeError(503, IntakeErrorCode.EmailUnavailable);
+        }
+        const [job] = await tx.insert(crmEmailJob).values({ registrationId: input.id, kind: CrmEmailKind.PaymentAcknowledgment, payload })
+          .returning({ id: crmEmailJob.id });
+        jobs.push(job.id);
+      }
+    }
     // A provider request already in flight cannot be recalled. Leave its outcome intact.
     if (input.action !== RegistrationAction.CorrectPayment) {
-      await tx.update(crmEmailJob).set({ state: "skipped", leaseExpiresAt: null, lastErrorCode: "payment_instructions_obsolete" })
-        .where(and(eq(crmEmailJob.registrationId, input.id), eq(crmEmailJob.kind, "payment_instructions"), inArray(crmEmailJob.state, ["pending", "failed"])));
+      await tx.update(crmEmailJob).set({ state: CrmEmailState.Skipped, leaseExpiresAt: null, lastErrorCode: "payment_instructions_obsolete" })
+        .where(and(eq(crmEmailJob.registrationId, input.id), eq(crmEmailJob.kind, CrmEmailKind.PaymentInstructions), inArray(crmEmailJob.state, [CrmEmailState.Pending, CrmEmailState.Failed])));
     }
     await logActivity(tx, { userId: actor.id, action: "status_change", entityType: "registration", entityId: input.id,
       changes: { ...diffChanges(before, after),
         ...(input.action === RegistrationAction.MarkPaid ? {} : { reason: { from: null, to: input.reason } }),
         actor: { from: null, to: { id: actor.id, name: actor.name, email: actor.email } } } });
-    return { changed: true, isPaid: after.isPaid, cancelledAt: after.cancelledAt, updatedAt: after.updatedAt };
+    return { changed: true, isPaid: after.isPaid, cancelledAt: after.cancelledAt, updatedAt: after.updatedAt, jobs };
   });
 }
 
@@ -144,8 +163,11 @@ export async function retryRegistrationEmail(db: Db, registrationId: string, job
   const [job] = await db.select({ ...emailFields, now: sql<Date>`clock_timestamp()` }).from(crmEmailJob)
     .where(and(eq(crmEmailJob.id, jobId), eq(crmEmailJob.registrationId, registrationId)));
   if (!job) throw new IntakeError(404, IntakeErrorCode.EmailJobNotFound);
-  if (job.kind !== "payment_instructions" || !["pending", "failed", "sending"].includes(job.state)
-    || (job.state === "sending" && job.leaseExpiresAt && job.leaseExpiresAt > new Date(job.now))) {
+  if (
+    ![CrmEmailKind.PaymentInstructions, CrmEmailKind.PaymentAcknowledgment].some(kind => kind === job.kind)
+    || ![CrmEmailState.Pending, CrmEmailState.Failed, CrmEmailState.Sending].some(state => state === job.state)
+    || (job.state === CrmEmailState.Sending && job.leaseExpiresAt && job.leaseExpiresAt > new Date(job.now))
+  ) {
     throw new IntakeError(409, IntakeErrorCode.EmailNotRetryable);
   }
   await sendEmailJob(db, jobId, apiKey, transport, actor);
