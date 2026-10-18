@@ -81,3 +81,13 @@ export const inquiryTransitionSchema = z.strictObject({
     context.addIssue({ code: "custom", path: ["lostReason"], message: "A loss reason applies only to lost inquiries." });
   }
 });
+
+export const registrationSchema = z.strictObject({
+  ...contactFields,
+  workshopSessionId: z.uuid().transform(value => value.toLowerCase()),
+  occupation: requiredText(200),
+  salaryRange: requiredText(100, 1),
+  city: optionalText(200)
+});
+
+export type RegistrationInput = z.output<typeof registrationSchema>;

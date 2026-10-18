@@ -10,7 +10,7 @@ const originsSchema = z.string().default("").transform(value => value.split(",")
     } catch { return false; }
   })).min(1));
 
-export function getCorporateOrigins() {
+export function getIntakeOrigins() {
   const result = originsSchema.safeParse(process.env.SITE_ORIGINS);
   if (!result.success) throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
   return result.data;
@@ -49,4 +49,15 @@ export function getCorporateMailConfig() {
     throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
   }
   return { ...config, EMAIL_FROM: config.CORPORATE_EMAIL_FROM, EMAIL_REPLY_TO: config.CORPORATE_REPLY_TO };
+}
+
+// Preserve the corporate intake contract while sharing the exact origin allowlist.
+export const getCorporateOrigins = getIntakeOrigins;
+
+export function getRegistrationConfig() {
+  const secret = z.string().min(1).safeParse(process.env.TURNSTILE_SECRET_KEY);
+  if (process.env.REGISTRATION_INTAKE_ENABLED !== "true" || !secret.success) {
+    throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
+  }
+  return { TURNSTILE_SECRET_KEY: secret.data };
 }

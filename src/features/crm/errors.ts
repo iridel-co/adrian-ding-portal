@@ -19,6 +19,8 @@ export enum IntakeErrorCode {
   SchedulerDisabled = "scheduler_disabled",
   SchedulerUnauthorized = "scheduler_unauthorized",
   SchedulerUnavailable = "scheduler_unavailable",
+  SessionUnavailable = "session_unavailable",
+  SoldOut = "sold_out",
   SubmissionRejected = "submission_rejected",
   UnsupportedContentType = "unsupported_content_type",
   VerificationFailed = "verification_failed",

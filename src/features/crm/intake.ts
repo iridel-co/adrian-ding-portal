@@ -4,7 +4,7 @@ import { getDb } from "@/db";
 import { getCorporateConfig, getCorporateOrigins } from "./config";
 import { sendEmailJob } from "./email";
 import { IntakeError, IntakeErrorCode } from "./errors";
-import { readJson } from "./http";
+import { handleOptions, readJson } from "./http";
 import { corporateInquirySchema, idempotencyKeySchema } from "./schemas";
 import { acceptCorporateInquiry } from "./service";
 import { verifyCorporateTurnstile } from "./turnstile";
@@ -28,15 +28,6 @@ export async function handleCorporateInquiry(request: Request) {
     const failure = error instanceof IntakeError ? error : new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
     return Response.json({ error: failure.code }, { status: failure.status, headers });
   }
-}
-
-function handleOptions(request: Request, headers: Headers) {
-  if (request.headers.get("access-control-request-method") !== "POST") throw new IntakeError(405, IntakeErrorCode.MethodNotAllowed);
-  const requested = request.headers.get("access-control-request-headers")?.toLowerCase().split(",").map(value => value.trim()) ?? [];
-  if (requested.some(header => !["content-type", "idempotency-key"].includes(header))) throw new IntakeError(400, IntakeErrorCode.HeadersNotAllowed);
-  headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-  headers.set("Access-Control-Allow-Headers", "Content-Type, Idempotency-Key");
-  return new Response(null, { status: 204, headers });
 }
 
 async function handlePost(request: Request, headers: Headers, origins: string[]) {
