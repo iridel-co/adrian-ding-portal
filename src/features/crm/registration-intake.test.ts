@@ -3,8 +3,10 @@ vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@/db", () => ({ getDb: vi.fn(() => "database") }));
 vi.mock("./config", () => ({ getIntakeOrigins: vi.fn(() => ["https://website.test"]),
   getRegistrationConfig: vi.fn(() => ({ TURNSTILE_SECRET_KEY: "secret" })) }));
+vi.mock("./email", () => ({ sendEmailJob: vi.fn() }));
 vi.mock("./turnstile", () => ({ verifyTurnstile: vi.fn() }));
 vi.mock("./registration-service", () => ({ acceptRegistration: vi.fn() }));
+import { sendEmailJob } from "./email";
 import { getDb } from "@/db";
 import { getRegistrationConfig } from "./config";
 import { verifyTurnstile } from "./turnstile";
@@ -23,8 +25,12 @@ const request = (body: unknown = answers, origin = "https://website.test") => ne
 describe("Workshop public intake", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getRegistrationConfig).mockReturnValue({ TURNSTILE_SECRET_KEY: "secret", REGISTRATION_EMAIL_ENABLED: true,
+      REGISTRATION_PAYMENT_ACCOUNT_ID: key, RESEND_API_KEY: "synthetic-key", EMAIL_FROM: "team@company.test",
+      EMAIL_REPLY_TO: "registrations@company.test", REGISTRATION_EMAIL_FROM: "team@company.test", REGISTRATION_REPLY_TO: "registrations@company.test" });
+    vi.mocked(sendEmailJob).mockResolvedValue(undefined);
     vi.mocked(verifyTurnstile).mockResolvedValue(undefined);
-    vi.mocked(acceptRegistration).mockResolvedValue({ accepted: true, reference: "AD-PSW-0001", paymentStatus: "unpaid" });
+    vi.mocked(acceptRegistration).mockResolvedValue({ response: { accepted: true, reference: "AD-PSW-0001", paymentStatus: "unpaid" }, jobs: ["e1-job"] });
   });
   it("verifies before database access and returns the committed result with CORS and no caching", async () => {
     vi.mocked(verifyTurnstile).mockImplementation(async () => { expect(getDb).not.toHaveBeenCalled(); });
@@ -34,10 +40,31 @@ describe("Workshop public intake", () => {
     expect(response.headers.get("access-control-allow-origin")).toBe("https://website.test");
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(verifyTurnstile).toHaveBeenCalledWith("fresh-token", "secret", ["https://website.test"], "workshop-registration");
-    expect(acceptRegistration).toHaveBeenCalledWith("database", expect.objectContaining({ email: "test@example.invalid", city: null }), key);
+    expect(acceptRegistration).toHaveBeenCalledWith("database", expect.objectContaining({ email: "test@example.invalid", city: null }), key, getRegistrationConfig());
     const data = vi.mocked(acceptRegistration).mock.calls[0][1];
     expect(data).not.toHaveProperty("turnstileToken");
     expect(data).not.toHaveProperty("website");
+  });
+  it("commits before sending and keeps provider failures out of the acceptance response", async () => {
+    let committed = false;
+    vi.mocked(acceptRegistration).mockImplementation(async () => {
+      committed = true;
+      return { response: { accepted: true, reference: "AD-PSW-0001", paymentStatus: "unpaid" }, jobs: ["e1-job"] };
+    });
+    vi.mocked(sendEmailJob).mockImplementation(async () => {
+      expect(committed).toBe(true);
+      throw new Error("private provider failure");
+    });
+    const response = await handleRegistration(request());
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual({ accepted: true, reference: "AD-PSW-0001", paymentStatus: "unpaid" });
+    expect(sendEmailJob).toHaveBeenCalledWith("database", "e1-job", "synthetic-key");
+  });
+  it("leaves the saved job pending when workshop email sending is disabled", async () => {
+    vi.mocked(getRegistrationConfig).mockReturnValue({ ...getRegistrationConfig(), REGISTRATION_EMAIL_ENABLED: false });
+    expect((await handleRegistration(request())).status).toBe(202);
+    expect(acceptRegistration).toHaveBeenCalledOnce();
+    expect(sendEmailJob).not.toHaveBeenCalled();
   });
   it.each([
     { ...answers, consent: false }, { ...answers, website: "spam" }, { ...answers, turnstileToken: "" },
@@ -50,9 +77,10 @@ describe("Workshop public intake", () => {
     expect(getDb).not.toHaveBeenCalled();
   });
   it("requires a fresh bot check on a duplicate retry and preserves generic acceptance", async () => {
-    vi.mocked(acceptRegistration).mockResolvedValue({ accepted: true });
+    vi.mocked(acceptRegistration).mockResolvedValue({ response: { accepted: true }, jobs: [] });
     const response = await handleRegistration(request({ ...answers, turnstileToken: "retry-token" }));
     expect(await response.json()).toEqual({ accepted: true });
+    expect(sendEmailJob).not.toHaveBeenCalled();
     expect(verifyTurnstile).toHaveBeenCalledWith("retry-token", "secret", expect.any(Array), "workshop-registration");
   });
   it("rejects bot failures before opening the database", async () => {
