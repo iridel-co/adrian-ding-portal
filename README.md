@@ -82,8 +82,8 @@ Database tests create and remove temporary databases without changing the
 application database. They never use `DATABASE_URL` automatically.
 
 The workshop registration data layer is implemented, including course-wide
-references and registration-owned retry/email records. Its intake and staff
-APIs are not yet implemented. See [the step 1 review](docs/crm/STEP-1-REVIEW.md)
+references and registration-owned retry/email records. Its [public intake](docs/crm/REGISTRATION-INTAKE.md) is implemented.
+Email creation/delivery and staff APIs remain pending. See [the step 1 review](docs/crm/STEP-1-REVIEW.md)
 and [implementation plan](docs/crm/WORKSHOP-REGISTRATION-PLAN.md).
 
 ## Corporate inquiries

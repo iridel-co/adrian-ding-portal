@@ -15,6 +15,7 @@ import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppInquiriesRouteImport } from './routes/_app/inquiries'
 import { Route as ApiCorporateInquiriesRouteImport } from './routes/api/corporate-inquiries'
+import { Route as ApiRegistrationsRouteImport } from './routes/api/registrations'
 import { Route as PreviewProgramRouteImport } from './routes/preview/program'
 import { Route as PreviewWorkshopRouteImport } from './routes/preview/workshop'
 import { Route as AppContentMediaRouteImport } from './routes/_app/content/media'
@@ -70,6 +71,11 @@ const AppInquiriesRoute = AppInquiriesRouteImport.update({
 const ApiCorporateInquiriesRoute = ApiCorporateInquiriesRouteImport.update({
   id: '/api/corporate-inquiries',
   path: '/api/corporate-inquiries',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRegistrationsRoute = ApiRegistrationsRouteImport.update({
+  id: '/api/registrations',
+  path: '/api/registrations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PreviewProgramRoute = PreviewProgramRouteImport.update({
@@ -218,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/preview': typeof PreviewRouteWithChildren
   '/inquiries': typeof AppInquiriesRouteWithChildren
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
+  '/api/registrations': typeof ApiRegistrationsRoute
   '/preview/program': typeof PreviewProgramRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/content/media': typeof AppContentMediaRoute
@@ -250,6 +257,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
+  '/api/registrations': typeof ApiRegistrationsRoute
   '/preview/program': typeof PreviewProgramRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/': typeof AppIndexRoute
@@ -286,6 +294,7 @@ export interface FileRoutesById {
   '/preview': typeof PreviewRouteWithChildren
   '/_app/inquiries': typeof AppInquiriesRouteWithChildren
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
+  '/api/registrations': typeof ApiRegistrationsRoute
   '/preview/program': typeof PreviewProgramRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/_app/': typeof AppIndexRoute
@@ -323,6 +332,7 @@ export interface FileRouteTypes {
     | '/preview'
     | '/inquiries'
     | '/api/corporate-inquiries'
+    | '/api/registrations'
     | '/preview/program'
     | '/preview/workshop'
     | '/content/media'
@@ -355,6 +365,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/preview'
     | '/api/corporate-inquiries'
+    | '/api/registrations'
     | '/preview/program'
     | '/preview/workshop'
     | '/'
@@ -390,6 +401,7 @@ export interface FileRouteTypes {
     | '/preview'
     | '/_app/inquiries'
     | '/api/corporate-inquiries'
+    | '/api/registrations'
     | '/preview/program'
     | '/preview/workshop'
     | '/_app/'
@@ -425,6 +437,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PreviewRoute: typeof PreviewRouteWithChildren
   ApiCorporateInquiriesRoute: typeof ApiCorporateInquiriesRoute
+  ApiRegistrationsRoute: typeof ApiRegistrationsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiInternalCorporateSchedulerRoute: typeof ApiInternalCorporateSchedulerRoute
   ApiPublicClientsRoute: typeof ApiPublicClientsRoute
@@ -481,6 +494,13 @@ declare module '@tanstack/react-router' {
       path: '/api/corporate-inquiries'
       fullPath: '/api/corporate-inquiries'
       preLoaderRoute: typeof ApiCorporateInquiriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/registrations': {
+      id: '/api/registrations'
+      path: '/api/registrations'
+      fullPath: '/api/registrations'
+      preLoaderRoute: typeof ApiRegistrationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/preview/program': {
@@ -742,6 +762,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PreviewRoute: PreviewRouteWithChildren,
   ApiCorporateInquiriesRoute: ApiCorporateInquiriesRoute,
+  ApiRegistrationsRoute: ApiRegistrationsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiInternalCorporateSchedulerRoute: ApiInternalCorporateSchedulerRoute,
   ApiPublicClientsRoute: ApiPublicClientsRoute,

@@ -15,6 +15,8 @@ import { allocateRegistrationReference } from "./registration-reference";
 import { isCourseCodeLocked } from "@/features/workshops/course-code-lock";
 import { updateWorkshop } from "@/features/workshops/service";
 import { workshopSaveSchema } from "@/features/workshops/schemas";
+import { acceptRegistration } from "./registration-service";
+import { registrationSchema } from "./schemas";
 import { acceptCorporateInquiry } from "./service";
 import { corporateInquirySchema } from "./schemas";
 import { sendEmailJob, type EmailTransport } from "./email";
@@ -496,6 +498,134 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
         (${course.id}, '2027-02-12', '2027-02-12', '09:00', '17:00', 10000, 20) returning id`;
     return { courseId: course.id as string, courseCode, sessions: sessions.map(row => row.id as string) };
   }
+
+  async function intakeFixture(capacity = 20) {
+    const fixture = await workshopFixture();
+    await sql`update workshop set status = 'published' where id = ${fixture.courseId}`;
+    await sql`update workshop_session set status = 'open', capacity = ${capacity} where workshop_id = ${fixture.courseId}`;
+    const answers = registrationSchema.parse({ fullName: "Synthetic Registrant", email: `${randomUUID()}@example.invalid`,
+      phone: "+639171234567", consent: true, workshopSessionId: fixture.sessions[0], occupation: "Trainer", salaryRange: "Prefer not to say" });
+    return { ...fixture, answers };
+  }
+
+  it("accepts concurrent retries once, preserves price/consent, and returns the original result after closure", async () => {
+    const fixture = await intakeFixture();
+    const key = randomUUID();
+    const results = await Promise.all(Array.from({ length: 5 }, () => acceptRegistration(db, fixture.answers, key, now)));
+    expect(results.every(result => JSON.stringify(result) === JSON.stringify(results[0]))).toBe(true);
+    expect(results[0]).toEqual({ accepted: true, reference: `AD-${fixture.courseCode}-0001`, paymentStatus: "unpaid" });
+    const [saved] = await sql`select * from registration where idempotency_key = ${key}`;
+    expect(saved.price_centavos).toBe(10000);
+    expect(saved.consent_at).toEqual(now);
+    await sql`update workshop_session set status = 'closed', price_centavos = 20000 where id = ${fixture.sessions[0]}`;
+    expect(await acceptRegistration(db, fixture.answers, key, now)).toEqual(results[0]);
+    await expect(acceptRegistration(db, { ...fixture.answers, occupation: "Changed" }, key, now))
+      .rejects.toMatchObject({ code: "idempotency_key_mismatch" });
+    expect((await sql`select count(*)::int as total from crm_email_job where registration_id = ${saved.id}`)[0].total).toBe(0);
+    expect((await sql`select count(*)::int as total from registration where workshop_session_id = ${fixture.sessions[0]}`)[0].total).toBe(1);
+  });
+
+  it("keeps concurrent fresh-key duplicates and their replays private even at capacity", async () => {
+    const fixture = await intakeFixture(1);
+    const keys = Array.from({ length: 5 }, () => randomUUID());
+    const results = await Promise.all(keys.map(key => acceptRegistration(db, fixture.answers, key, now)));
+    expect(results.filter(result => result.reference)).toHaveLength(1);
+    for (const [index, result] of results.entries()) {
+      if (!result.reference) {
+        expect(result).toEqual({ accepted: true });
+        expect(await acceptRegistration(db, fixture.answers, keys[index], now)).toEqual({ accepted: true });
+        await expect(acceptRegistration(db, { ...fixture.answers, fullName: "Changed" }, keys[index], now))
+          .rejects.toMatchObject({ code: "idempotency_key_mismatch" });
+      }
+    }
+    expect((await sql`select count(*)::int as total from registration where workshop_session_id = ${fixture.sessions[0]}`)[0].total).toBe(1);
+    expect((await sql`select count(*)::int as total from crm_submission_key where key in ${sql(keys)}`)[0].total).toBe(5);
+  });
+
+  it("allocates only the last available seat and saves no receipts for sold-out requests", async () => {
+    const fixture = await intakeFixture(1);
+    const keys = Array.from({ length: 6 }, () => randomUUID());
+    const results = await Promise.allSettled(keys.map((key, index) => acceptRegistration(db,
+      { ...fixture.answers, email: `seat-${index}@example.invalid` }, key, now)));
+    expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
+    for (const result of results) if (result.status === "rejected") expect(result.reason).toMatchObject({ code: "sold_out" });
+    expect((await sql`select count(*)::int as total from crm_submission_key where key in ${sql(keys)}`)[0].total).toBe(1);
+    expect((await sql`select last_number from registration_reference_counter where course_code = ${fixture.courseCode}`)[0].last_number).toBe(1);
+  });
+
+  it.each(["draft", "closed", "cancelled"])("rejects %s sessions without writes", async status => {
+    const fixture = await intakeFixture();
+    await sql`update workshop_session set status = ${status} where id = ${fixture.sessions[0]}`;
+    const key = randomUUID();
+    await expect(acceptRegistration(db, fixture.answers, key, now)).rejects.toMatchObject({ code: "session_unavailable" });
+    expect(await sql`select * from crm_submission_key where key = ${key}`).toHaveLength(0);
+    expect(await sql`select * from registration_reference_counter where course_code = ${fixture.courseCode}`).toHaveLength(0);
+  });
+
+  it("rejects missing/unpublished courses, missing sessions, and missing course codes", async () => {
+    const fixture = await intakeFixture();
+    await expect(acceptRegistration(db, { ...fixture.answers, workshopSessionId: randomUUID() }, randomUUID(), now))
+      .rejects.toMatchObject({ code: "session_unavailable" });
+    await sql`update workshop set status = 'draft' where id = ${fixture.courseId}`;
+    await expect(acceptRegistration(db, fixture.answers, randomUUID(), now)).rejects.toMatchObject({ code: "session_unavailable" });
+    await sql`update workshop set status = 'published', course_code = null where id = ${fixture.courseId}`;
+    await expect(acceptRegistration(db, fixture.answers, randomUUID(), now)).rejects.toMatchObject({ code: "session_unavailable" });
+  });
+
+  it("checks exact cutoff and Manila start boundaries, even with a later cutoff", async () => {
+    const fixture = await intakeFixture();
+    const cutoff = new Date("2027-01-11T09:00:00+08:00");
+    await sql`update workshop_session set registration_cutoff_at = ${cutoff} where id = ${fixture.sessions[0]}`;
+    await acceptRegistration(db, fixture.answers, randomUUID(), new Date(cutoff.getTime() - 1));
+    await expect(acceptRegistration(db, { ...fixture.answers, email: "cutoff@example.invalid" }, randomUUID(), cutoff))
+      .rejects.toMatchObject({ code: "session_unavailable" });
+    await sql`update workshop_session set registration_cutoff_at = '2027-01-13T09:00:00+08:00' where id = ${fixture.sessions[0]}`;
+    await expect(acceptRegistration(db, { ...fixture.answers, email: "start@example.invalid" }, randomUUID(), new Date("2027-01-12T09:00:00+08:00")))
+      .rejects.toMatchObject({ code: "session_unavailable" });
+  });
+
+  it("keeps old unpaid seats until cancellation, then uses the next reference; other runs remain independent", async () => {
+    const fixture = await intakeFixture(1);
+    const first = await acceptRegistration(db, fixture.answers, randomUUID(), now);
+    const later = new Date(now.getTime() + 72 * 60 * 60 * 1000);
+    const nextAnswers = { ...fixture.answers, email: "next@example.invalid" };
+    await expect(acceptRegistration(db, nextAnswers, randomUUID(), later)).rejects.toMatchObject({ code: "sold_out" });
+    const otherRun = await acceptRegistration(db, { ...fixture.answers, workshopSessionId: fixture.sessions[1] }, randomUUID(), later);
+    expect(otherRun.reference).toBe(`AD-${fixture.courseCode}-0002`);
+    await sql`update registration set cancelled_at = ${later}, cancelled_by = ${actor.id}, cancellation_reason = 'Staff cancellation'
+      where reference = ${first.reference!}`;
+    expect((await acceptRegistration(db, fixture.answers, randomUUID(), later)).reference).toBe(`AD-${fixture.courseCode}-0003`);
+  });
+
+  it("counts paid registrations as occupied seats", async () => {
+    const fixture = await intakeFixture(1);
+    const accepted = await acceptRegistration(db, fixture.answers, randomUUID(), now);
+    await sql`update registration set payment_status = 'paid', payment_method = 'bank', paid_amount_centavos = 10000,
+      payer_name = 'Synthetic Payer', provider_transaction_reference = 'synthetic-payment', verified_at = ${now}, verified_by = ${actor.id}
+      where reference = ${accepted.reference!}`;
+    await expect(acceptRegistration(db, { ...fixture.answers, email: 'other@example.invalid' }, randomUUID(), now))
+      .rejects.toMatchObject({ code: "sold_out" });
+  });
+
+  it("rolls back the registration, receipt and reference together on failure", async () => {
+    const fixture = await intakeFixture();
+    const key = randomUUID();
+    await expect(db.transaction(async tx => {
+      await acceptRegistration(tx, fixture.answers, key, now);
+      throw new Error("synthetic failure");
+    })).rejects.toThrow("synthetic failure");
+    expect(await sql`select * from registration where idempotency_key = ${key}`).toHaveLength(0);
+    expect(await sql`select * from crm_submission_key where key = ${key}`).toHaveLength(0);
+    expect(await sql`select * from registration_reference_counter where course_code = ${fixture.courseCode}`).toHaveLength(0);
+    expect((await acceptRegistration(db, fixture.answers, key, now)).reference).toBe(`AD-${fixture.courseCode}-0001`);
+  });
+
+  it("rejects keys already owned by the corporate flow", async () => {
+    const fixture = await intakeFixture();
+    const key = randomUUID();
+    await acceptCorporateInquiry(db, input(), key, config, now);
+    await expect(acceptRegistration(db, fixture.answers, key, now)).rejects.toMatchObject({ code: "idempotency_key_mismatch" });
+  });
 
   function saveRegistration(sessionId: string, courseCode: string, overrides: Partial<typeof registration.$inferInsert> = {}) {
     return db.transaction(async tx => {
