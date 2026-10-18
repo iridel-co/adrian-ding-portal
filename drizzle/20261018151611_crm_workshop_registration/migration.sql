@@ -1,4 +1,3 @@
-CREATE TYPE "registration_payment_status" AS ENUM('unpaid', 'paid');--> statement-breakpoint
 ALTER TYPE "crm_email_kind" ADD VALUE 'payment_instructions';--> statement-breakpoint
 ALTER TYPE "crm_email_kind" ADD VALUE 'payment_acknowledgment';--> statement-breakpoint
 CREATE TABLE "registration" (
@@ -17,7 +16,7 @@ CREATE TABLE "registration" (
 	"city" text,
 	"consent_at" timestamp with time zone NOT NULL,
 	"price_centavos" integer NOT NULL,
-	"payment_status" "registration_payment_status" DEFAULT 'unpaid'::"registration_payment_status" NOT NULL,
+	"is_paid" boolean DEFAULT false NOT NULL,
 	"payment_method" "payment_method",
 	"paid_amount_centavos" integer,
 	"payer_name" text,
@@ -33,7 +32,7 @@ CREATE TABLE "registration" (
 	CONSTRAINT "registration_price_non_negative" CHECK ("price_centavos" >= 0),
 	CONSTRAINT "registration_paid_amount_non_negative" CHECK ("paid_amount_centavos" >= 0),
 	CONSTRAINT "registration_verification_consistent" CHECK (
-    ("payment_status" = 'unpaid' AND "payment_method" IS NULL AND "paid_amount_centavos" IS NULL
+    (NOT "is_paid" AND "payment_method" IS NULL AND "paid_amount_centavos" IS NULL
       AND "payer_name" IS NULL AND "provider_transaction_reference" IS NULL
       AND "verified_at" IS NULL AND "verified_by" IS NULL)
     OR ("payment_method" IS NOT NULL AND "paid_amount_centavos" IS NOT NULL
@@ -43,7 +42,7 @@ CREATE TABLE "registration" (
   ),
 	CONSTRAINT "registration_cancellation_consistent" CHECK (
     ("cancelled_at" IS NULL AND "cancelled_by" IS NULL AND "cancellation_reason" IS NULL)
-    OR ("cancelled_at" IS NOT NULL AND "cancelled_by" IS NOT NULL AND "payment_status" = 'unpaid'
+    OR ("cancelled_at" IS NOT NULL AND "cancelled_by" IS NOT NULL AND NOT "is_paid"
       AND "cancellation_reason" IS NOT NULL AND btrim("cancellation_reason") <> '')
   )
 );
@@ -74,15 +73,4 @@ ALTER TABLE "crm_email_job" ADD CONSTRAINT "crm_email_job_owner_kind" CHECK (
     OR ("corporate_inquiry_id" IS NOT NULL AND "registration_id" IS NULL
       AND "kind"::text IN ('corporate_acknowledgment', 'corporate_notification', 'corporate_overdue'))
   );--> statement-breakpoint
-ALTER TABLE "crm_submission_key" ADD CONSTRAINT "crm_submission_key_one_owner" CHECK (("corporate_inquiry_id" IS NOT NULL) <> ("registration_id" IS NOT NULL));--> statement-breakpoint
--- Issued payment references must survive staff corrections unchanged.
-CREATE FUNCTION "preserve_registration_reference"() RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  IF NEW.reference IS DISTINCT FROM OLD.reference THEN
-    RAISE EXCEPTION 'Registration references are immutable' USING ERRCODE = '23514';
-  END IF;
-  RETURN NEW;
-END;
-$$;--> statement-breakpoint
-CREATE TRIGGER "registration_reference_immutable" BEFORE UPDATE OF "reference" ON "registration"
-  FOR EACH ROW EXECUTE FUNCTION "preserve_registration_reference"();
+ALTER TABLE "crm_submission_key" ADD CONSTRAINT "crm_submission_key_one_owner" CHECK (("corporate_inquiry_id" IS NOT NULL) <> ("registration_id" IS NOT NULL));
