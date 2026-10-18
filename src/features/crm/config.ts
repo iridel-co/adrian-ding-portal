@@ -59,5 +59,26 @@ export function getRegistrationConfig() {
   if (process.env.REGISTRATION_INTAKE_ENABLED !== "true" || !secret.success) {
     throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
   }
-  return { TURNSTILE_SECRET_KEY: secret.data };
+  return { ...getRegistrationMailConfig(), TURNSTILE_SECRET_KEY: secret.data };
+}
+
+const registrationMailSchema = z.object({
+  REGISTRATION_EMAIL_ENABLED: z.enum(["true", "false"]).default("false").transform(value => value === "true"),
+  REGISTRATION_PAYMENT_ACCOUNT_ID: z.uuid(),
+  REGISTRATION_EMAIL_FROM: z.string().trim().min(1).max(320).default("Adrian Ding Team <registrations@example.invalid>")
+    .refine(value => !/[\r\n]/.test(value)
+      && z.email().safeParse(value.match(/^[^<>]+<([^<>]+)>$/)?.[1] ?? value).success),
+  REGISTRATION_REPLY_TO: z.email().default("registrations@example.invalid"),
+  RESEND_API_KEY: z.string().default("")
+});
+
+export function getRegistrationMailConfig() {
+  const result = registrationMailSchema.safeParse(process.env);
+  if (!result.success) throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
+  const config = result.data;
+  if (config.REGISTRATION_EMAIL_ENABLED && (!config.RESEND_API_KEY
+    || /example\.|\.invalid/i.test(`${config.REGISTRATION_EMAIL_FROM} ${config.REGISTRATION_REPLY_TO}`))) {
+    throw new IntakeError(503, IntakeErrorCode.EmailUnavailable);
+  }
+  return { ...config, EMAIL_FROM: config.REGISTRATION_EMAIL_FROM, EMAIL_REPLY_TO: config.REGISTRATION_REPLY_TO };
 }

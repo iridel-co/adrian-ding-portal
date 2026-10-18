@@ -9,13 +9,18 @@ import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { eq } from "drizzle-orm";
 
 vi.mock("@tanstack/react-start/server-only", () => ({}));
+vi.mock("@/features/media/r2", () => ({
+  publicMediaUrl: vi.fn((key: string) => `https://media.company.test/${key}`),
+  readPaymentQr: vi.fn(async () => ({ filename: "payment-qr.png", content: "synthetic-base64", contentType: "image/png" }))
+}));
+import { readPaymentQr } from "@/features/media/r2";
 import { queueOverdueInquiries, runCorporateScheduler } from "./scheduler";
 import { relations, registration, workshop } from "@/db/schema";
 import { allocateRegistrationReference } from "./registration-reference";
 import { isCourseCodeLocked } from "@/features/workshops/course-code-lock";
 import { updateWorkshop } from "@/features/workshops/service";
 import { workshopSaveSchema } from "@/features/workshops/schemas";
-import { acceptRegistration } from "./registration-service";
+import { acceptRegistration as saveRegistrationIntake } from "./registration-service";
 import { registrationSchema } from "./schemas";
 import { acceptCorporateInquiry } from "./service";
 import { corporateInquirySchema } from "./schemas";
@@ -46,6 +51,13 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
   const actor: PortalActor = { id: `staff-${suffix}`, name: "Synthetic Staff", email: "staff@company.test", role: "staff" };
   const config = { EMAIL_FROM: "Test <test@example.invalid>", EMAIL_REPLY_TO: "sales@example.invalid",
     CORPORATE_INQUIRY_RECIPIENTS: ["primary@example.invalid", "secondary@example.invalid"] };
+  const registrationConfig = { EMAIL_FROM: "Team <registrations@company.test>", EMAIL_REPLY_TO: "registrations@company.test",
+    REGISTRATION_PAYMENT_ACCOUNT_ID: randomUUID(), REGISTRATION_EMAIL_ENABLED: false, RESEND_API_KEY: "" };
+  const qrMediaId = randomUUID();
+  async function acceptRegistration(database: Parameters<typeof saveRegistrationIntake>[0], data: Parameters<typeof saveRegistrationIntake>[1],
+    key: string, instant?: Date) {
+    return (await saveRegistrationIntake(database, data, key, registrationConfig, instant)).response;
+  }
   const now = new Date("2026-10-16T10:00:00+08:00");
   const input = () => corporateInquirySchema.parse({ fullName: "Synthetic Lead", email: `${randomUUID()}@example.invalid`,
     phone: "+63 917 123 4567", consent: true, company: "Synthetic Company", role: "HR Manager", program: "Leadership",
@@ -116,6 +128,10 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
           .toMatchObject({ corporate_inquiry_id: savedInquiry!.id, registration_id: null, payload_hash: "a".repeat(64) });
       } else { sql = raw; db = database; }
     }
+    await sql`insert into media (id, key, file_name, content_type, size_bytes)
+      values (${qrMediaId}, 'media/synthetic-payment-qr.png', 'qr.png', 'image/png', 8)`;
+    await sql`insert into payment_account (id, method, provider_name, account_name, account_number, qr_media_id)
+      values (${registrationConfig.REGISTRATION_PAYMENT_ACCOUNT_ID}, 'bank', 'Synthetic Bank', 'Synthetic Team', '1234567890', ${qrMediaId})`;
     await sql`insert into "user" (id, name, email, email_verified) values (${actor.id}, ${actor.name}, ${actor.email}, true)`;
     await sql`insert into account (id, account_id, provider_id, user_id, updated_at) values (${`google-${suffix}`}, ${`google-${suffix}`}, 'google', ${actor.id}, now())`;
   }, 30000);
@@ -501,9 +517,9 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
 
   async function intakeFixture(capacity = 20) {
     const fixture = await workshopFixture();
-    await sql`update workshop set status = 'published' where id = ${fixture.courseId}`;
+    await sql`update workshop set status = 'published', primer_video_url = 'https://video.company.test/primer' where id = ${fixture.courseId}`;
     await sql`update workshop_session set status = 'open', capacity = ${capacity} where workshop_id = ${fixture.courseId}`;
-    const answers = registrationSchema.parse({ fullName: "Synthetic Registrant", email: `${randomUUID()}@example.invalid`,
+    const answers = registrationSchema.parse({ fullName: "Synthetic Registrant", email: `${randomUUID()}@company.test`,
       phone: "+639171234567", consent: true, workshopSessionId: fixture.sessions[0], occupation: "Trainer", salaryRange: "Prefer not to say" });
     return { ...fixture, answers };
   }
@@ -521,7 +537,7 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     expect(await acceptRegistration(db, fixture.answers, key, now)).toEqual(results[0]);
     await expect(acceptRegistration(db, { ...fixture.answers, occupation: "Changed" }, key, now))
       .rejects.toMatchObject({ code: "idempotency_key_mismatch" });
-    expect((await sql`select count(*)::int as total from crm_email_job where registration_id = ${saved.id}`)[0].total).toBe(0);
+    expect((await sql`select count(*)::int as total from crm_email_job where registration_id = ${saved.id}`)[0].total).toBe(1);
     expect((await sql`select count(*)::int as total from registration where workshop_session_id = ${fixture.sessions[0]}`)[0].total).toBe(1);
   });
 
@@ -625,6 +641,148 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     const key = randomUUID();
     await acceptCorporateInquiry(db, input(), key, config, now);
     await expect(acceptRegistration(db, fixture.answers, key, now)).rejects.toMatchObject({ code: "idempotency_key_mismatch" });
+  });
+
+  it("queues E1 with an immutable payment snapshot and retries failed delivery with the same key", async () => {
+    const fixture = await intakeFixture();
+    const key = randomUUID();
+    const result = await saveRegistrationIntake(db, fixture.answers, key, registrationConfig, now);
+    expect(result.jobs).toHaveLength(1);
+    const [job] = await sql`select * from crm_email_job where id = ${result.jobs[0]}`;
+    expect(job.state).toBe("pending");
+    expect(job.payload.subject).toContain(`[${result.response.reference}]`);
+    expect(job.payload.text).toContain("₱100");
+    expect(job.payload.text).toContain("1234567890");
+    expect(job.payload.attachments[0].content).toBe("synthetic-base64");
+    expect((await saveRegistrationIntake(db, fixture.answers, key, registrationConfig, now)).jobs).toEqual([]);
+    const [saved] = await sql`select id from registration where idempotency_key = ${key}`;
+    expect((await sql`select count(*)::int as total from crm_email_job where registration_id = ${saved.id}`)[0].total).toBe(1);
+    const failed = vi.fn<EmailTransport>(async () => { throw new Error("synthetic provider failure"); });
+    await sendEmailJob(db, job.id, "unused", failed);
+    expect((await sql`select state from crm_email_job where id = ${job.id}`)[0].state).toBe("failed");
+    expect(await sql`select id from registration where id = ${saved.id}`).toHaveLength(1);
+    await sql`update workshop set title = 'Changed title', primer_video_url = 'https://video.company.test/changed' where id = ${fixture.courseId}`;
+    await sql`update workshop_session set price_centavos = 50000 where id = ${fixture.sessions[0]}`;
+    const capture = vi.fn<EmailTransport>(async (payload, providerKey) => {
+      expect(payload).toEqual(job.payload);
+      expect(providerKey).toBe(job.id);
+      return { id: `captured-${providerKey}` };
+    });
+    await Promise.all([sendEmailJob(db, job.id, "unused", capture), sendEmailJob(db, job.id, "unused", capture)]);
+    expect(capture).toHaveBeenCalledOnce();
+    expect(failed.mock.calls[0][1]).toBe(job.id);
+    expect((await sql`select state, attempt_count from crm_email_job where id = ${job.id}`)[0]).toMatchObject({ state: "sent", attempt_count: 2 });
+  });
+
+  it.each(["paid", "cancelled"])("suppresses pending E1 after the registration becomes %s", async status => {
+    const fixture = await intakeFixture();
+    const result = await saveRegistrationIntake(db, fixture.answers, randomUUID(), registrationConfig, now);
+    const [job] = await sql`select registration_id from crm_email_job where id = ${result.jobs[0]}`;
+    if (status === "cancelled") {
+      await sql`update registration set cancelled_at = ${now}, cancelled_by = ${actor.id}, cancellation_reason = 'Cancelled by staff'
+        where id = ${job.registration_id}`;
+    } else {
+      await sql`update registration set payment_status = 'paid', payment_method = 'bank', paid_amount_centavos = 10000,
+        payer_name = 'Synthetic Payer', provider_transaction_reference = 'synthetic-paid', verified_at = ${now}, verified_by = ${actor.id}
+        where id = ${job.registration_id}`;
+    }
+    const capture = vi.fn<EmailTransport>(async () => ({ id: 'unused' }));
+    await sendEmailJob(db, result.jobs[0], "unused", capture);
+    expect(capture).not.toHaveBeenCalled();
+    expect((await sql`select state, last_error_code, attempt_count from crm_email_job where id = ${result.jobs[0]}`)[0])
+      .toMatchObject({ state: "skipped", last_error_code: "payment_instructions_obsolete", attempt_count: 0 });
+  });
+
+  it("recovers an expired E1 lease but reconciles attempts beyond the provider retry window", async () => {
+    const fixture = await intakeFixture();
+    const recoverable = await saveRegistrationIntake(db, fixture.answers, randomUUID(), registrationConfig, now);
+    const expired = await saveRegistrationIntake(db, { ...fixture.answers, email: `${randomUUID()}@company.test` }, randomUUID(), registrationConfig, now);
+    for (const [result, age] of [[recoverable, 1], [expired, 25]] as const) {
+      await sql`update crm_email_job set state = 'sending', attempt_count = 1,
+        first_attempt_at = now() - ${age} * interval '1 hour', last_attempt_at = now() - interval '2 minutes',
+        lease_expires_at = now() - interval '1 minute' where id = ${result.jobs[0]}`;
+    }
+    const capture = vi.fn<EmailTransport>(async (_payload, providerKey) => ({ id: `captured-${providerKey}` }));
+    await sendEmailJob(db, recoverable.jobs[0], "unused", capture);
+    await sendEmailJob(db, expired.jobs[0], "unused", capture);
+    expect(capture).toHaveBeenCalledOnce();
+    expect((await sql`select state from crm_email_job where id = ${recoverable.jobs[0]}`)[0].state).toBe("sent");
+    expect((await sql`select state from crm_email_job where id = ${expired.jobs[0]}`)[0].state).toBe("needs_reconciliation");
+  });
+
+  it("blocks local placeholder snapshots from provider delivery", async () => {
+    const fixture = await intakeFixture();
+    const result = await saveRegistrationIntake(db, fixture.answers, randomUUID(),
+      { ...registrationConfig, EMAIL_FROM: "Team <registrations@example.invalid>" }, now);
+    const capture = vi.fn<EmailTransport>(async () => ({ id: 'unused' }));
+    await expect(sendEmailJob(db, result.jobs[0], "unused", capture)).rejects.toMatchObject({ code: "email_unavailable" });
+    expect(capture).not.toHaveBeenCalled();
+    expect((await sql`select state, attempt_count from crm_email_job where id = ${result.jobs[0]}`)[0])
+      .toMatchObject({ state: "pending", attempt_count: 0 });
+  });
+
+  it("rejects missing payment/primer configuration and QR failures without saving a seat", async () => {
+    const fixture = await intakeFixture();
+    const key = randomUUID();
+    await expect(saveRegistrationIntake(db, fixture.answers, key,
+      { ...registrationConfig, REGISTRATION_PAYMENT_ACCOUNT_ID: randomUUID() }, now))
+      .rejects.toMatchObject({ code: "intake_unavailable" });
+    await sql`update workshop set primer_video_url = null where id = ${fixture.courseId}`;
+    await expect(saveRegistrationIntake(db, fixture.answers, key, registrationConfig, now)).rejects.toMatchObject({ code: "intake_unavailable" });
+    await sql`update workshop set primer_video_url = 'https://video.company.test/primer' where id = ${fixture.courseId}`;
+    vi.mocked(readPaymentQr).mockRejectedValueOnce(new Error("Synthetic QR unavailable"));
+    await expect(saveRegistrationIntake(db, fixture.answers, key, registrationConfig, now)).rejects.toThrow("Synthetic QR unavailable");
+    expect(await sql`select id from registration where idempotency_key = ${key}`).toHaveLength(0);
+    expect(await sql`select key from crm_submission_key where key = ${key}`).toHaveLength(0);
+    expect(await sql`select * from registration_reference_counter where course_code = ${fixture.courseCode}`).toHaveLength(0);
+  });
+
+  it("rechecks the last seat after downloading the QR outside database locks", async () => {
+    const fixture = await intakeFixture(1);
+    const key = randomUUID();
+    vi.mocked(readPaymentQr).mockImplementationOnce(async () => {
+      await saveRegistration(fixture.sessions[0], fixture.courseCode);
+      return { filename: "payment-qr.png", content: "synthetic-base64", contentType: "image/png" };
+    });
+    await expect(saveRegistrationIntake(db, fixture.answers, key, registrationConfig, now))
+      .rejects.toMatchObject({ code: "sold_out" });
+    expect(await sql`select id from registration where idempotency_key = ${key}`).toHaveLength(0);
+    expect(await sql`select key from crm_submission_key where key = ${key}`).toHaveLength(0);
+    expect((await sql`select count(*)::int as total from registration where workshop_session_id = ${fixture.sessions[0]}`)[0].total).toBe(1);
+    expect((await sql`select last_number from registration_reference_counter where course_code = ${fixture.courseCode}`)[0].last_number).toBe(1);
+  });
+
+  it("rechecks QR metadata after download and rolls back when it changed", async () => {
+    const fixture = await intakeFixture();
+    const key = randomUUID();
+    vi.mocked(readPaymentQr).mockImplementationOnce(async () => {
+      await sql`update media set size_bytes = 9 where id = ${qrMediaId}`;
+      return { filename: "payment-qr.png", content: "old-content", contentType: "image/png" };
+    });
+    try {
+      await expect(saveRegistrationIntake(db, fixture.answers, key, registrationConfig, now)).rejects.toMatchObject({ code: "intake_unavailable" });
+      expect(await sql`select id from registration where idempotency_key = ${key}`).toHaveLength(0);
+      expect(await sql`select key from crm_submission_key where key = ${key}`).toHaveLength(0);
+      expect(await sql`select * from registration_reference_counter where course_code = ${fixture.courseCode}`).toHaveLength(0);
+    } finally { await sql`update media set size_bytes = 8 where id = ${qrMediaId}`; }
+  });
+
+  it("rolls back the seat, key and reference if saving the E1 job fails", async () => {
+    const fixture = await intakeFixture();
+    const key = randomUUID();
+    await sql`create function reject_synthetic_e1() returns trigger language plpgsql as $$
+      begin if NEW.kind = 'payment_instructions' then raise exception 'synthetic E1 write failure'; end if; return NEW; end $$`;
+    await sql`create trigger reject_synthetic_e1 before insert on crm_email_job for each row execute function reject_synthetic_e1()`;
+    try {
+      await expect(saveRegistrationIntake(db, fixture.answers, key, registrationConfig, now)).rejects.toThrow();
+      expect(await sql`select id from registration where idempotency_key = ${key}`).toHaveLength(0);
+      expect(await sql`select key from crm_submission_key where key = ${key}`).toHaveLength(0);
+      expect(await sql`select * from registration_reference_counter where course_code = ${fixture.courseCode}`).toHaveLength(0);
+    } finally {
+      await sql`drop trigger reject_synthetic_e1 on crm_email_job`;
+      await sql`drop function reject_synthetic_e1()`;
+    }
+    expect((await saveRegistrationIntake(db, fixture.answers, key, registrationConfig, now)).jobs).toHaveLength(1);
   });
 
   function saveRegistration(sessionId: string, courseCode: string, overrides: Partial<typeof registration.$inferInsert> = {}) {
@@ -753,14 +911,14 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
       values (${inquiry.id}, ${row.id}, 'payment_instructions', '{}'::jsonb)`).rejects.toSatisfy(error => code(error) === "23514");
   });
 
-  it("stores one job of each registration kind and leaves them unclaimed by corporate delivery", async () => {
+  it("stores one job of each registration kind and leaves E2 unclaimed until its delivery step", async () => {
     const fixture = await workshopFixture();
     const row = await saveRegistration(fixture.sessions[0], fixture.courseCode);
     const jobs = await sql`insert into crm_email_job (registration_id, kind, payload)
       values (${row.id}, 'payment_instructions', '{"subject":"Synthetic E1"}'::jsonb),
         (${row.id}, 'payment_acknowledgment', '{"subject":"Synthetic E2"}'::jsonb) returning id`;
     const capture = vi.fn<EmailTransport>(async (_payload, id) => ({ id: `captured-${id}` }));
-    for (const job of jobs) await sendEmailJob(db, job.id, "unused", capture);
+    await sendEmailJob(db, jobs[1].id, "unused", capture);
     expect(capture).not.toHaveBeenCalled();
     expect((await sql`select state from crm_email_job where registration_id = ${row.id}`).every(job => job.state === "pending")).toBe(true);
     for (const kind of ["payment_instructions", "payment_acknowledgment"]) {
