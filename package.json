@@ -46,6 +46,7 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@readme/openapi-parser": "9.0.0",
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "26.6.1",
     "@types/react": "19.3.0",

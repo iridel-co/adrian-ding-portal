@@ -4,6 +4,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { client, inhouseProgram, media, taxonomyTerm, testimonial, workshop } from "@/db/schema";
 import type { ContentStatus } from "@/features/shared/content-status";
 import type { DbOrTx } from "@/features/shared/db-types";
+import { NotFoundError } from "@/features/shared/errors";
 import { toPublicMedia } from "@/features/shared/public-api";
 import { isNotArchived, isPublished } from "@/features/shared/visibility";
 
@@ -68,25 +69,43 @@ export async function listPublicIndustries(db: DbOrTx) {
     .orderBy(asc(taxonomyTerm.position), asc(taxonomyTerm.createdAt));
 }
 
-export async function listPublicPrograms(db: DbOrTx) {
-  const rows = await db
+type ProgramRow = {
+  program: Pick<typeof inhouseProgram.$inferSelect, "id" | "slug" | "title" | "summary" | "usefulFor">;
+  image: Pick<typeof media.$inferSelect, "key" | "alt" | "width" | "height"> | null;
+};
+
+export function toPublicProgram(row: ProgramRow, toUrl?: (key: string) => string) {
+  return {
+    id: row.program.id,
+    slug: row.program.slug,
+    title: row.program.title,
+    summary: row.program.summary,
+    image: toPublicMedia(row.image, toUrl),
+    usefulFor: row.program.usefulFor
+  };
+}
+
+function selectPublishedPrograms(db: DbOrTx, slug?: string) {
+  return db
     .select({ program: inhouseProgram, image: media })
     .from(inhouseProgram)
     .leftJoin(
       media,
       and(eq(media.id, inhouseProgram.imageMediaId), isNotArchived(media.archivedAt))
     )
-    .where(isPublished(inhouseProgram.status))
+    .where(and(isPublished(inhouseProgram.status), slug ? eq(inhouseProgram.slug, slug) : undefined))
     .orderBy(asc(inhouseProgram.position), asc(inhouseProgram.createdAt));
+}
 
-  return rows.map((row) => ({
-    id: row.program.id,
-    slug: row.program.slug,
-    title: row.program.title,
-    summary: row.program.summary,
-    image: toPublicMedia(row.image),
-    usefulFor: row.program.usefulFor
-  }));
+export async function listPublicPrograms(db: DbOrTx) {
+  const rows = await selectPublishedPrograms(db);
+  return rows.map((row) => toPublicProgram(row));
+}
+
+export async function getPublicProgramBySlug(db: DbOrTx, slug: string) {
+  const [row] = await selectPublishedPrograms(db, slug);
+  if (!row) throw new NotFoundError("Program not found.");
+  return toPublicProgram(row);
 }
 
 type TestimonialFilters = {

@@ -29,8 +29,8 @@ import { Route as ApiInternalCorporateSchedulerRouteImport } from './routes/api/
 import { Route as ApiPublicClientsRouteImport } from './routes/api/public/clients'
 import { Route as ApiPublicFaqsRouteImport } from './routes/api/public/faqs'
 import { Route as ApiPublicIndustriesRouteImport } from './routes/api/public/industries'
+import { Route as ApiPublicOpenapiDotjsonRouteImport } from './routes/api/public/openapi[.]json'
 import { Route as ApiPublicProfileRouteImport } from './routes/api/public/profile'
-import { Route as ApiPublicProgramsRouteImport } from './routes/api/public/programs'
 import { Route as ApiPublicTestimonialsRouteImport } from './routes/api/public/testimonials'
 import { Route as AppContentCorporateTrainingsIndexRouteImport } from './routes/_app/content/corporate-trainings/index'
 import { Route as AppContentCorporateTrainingsIdRouteImport } from './routes/_app/content/corporate-trainings/$id'
@@ -38,6 +38,8 @@ import { Route as AppContentSessionsIndexRouteImport } from './routes/_app/conte
 import { Route as AppContentSessionsIdRouteImport } from './routes/_app/content/sessions/$id'
 import { Route as AppContentWorkshopsIndexRouteImport } from './routes/_app/content/workshops/index'
 import { Route as AppContentWorkshopsIdRouteImport } from './routes/_app/content/workshops/$id'
+import { Route as ApiPublicProgramsIndexRouteImport } from './routes/api/public/programs/index'
+import { Route as ApiPublicProgramsSlugRouteImport } from './routes/api/public/programs/$slug'
 import { Route as ApiPublicWorkshopsIndexRouteImport } from './routes/api/public/workshops/index'
 import { Route as ApiPublicWorkshopsSlugRouteImport } from './routes/api/public/workshops/$slug'
 
@@ -141,14 +143,14 @@ const ApiPublicIndustriesRoute = ApiPublicIndustriesRouteImport.update({
   path: '/api/public/industries',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicOpenapiDotjsonRoute = ApiPublicOpenapiDotjsonRouteImport.update({
+  id: '/api/public/openapi.json',
+  path: '/api/public/openapi.json',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicProfileRoute = ApiPublicProfileRouteImport.update({
   id: '/api/public/profile',
   path: '/api/public/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicProgramsRoute = ApiPublicProgramsRouteImport.update({
-  id: '/api/public/programs',
-  path: '/api/public/programs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicTestimonialsRoute = ApiPublicTestimonialsRouteImport.update({
@@ -189,6 +191,16 @@ const AppContentWorkshopsIdRoute = AppContentWorkshopsIdRouteImport.update({
   path: '/content/workshops/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicProgramsIndexRoute = ApiPublicProgramsIndexRouteImport.update({
+  id: '/api/public/programs/',
+  path: '/api/public/programs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicProgramsSlugRoute = ApiPublicProgramsSlugRouteImport.update({
+  id: '/api/public/programs/$slug',
+  path: '/api/public/programs/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicWorkshopsIndexRoute = ApiPublicWorkshopsIndexRouteImport.update({
   id: '/api/public/workshops/',
   path: '/api/public/workshops/',
@@ -218,18 +230,20 @@ export interface FileRoutesByFullPath {
   '/api/public/clients': typeof ApiPublicClientsRoute
   '/api/public/faqs': typeof ApiPublicFaqsRoute
   '/api/public/industries': typeof ApiPublicIndustriesRoute
+  '/api/public/openapi.json': typeof ApiPublicOpenapiDotjsonRoute
   '/api/public/profile': typeof ApiPublicProfileRoute
-  '/api/public/programs': typeof ApiPublicProgramsRoute
   '/api/public/testimonials': typeof ApiPublicTestimonialsRoute
   '/inquiries/': typeof AppInquiriesIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
+  '/api/public/programs/$slug': typeof ApiPublicProgramsSlugRoute
   '/api/public/workshops/$slug': typeof ApiPublicWorkshopsSlugRoute
   '/content/corporate-trainings/': typeof AppContentCorporateTrainingsIndexRoute
   '/content/sessions/': typeof AppContentSessionsIndexRoute
   '/content/workshops/': typeof AppContentWorkshopsIndexRoute
+  '/api/public/programs/': typeof ApiPublicProgramsIndexRoute
   '/api/public/workshops/': typeof ApiPublicWorkshopsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -249,18 +263,20 @@ export interface FileRoutesByTo {
   '/api/public/clients': typeof ApiPublicClientsRoute
   '/api/public/faqs': typeof ApiPublicFaqsRoute
   '/api/public/industries': typeof ApiPublicIndustriesRoute
+  '/api/public/openapi.json': typeof ApiPublicOpenapiDotjsonRoute
   '/api/public/profile': typeof ApiPublicProfileRoute
-  '/api/public/programs': typeof ApiPublicProgramsRoute
   '/api/public/testimonials': typeof ApiPublicTestimonialsRoute
   '/inquiries': typeof AppInquiriesIndexRoute
   '/settings': typeof AppSettingsIndexRoute
   '/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
+  '/api/public/programs/$slug': typeof ApiPublicProgramsSlugRoute
   '/api/public/workshops/$slug': typeof ApiPublicWorkshopsSlugRoute
   '/content/corporate-trainings': typeof AppContentCorporateTrainingsIndexRoute
   '/content/sessions': typeof AppContentSessionsIndexRoute
   '/content/workshops': typeof AppContentWorkshopsIndexRoute
+  '/api/public/programs': typeof ApiPublicProgramsIndexRoute
   '/api/public/workshops': typeof ApiPublicWorkshopsIndexRoute
 }
 export interface FileRoutesById {
@@ -283,18 +299,20 @@ export interface FileRoutesById {
   '/api/public/clients': typeof ApiPublicClientsRoute
   '/api/public/faqs': typeof ApiPublicFaqsRoute
   '/api/public/industries': typeof ApiPublicIndustriesRoute
+  '/api/public/openapi.json': typeof ApiPublicOpenapiDotjsonRoute
   '/api/public/profile': typeof ApiPublicProfileRoute
-  '/api/public/programs': typeof ApiPublicProgramsRoute
   '/api/public/testimonials': typeof ApiPublicTestimonialsRoute
   '/_app/inquiries/': typeof AppInquiriesIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/_app/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/_app/content/workshops/$id': typeof AppContentWorkshopsIdRoute
+  '/api/public/programs/$slug': typeof ApiPublicProgramsSlugRoute
   '/api/public/workshops/$slug': typeof ApiPublicWorkshopsSlugRoute
   '/_app/content/corporate-trainings/': typeof AppContentCorporateTrainingsIndexRoute
   '/_app/content/sessions/': typeof AppContentSessionsIndexRoute
   '/_app/content/workshops/': typeof AppContentWorkshopsIndexRoute
+  '/api/public/programs/': typeof ApiPublicProgramsIndexRoute
   '/api/public/workshops/': typeof ApiPublicWorkshopsIndexRoute
 }
 export interface FileRouteTypes {
@@ -317,18 +335,20 @@ export interface FileRouteTypes {
     | '/api/public/clients'
     | '/api/public/faqs'
     | '/api/public/industries'
+    | '/api/public/openapi.json'
     | '/api/public/profile'
-    | '/api/public/programs'
     | '/api/public/testimonials'
     | '/inquiries/'
     | '/settings/'
     | '/content/corporate-trainings/$id'
     | '/content/sessions/$id'
     | '/content/workshops/$id'
+    | '/api/public/programs/$slug'
     | '/api/public/workshops/$slug'
     | '/content/corporate-trainings/'
     | '/content/sessions/'
     | '/content/workshops/'
+    | '/api/public/programs/'
     | '/api/public/workshops/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -348,18 +368,20 @@ export interface FileRouteTypes {
     | '/api/public/clients'
     | '/api/public/faqs'
     | '/api/public/industries'
+    | '/api/public/openapi.json'
     | '/api/public/profile'
-    | '/api/public/programs'
     | '/api/public/testimonials'
     | '/inquiries'
     | '/settings'
     | '/content/corporate-trainings/$id'
     | '/content/sessions/$id'
     | '/content/workshops/$id'
+    | '/api/public/programs/$slug'
     | '/api/public/workshops/$slug'
     | '/content/corporate-trainings'
     | '/content/sessions'
     | '/content/workshops'
+    | '/api/public/programs'
     | '/api/public/workshops'
   id:
     | '__root__'
@@ -381,18 +403,20 @@ export interface FileRouteTypes {
     | '/api/public/clients'
     | '/api/public/faqs'
     | '/api/public/industries'
+    | '/api/public/openapi.json'
     | '/api/public/profile'
-    | '/api/public/programs'
     | '/api/public/testimonials'
     | '/_app/inquiries/'
     | '/_app/settings/'
     | '/_app/content/corporate-trainings/$id'
     | '/_app/content/sessions/$id'
     | '/_app/content/workshops/$id'
+    | '/api/public/programs/$slug'
     | '/api/public/workshops/$slug'
     | '/_app/content/corporate-trainings/'
     | '/_app/content/sessions/'
     | '/_app/content/workshops/'
+    | '/api/public/programs/'
     | '/api/public/workshops/'
   fileRoutesById: FileRoutesById
 }
@@ -406,10 +430,12 @@ export interface RootRouteChildren {
   ApiPublicClientsRoute: typeof ApiPublicClientsRoute
   ApiPublicFaqsRoute: typeof ApiPublicFaqsRoute
   ApiPublicIndustriesRoute: typeof ApiPublicIndustriesRoute
+  ApiPublicOpenapiDotjsonRoute: typeof ApiPublicOpenapiDotjsonRoute
   ApiPublicProfileRoute: typeof ApiPublicProfileRoute
-  ApiPublicProgramsRoute: typeof ApiPublicProgramsRoute
   ApiPublicTestimonialsRoute: typeof ApiPublicTestimonialsRoute
+  ApiPublicProgramsSlugRoute: typeof ApiPublicProgramsSlugRoute
   ApiPublicWorkshopsSlugRoute: typeof ApiPublicWorkshopsSlugRoute
+  ApiPublicProgramsIndexRoute: typeof ApiPublicProgramsIndexRoute
   ApiPublicWorkshopsIndexRoute: typeof ApiPublicWorkshopsIndexRoute
 }
 
@@ -555,18 +581,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicIndustriesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/openapi.json': {
+      id: '/api/public/openapi.json'
+      path: '/api/public/openapi.json'
+      fullPath: '/api/public/openapi.json'
+      preLoaderRoute: typeof ApiPublicOpenapiDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/profile': {
       id: '/api/public/profile'
       path: '/api/public/profile'
       fullPath: '/api/public/profile'
       preLoaderRoute: typeof ApiPublicProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/programs': {
-      id: '/api/public/programs'
-      path: '/api/public/programs'
-      fullPath: '/api/public/programs'
-      preLoaderRoute: typeof ApiPublicProgramsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/testimonials': {
@@ -617,6 +643,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/content/workshops/$id'
       preLoaderRoute: typeof AppContentWorkshopsIdRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/api/public/programs/': {
+      id: '/api/public/programs/'
+      path: '/api/public/programs'
+      fullPath: '/api/public/programs/'
+      preLoaderRoute: typeof ApiPublicProgramsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/programs/$slug': {
+      id: '/api/public/programs/$slug'
+      path: '/api/public/programs/$slug'
+      fullPath: '/api/public/programs/$slug'
+      preLoaderRoute: typeof ApiPublicProgramsSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/workshops/': {
       id: '/api/public/workshops/'
@@ -707,10 +747,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicClientsRoute: ApiPublicClientsRoute,
   ApiPublicFaqsRoute: ApiPublicFaqsRoute,
   ApiPublicIndustriesRoute: ApiPublicIndustriesRoute,
+  ApiPublicOpenapiDotjsonRoute: ApiPublicOpenapiDotjsonRoute,
   ApiPublicProfileRoute: ApiPublicProfileRoute,
-  ApiPublicProgramsRoute: ApiPublicProgramsRoute,
   ApiPublicTestimonialsRoute: ApiPublicTestimonialsRoute,
+  ApiPublicProgramsSlugRoute: ApiPublicProgramsSlugRoute,
   ApiPublicWorkshopsSlugRoute: ApiPublicWorkshopsSlugRoute,
+  ApiPublicProgramsIndexRoute: ApiPublicProgramsIndexRoute,
   ApiPublicWorkshopsIndexRoute: ApiPublicWorkshopsIndexRoute,
 }
 export const routeTree = rootRouteImport

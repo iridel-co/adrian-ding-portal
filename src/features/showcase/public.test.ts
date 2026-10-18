@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toPublicIndustry, toPublicWorkshopLink } from "@/features/showcase/public";
+import { toPublicIndustry, toPublicProgram, toPublicWorkshopLink } from "@/features/showcase/public";
 
 describe("toPublicIndustry", () => {
   it("returns the industry name and id", () => {
@@ -26,5 +26,42 @@ describe("toPublicWorkshopLink", () => {
     expect(toPublicWorkshopLink({ slug: "a", title: "A", status: "draft" })).toBeNull();
     expect(toPublicWorkshopLink({ slug: "a", title: "A", status: "archived" })).toBeNull();
     expect(toPublicWorkshopLink(null)).toBeNull();
+  });
+});
+
+describe("toPublicProgram", () => {
+  const program = {
+    id: "p1",
+    slug: "leadership",
+    title: "Leadership Training & Development",
+    summary: "For new managers.",
+    usefulFor: ["New and first-time managers"]
+  };
+  const image = {
+    key: "programs/leadership.jpg",
+    alt: "Managers in a session",
+    width: 1400,
+    height: 800
+  };
+  const toUrl = (key: string) => `https://cdn.example.com/${key}`;
+
+  it("returns only public fields", () => {
+    expect(toPublicProgram({ program, image }, toUrl)).toEqual({
+      id: "p1",
+      slug: "leadership",
+      title: "Leadership Training & Development",
+      summary: "For new managers.",
+      image: {
+        url: "https://cdn.example.com/programs/leadership.jpg",
+        alt: "Managers in a session",
+        width: 1400,
+        height: 800
+      },
+      usefulFor: ["New and first-time managers"]
+    });
+  });
+
+  it("returns a null image when the image is archived", () => {
+    expect(toPublicProgram({ program, image: null }, toUrl).image).toBeNull();
   });
 });
