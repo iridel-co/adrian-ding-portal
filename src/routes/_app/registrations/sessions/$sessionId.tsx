@@ -5,7 +5,7 @@ import { z } from "zod";
 import { EmptyState, FilterSelect } from "@/components/cms/content-list-page";
 import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { CrmReadState } from "@/components/crm/read-state";
-import { Badge } from "@/components/ui/badge";
+import { RegistrationStatus } from "@/components/crm/registration-status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -15,17 +15,10 @@ import type { $listRegistrations } from "@/features/crm/functions";
 import { formatInquiryTime, isInquiryAccessError } from "@/features/crm/presentation";
 import { registrationErrorMessage } from "@/features/crm/registration-presentation";
 import { registrationSessionQueryOptions, registrationsQueryOptions } from "@/features/crm/registration-queries";
-import { registrationListSchema } from "@/features/crm/registration-staff-schemas";
+import { registrationWorkspaceSearchSchema as searchSchema } from "@/features/crm/registration-navigation";
 import { formatDateRange, formatTimeRange } from "@/features/shared/format";
 import { formatPesos } from "@/features/shared/money";
 
-const pageOffset = z.coerce.number().int().min(0).max(100000).catch(0).transform(offset => Math.floor(offset / 50) * 50);
-const searchSchema = registrationListSchema.pick({ filter: true, search: true }).extend({
-  tab: z.enum(["overview", "registrations"]).default("overview"),
-  offset: pageOffset,
-  runWhen: z.enum(["upcoming", "past", "all"]).catch("upcoming"),
-  runOffset: pageOffset
-});
 const filterOptions: { value: z.output<typeof searchSchema>["filter"]; label: string }[] = [
   { value: "active", label: "Active" }, { value: "unpaid", label: "Unpaid" }, { value: "paid", label: "Paid" },
   { value: "cancelled", label: "Cancelled" }, { value: "all", label: "All registrations" }
@@ -60,7 +53,7 @@ function RegistrationWorkspace() {
     retry={() => void registrations.refetch()} loadingMessage="Loading registrations…"
     accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />;
   const rows = !registrations.isError && registrations.data && (registrations.data.items.length
-    ? <RegistrationRows items={registrations.data.items} />
+    ? <RegistrationRows items={registrations.data.items} search={search} />
     : <EmptyState>{overview ? "No registrations for this run yet." : "No registrations match these filters."}</EmptyState>);
   // Prevent the loading state from shrinking the page and clamping its scroll position.
   return <div ref={workspace} style={{ minHeight: !error && registrations.isPending ? transitionHeight : undefined }}
@@ -134,15 +127,13 @@ function RegistrationWorkspace() {
 }
 
 type RegistrationRow = Awaited<ReturnType<typeof $listRegistrations>>["items"][number];
-function RegistrationRows({ items }: { items: RegistrationRow[] }) {
+function RegistrationRows({ items, search }: { items: RegistrationRow[]; search: z.output<typeof searchSchema> }) {
   return <Table>
     <TableHeader><TableRow><TableHead>Registrant</TableHead><TableHead>Reference</TableHead><TableHead>Status</TableHead><TableHead>Saved price</TableHead><TableHead>Submitted</TableHead></TableRow></TableHeader>
     <TableBody>{items.map(item => <TableRow key={item.id}>
-      <TableCell className="whitespace-normal py-4"><p className="font-medium">{item.fullName}</p><p className="mt-1 break-all text-xs text-muted-foreground">{item.email}</p><p className="mt-1 text-xs text-muted-foreground">{item.phone}</p></TableCell>
+      <TableCell className="whitespace-normal py-4"><Link to="/registrations/$id" params={{ id: item.id }} search={search} className="font-medium underline underline-offset-4">{item.fullName}</Link><p className="mt-1 break-all text-xs text-muted-foreground">{item.email}</p><p className="mt-1 text-xs text-muted-foreground">{item.phone}</p></TableCell>
       <TableCell>{item.reference}</TableCell>
-      <TableCell><Badge variant={item.cancelledAt ? "destructive" : item.isPaid ? "secondary" : "default"}
-        className={!item.cancelledAt && item.isPaid ? "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" : undefined}>
-        {item.cancelledAt ? "Cancelled" : item.isPaid ? "Paid" : "Unpaid"}</Badge></TableCell>
+      <TableCell><RegistrationStatus isPaid={item.isPaid} cancelledAt={item.cancelledAt} /></TableCell>
       <TableCell>{formatPesos(item.priceCentavos)}</TableCell><TableCell>{formatInquiryTime(item.createdAt)}</TableCell>
     </TableRow>)}</TableBody>
   </Table>;

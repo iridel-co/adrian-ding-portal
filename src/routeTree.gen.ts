@@ -24,6 +24,7 @@ import { Route as AppContentTagsRouteImport } from './routes/_app/content/tags'
 import { Route as AppInquiriesIndexRouteImport } from './routes/_app/inquiries/index'
 import { Route as AppInquiriesIdRouteImport } from './routes/_app/inquiries/$id'
 import { Route as AppRegistrationsIndexRouteImport } from './routes/_app/registrations/index'
+import { Route as AppRegistrationsIdRouteImport } from './routes/_app/registrations/$id'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAccessRouteImport } from './routes/_app/settings/access'
 import { Route as AppSettingsIndustriesRouteImport } from './routes/_app/settings/industries'
@@ -119,6 +120,11 @@ const AppInquiriesIdRoute = AppInquiriesIdRouteImport.update({
 const AppRegistrationsIndexRoute = AppRegistrationsIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRegistrationsRoute,
+} as any)
+const AppRegistrationsIdRoute = AppRegistrationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
   getParentRoute: () => AppRegistrationsRoute,
 } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
@@ -250,6 +256,7 @@ export interface FileRoutesByFullPath {
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
   '/inquiries/$id': typeof AppInquiriesIdRoute
+  '/registrations/$id': typeof AppRegistrationsIdRoute
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -286,6 +293,7 @@ export interface FileRoutesByTo {
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
   '/inquiries/$id': typeof AppInquiriesIdRoute
+  '/registrations/$id': typeof AppRegistrationsIdRoute
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -326,6 +334,7 @@ export interface FileRoutesById {
   '/_app/content/media': typeof AppContentMediaRoute
   '/_app/content/tags': typeof AppContentTagsRoute
   '/_app/inquiries/$id': typeof AppInquiriesIdRoute
+  '/_app/registrations/$id': typeof AppRegistrationsIdRoute
   '/_app/settings/access': typeof AppSettingsAccessRoute
   '/_app/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -366,6 +375,7 @@ export interface FileRouteTypes {
     | '/content/media'
     | '/content/tags'
     | '/inquiries/$id'
+    | '/registrations/$id'
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
@@ -402,6 +412,7 @@ export interface FileRouteTypes {
     | '/content/media'
     | '/content/tags'
     | '/inquiries/$id'
+    | '/registrations/$id'
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
@@ -441,6 +452,7 @@ export interface FileRouteTypes {
     | '/_app/content/media'
     | '/_app/content/tags'
     | '/_app/inquiries/$id'
+    | '/_app/registrations/$id'
     | '/_app/settings/access'
     | '/_app/settings/industries'
     | '/api/auth/$'
@@ -592,6 +604,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/registrations/'
       preLoaderRoute: typeof AppRegistrationsIndexRouteImport
+      parentRoute: typeof AppRegistrationsRoute
+    }
+    '/_app/registrations/$id': {
+      id: '/_app/registrations/$id'
+      path: '/$id'
+      fullPath: '/registrations/$id'
+      preLoaderRoute: typeof AppRegistrationsIdRouteImport
       parentRoute: typeof AppRegistrationsRoute
     }
     '/_app/settings/': {
@@ -766,11 +785,13 @@ const AppInquiriesRouteWithChildren = AppInquiriesRoute._addFileChildren(
 )
 
 interface AppRegistrationsRouteChildren {
+  AppRegistrationsIdRoute: typeof AppRegistrationsIdRoute
   AppRegistrationsIndexRoute: typeof AppRegistrationsIndexRoute
   AppRegistrationsSessionsSessionIdRoute: typeof AppRegistrationsSessionsSessionIdRoute
 }
 
 const AppRegistrationsRouteChildren: AppRegistrationsRouteChildren = {
+  AppRegistrationsIdRoute: AppRegistrationsIdRoute,
   AppRegistrationsIndexRoute: AppRegistrationsIndexRoute,
   AppRegistrationsSessionsSessionIdRoute:
     AppRegistrationsSessionsSessionIdRoute,

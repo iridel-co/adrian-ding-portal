@@ -73,7 +73,7 @@ describe("Workshop run workspace", () => {
       expect(html).toContain(value);
     expect(html).toContain("aria-valuenow=\"90\"");
     expect(html).toContain("&lt;script&gt;unsafe&lt;/script&gt;");
-    expect(html).not.toContain("/registrations/$id");
+    expect(html).toContain("/registrations/$id");
     expect(html).not.toContain("Page 2");
   });
   it("clamps empty, full and over-capacity bars while retaining actual counts", () => {
