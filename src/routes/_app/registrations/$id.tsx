@@ -4,10 +4,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { CrmReadState } from "@/components/crm/read-state";
 import { emptyRegistrationDraft, paymentMethodLabels, RegistrationActions, type RegistrationDraft } from "@/components/crm/registration-actions";
+import { RegistrationEmails } from "@/components/crm/registration-emails";
+import { RegistrationHistory } from "@/components/crm/registration-history";
 import { RegistrationStatus } from "@/components/crm/registration-status";
 import { Button } from "@/components/ui/button";
-import { CrmEmailKind } from "@/db/schema/crm-email-kind";
-import { emailStateLabels, formatInquiryTime, isInquiryAccessError } from "@/features/crm/presentation";
+import { formatInquiryTime, isInquiryAccessError } from "@/features/crm/presentation";
 import { registrationWorkspaceSearchSchema } from "@/features/crm/registration-navigation";
 import { registrationErrorMessage } from "@/features/crm/registration-presentation";
 import { registrationQueryKey, registrationQueryOptions } from "@/features/crm/registration-queries";
@@ -28,10 +29,15 @@ function RegistrationPage() {
 function RegistrationDetail({ id }: { id: string }) {
   const search = Route.useSearch();
   const queryClient = useQueryClient();
+  const [historyOffset, setHistoryOffset] = useState(0);
   const result = useQuery(registrationQueryOptions(id));
+  const olderHistory = useQuery({ ...registrationQueryOptions(id, historyOffset),
+    enabled: historyOffset > 0 && !!result.data && !result.isError });
+  const history = historyOffset === 0 ? result : olderHistory;
+  const refresh = () => { void result.refetch(); if (historyOffset > 0) void olderHistory.refetch(); };
   const [draft, setDraft] = useState<RegistrationDraft>(emptyRegistrationDraft);
   const [actionAccessError, setActionAccessError] = useState<Error | null>(null);
-  const error = actionAccessError || result.error;
+  const error = actionAccessError || result.error || (isInquiryAccessError(history.error) ? history.error : null);
   useEffect(() => {
     if (isInquiryAccessError(error)) {
       setActionAccessError(error instanceof Error ? error : null);
@@ -45,10 +51,10 @@ function RegistrationDetail({ id }: { id: string }) {
   return <div className="mx-auto flex max-w-5xl flex-col gap-6">
     <div className="flex items-center justify-between gap-3">
       <Link to="/registrations" search={{ when: search.runWhen, offset: search.runOffset }} className="text-sm underline underline-offset-4">Workshop runs</Link>
-      <Button variant="outline" disabled={result.isFetching} onClick={() => void result.refetch()}>Refresh</Button>
+      <Button variant="outline" disabled={result.isFetching} onClick={refresh}>Refresh</Button>
     </div>
     <CrmReadState pending={result.isPending && !actionAccessError} error={error}
-      retry={() => { setActionAccessError(null); void result.refetch(); }} loadingMessage="Loading registration…"
+      retry={() => { setActionAccessError(null); refresh(); }} loadingMessage="Loading registration…"
       accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />
     {!result.isError && !error && registration && <>
       <Link to="/registrations/sessions/$sessionId" params={{ sessionId: registration.workshopSessionId }} search={search}
@@ -94,14 +100,11 @@ function RegistrationDetail({ id }: { id: string }) {
           <Field label="Cancelled by">{canceller ? `${canceller.name} (${canceller.email})` : "Staff identity not available"}</Field></dl>
         <p className="text-sm text-muted-foreground">This registration does not reserve a seat.</p>
       </section>}
-      <RegistrationActions registration={registration} draft={draft} setDraft={setDraft} onAccessError={setActionAccessError} />
-      <section className="space-y-4 rounded-lg border p-5" aria-labelledby="registration-email">
-        <h2 id="registration-email" className="text-xl font-medium">Email delivery</h2>
-        <p className="text-sm text-muted-foreground">Payment status is independent of email delivery. Accepted means the email provider accepted the message, not confirmed inbox delivery.</p>
-        {registration.emailJobs.length ? <ul className="space-y-2">{registration.emailJobs.map(job => <li key={job.id} className="flex flex-wrap justify-between gap-2 text-sm">
-          <span>{job.kind === CrmEmailKind.PaymentInstructions ? "Payment information" : "Payment acknowledgment"}</span><span>{emailStateLabels[job.state]}</span>
-        </li>)}</ul> : <p className="text-sm text-muted-foreground">No email jobs recorded.</p>}
-      </section>
+      <RegistrationActions registration={registration} draft={draft} setDraft={setDraft} onAccessError={setActionAccessError}
+        onChanged={() => setHistoryOffset(0)} />
+      <RegistrationEmails registration={registration} onAccessError={setActionAccessError} onChanged={() => setHistoryOffset(0)} />
+      <RegistrationHistory entries={history.data?.history ?? []} offset={historyOffset} hasMore={history.data?.historyHasMore ?? false}
+        pending={history.isPending} fetching={history.isFetching} error={history.error} retry={() => void history.refetch()} onPage={setHistoryOffset} />
     </>}
   </div>;
 }
