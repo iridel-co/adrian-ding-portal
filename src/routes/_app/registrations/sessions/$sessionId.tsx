@@ -1,0 +1,149 @@
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useRef, useState } from "react";
+import { z } from "zod";
+import { EmptyState, FilterSelect } from "@/components/cms/content-list-page";
+import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
+import { CrmReadState } from "@/components/crm/read-state";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { $listRegistrations } from "@/features/crm/functions";
+import { formatInquiryTime, isInquiryAccessError } from "@/features/crm/presentation";
+import { registrationErrorMessage } from "@/features/crm/registration-presentation";
+import { registrationSessionQueryOptions, registrationsQueryOptions } from "@/features/crm/registration-queries";
+import { registrationListSchema } from "@/features/crm/registration-staff-schemas";
+import { formatDateRange, formatTimeRange } from "@/features/shared/format";
+import { formatPesos } from "@/features/shared/money";
+
+const pageOffset = z.coerce.number().int().min(0).max(100000).catch(0).transform(offset => Math.floor(offset / 50) * 50);
+const searchSchema = registrationListSchema.pick({ filter: true, search: true }).extend({
+  tab: z.enum(["overview", "registrations"]).default("overview"),
+  offset: pageOffset,
+  runWhen: z.enum(["upcoming", "past", "all"]).catch("upcoming"),
+  runOffset: pageOffset
+});
+const filterOptions: { value: z.output<typeof searchSchema>["filter"]; label: string }[] = [
+  { value: "active", label: "Active" }, { value: "unpaid", label: "Unpaid" }, { value: "paid", label: "Paid" },
+  { value: "cancelled", label: "Cancelled" }, { value: "all", label: "All registrations" }
+];
+
+export const Route = createFileRoute("/_app/registrations/sessions/$sessionId")({
+  validateSearch: searchSchema,
+  head: () => ({ meta: [{ title: "Workshop run management" }] }),
+  component: RegistrationWorkspace
+});
+
+function RegistrationWorkspace() {
+  const { sessionId } = Route.useParams();
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const workspace = useRef<HTMLDivElement>(null);
+  const [transitionHeight, setTransitionHeight] = useState<number>();
+  const changeTab = (tab: "overview" | "registrations") => {
+    setTransitionHeight(workspace.current?.offsetHeight);
+    void navigate({ search: { ...search, tab }, resetScroll: false });
+  };
+  const summary = useQuery(registrationSessionQueryOptions(sessionId));
+  const overview = search.tab === "overview";
+  const registrations = useQuery({ ...registrationsQueryOptions({ workshopSessionId: sessionId,
+    filter: overview ? "all" : search.filter, search: overview ? "" : search.search,
+    offset: overview ? 0 : search.offset, limit: overview ? 5 : 50 }), enabled: !!summary.data && !summary.isError });
+  const refresh = () => { void summary.refetch(); void registrations.refetch(); };
+  const run = summary.data;
+  const accessError = [summary.error, registrations.error].find(isInquiryAccessError);
+  const error = accessError || summary.error;
+  const listState = <CrmReadState pending={registrations.isPending} error={registrations.error}
+    retry={() => void registrations.refetch()} loadingMessage="Loading registrations…"
+    accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />;
+  const rows = !registrations.isError && registrations.data && (registrations.data.items.length
+    ? <RegistrationRows items={registrations.data.items} />
+    : <EmptyState>{overview ? "No registrations for this run yet." : "No registrations match these filters."}</EmptyState>);
+  // Prevent the loading state from shrinking the page and clamping its scroll position.
+  return <div ref={workspace} style={{ minHeight: !error && registrations.isPending ? transitionHeight : undefined }}
+    className="mx-auto flex max-w-6xl flex-col gap-6">
+    <div className="flex items-center justify-between gap-3">
+      <Link to="/registrations" search={{ when: search.runWhen, offset: search.runOffset }} className="text-sm underline underline-offset-4">Back to workshop runs</Link>
+      <Button variant="outline" disabled={summary.isFetching || registrations.isFetching} onClick={refresh}>Refresh</Button>
+    </div>
+    <CrmReadState pending={summary.isPending && !accessError} error={error} retry={refresh}
+      loadingMessage="Loading workshop run…" accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />
+    {!error && !summary.isError && run && <>
+      <header className="space-y-3">
+        <p className="text-sm text-muted-foreground">{run.courseCode || "No course code"}</p>
+        <h1 className="font-display text-3xl sm:text-4xl">{run.workshopTitle}</h1>
+        <StatusBadge display={SESSION_STATUS_DISPLAY[run.status]} />
+        <p>{formatDateRange(run.date, run.endDate)} · {formatTimeRange(run.startTime, run.endTime)} <span className="text-muted-foreground">Manila time</span></p>
+        <p className="text-sm text-muted-foreground">{run.venueName || "Venue not set"}{run.city && ` · ${run.city}`}</p>
+      </header>
+      <Tabs value={search.tab} onValueChange={tab => changeTab(searchSchema.shape.tab.parse(tab))}>
+        <TabsList aria-label="Workshop run workspace"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="registrations">Registrations</TabsTrigger></TabsList>
+        {overview ? <TabsContent value="overview" className="space-y-8 pt-4">
+          <section aria-labelledby="reserved-heading" className="space-y-4 rounded-lg border p-5">
+            <h2 id="reserved-heading" className="text-lg font-semibold">Reserved seats</h2>
+            <p className="text-2xl font-medium tabular-nums">{run.counts.reserved} / {run.capacity} <span className="text-sm font-normal text-muted-foreground">reserved</span></p>
+            <Progress aria-label="Reserved capacity" value={Math.min(100, Math.max(0, run.counts.reserved / run.capacity * 100))}
+              aria-valuetext={`${run.counts.reserved} reserved out of ${run.capacity} seats`} />
+            {run.counts.reserved > run.capacity && <p className="text-sm text-destructive">Reservations exceed the current capacity. Review this run before accepting more registrations.</p>}
+            <dl className="grid grid-cols-2 gap-5 sm:grid-cols-4">
+              <div><dt className="text-muted-foreground">Remaining</dt><dd className="mt-1 text-xl tabular-nums">{run.counts.remaining}</dd></div>
+              <div><dt className="text-muted-foreground">Paid</dt><dd className="mt-1 text-xl tabular-nums">{run.counts.paid}</dd></div>
+              <div><dt className="text-muted-foreground">Unpaid</dt><dd className="mt-1 text-xl tabular-nums">{run.counts.unpaid}</dd></div>
+              <div><dt className="text-muted-foreground">Cancelled</dt><dd className="mt-1 text-xl tabular-nums">{run.counts.cancelled}</dd></div>
+            </dl>
+            <p className="text-sm text-muted-foreground">Paid and Unpaid registrations reserve seats until staff cancel them. Cancelled registrations do not reserve seats.</p>
+          </section>
+          <section aria-labelledby="recent-heading" className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 id="recent-heading" className="text-lg font-semibold">Recent registrations</h2>
+              <Button variant="outline" onClick={() => changeTab("registrations")}>View all registrations</Button>
+            </div>
+            <p className="text-sm text-muted-foreground">Latest five submissions, including cancelled registrations.</p>
+            {listState}{rows}
+          </section>
+        </TabsContent> : <TabsContent value="registrations" className="space-y-5 pt-4">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <form className="flex gap-2" onSubmit={event => {
+              event.preventDefault();
+              const text = String(new FormData(event.currentTarget).get("search") ?? "");
+              void navigate({ search: { ...search, search: text.trim(), offset: 0 } });
+            }}>
+              <Input key={search.search} name="search" defaultValue={search.search} maxLength={200}
+                aria-label="Search this run by reference, name or email" placeholder="Reference, name or email" />
+              <Button variant="outline" type="submit">Search</Button>
+            </form>
+            <FilterSelect label="Registration status" options={filterOptions} value={search.filter}
+              onChange={filter => void navigate({ search: { ...search, filter, offset: 0 } })} />
+          </div>
+          <p className="text-sm text-muted-foreground">Search covers registrations for this workshop run only.</p>
+          {listState}{rows}
+          {!registrations.isError && registrations.data && <div className="flex items-center justify-between gap-3">
+            <Button variant="outline" disabled={!search.offset || registrations.isFetching}
+              onClick={() => void navigate({ search: { ...search, offset: Math.max(0, search.offset - 50) } })}>Previous</Button>
+            <p className="text-sm" aria-live="polite">Page {Math.floor(search.offset / 50) + 1}</p>
+            <Button variant="outline" disabled={!registrations.data.hasMore || registrations.isFetching || search.offset >= 100000}
+              onClick={() => void navigate({ search: { ...search, offset: search.offset + 50 } })}>Next</Button>
+          </div>}
+        </TabsContent>}
+      </Tabs>
+    </>}
+  </div>;
+}
+
+type RegistrationRow = Awaited<ReturnType<typeof $listRegistrations>>["items"][number];
+function RegistrationRows({ items }: { items: RegistrationRow[] }) {
+  return <Table>
+    <TableHeader><TableRow><TableHead>Registrant</TableHead><TableHead>Reference</TableHead><TableHead>Status</TableHead><TableHead>Saved price</TableHead><TableHead>Submitted</TableHead></TableRow></TableHeader>
+    <TableBody>{items.map(item => <TableRow key={item.id}>
+      <TableCell className="whitespace-normal py-4"><p className="font-medium">{item.fullName}</p><p className="mt-1 break-all text-xs text-muted-foreground">{item.email}</p><p className="mt-1 text-xs text-muted-foreground">{item.phone}</p></TableCell>
+      <TableCell>{item.reference}</TableCell>
+      <TableCell><Badge variant={item.cancelledAt ? "destructive" : item.isPaid ? "secondary" : "default"}
+        className={!item.cancelledAt && item.isPaid ? "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" : undefined}>
+        {item.cancelledAt ? "Cancelled" : item.isPaid ? "Paid" : "Unpaid"}</Badge></TableCell>
+      <TableCell>{formatPesos(item.priceCentavos)}</TableCell><TableCell>{formatInquiryTime(item.createdAt)}</TableCell>
+    </TableRow>)}</TableBody>
+  </Table>;
+}

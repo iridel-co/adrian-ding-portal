@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
 import { ContentListPage, EmptyState } from "@/components/cms/content-list-page";
 import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
@@ -49,7 +49,9 @@ function RegistrationRunsPage() {
           <TableHeader><TableRow><TableHead>Workshop</TableHead><TableHead>Schedule</TableHead><TableHead>Venue</TableHead><TableHead>Seats</TableHead><TableHead>Payment</TableHead></TableRow></TableHeader>
           <TableBody>{runs.data.items.map(run => <TableRow key={run.id}>
             <TableCell className="whitespace-normal py-5">
-              <p className="font-medium">{run.workshopTitle}</p>
+              <Link to="/registrations/sessions/$sessionId" params={{ sessionId: run.id }}
+                search={{ tab: "overview", filter: "active", search: "", offset: 0, runWhen: search.when, runOffset: search.offset }}
+                className="font-medium underline underline-offset-4">{run.workshopTitle}</Link>
               <p className="mt-1 text-xs text-muted-foreground">{run.courseCode || "No course code"}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <StatusBadge display={SESSION_STATUS_DISPLAY[run.status]} />
