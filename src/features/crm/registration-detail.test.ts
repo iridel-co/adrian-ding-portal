@@ -1,18 +1,25 @@
-import { Children, createElement, isValidElement, type ComponentType, type ReactElement, type ReactNode } from "react";
+import { Children, createElement, isValidElement, useState, type ComponentType, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const harness = vi.hoisted(() => ({
-  result: {} as Record<string, unknown>, pending: false, mutationError: null as Error | null,
+  result: {} as Record<string, unknown>, older: {} as Record<string, unknown>, query: vi.fn(), pending: false, mutationError: null as Error | null,
   mutation: {} as Record<string, Function>, mutate: vi.fn(), change: vi.fn(), get: vi.fn(), reset: vi.fn(),
-  invalidate: vi.fn(), remove: vi.fn(), toast: vi.fn(), refetch: vi.fn(), accessError: vi.fn()
+  invalidate: vi.fn(), remove: vi.fn(), toast: vi.fn(), refetch: vi.fn(), accessError: vi.fn(), changed: vi.fn()
 }));
+vi.mock("react", async original => {
+  const actual = await original<typeof import("react")>();
+  return { ...actual, useState: vi.fn(actual.useState) };
+});
 vi.mock("./functions", () => ({ $getRegistration: harness.get, $changeRegistration: harness.change,
-  $getRegistrationSession: vi.fn(), $listRegistrations: vi.fn(), $listRegistrationSessions: vi.fn() }));
+  $retryRegistrationEmail: vi.fn(), $getRegistrationSession: vi.fn(), $listRegistrations: vi.fn(), $listRegistrationSessions: vi.fn() }));
 vi.mock("@tanstack/react-query", async original => ({
   ...await original<typeof import("@tanstack/react-query")>(),
-  useQuery: () => harness.result,
+  useQuery: (options: { queryKey: unknown[] }) => {
+    harness.query(options);
+    return Number(options.queryKey[3]) > 0 ? harness.older : harness.result;
+  },
   useQueryClient: () => ({ invalidateQueries: harness.invalidate, removeQueries: harness.remove }),
   useMutation: (options: Record<string, Function>) => {
     harness.mutation = options;
@@ -67,7 +74,7 @@ function find(node: ReactNode, type: unknown, label?: string): ReactElement<Reco
 function actionTree(registration = record, draft = paidDraft, setDraft = vi.fn()) {
   let result: ReactElement;
   function Capture() {
-    result = RegistrationActions({ registration, draft, setDraft, onAccessError: harness.accessError });
+    result = RegistrationActions({ registration, draft, setDraft, onAccessError: harness.accessError, onChanged: harness.changed });
     return result;
   }
   renderToStaticMarkup(createElement(Capture));
@@ -79,6 +86,7 @@ const render = () => renderToStaticMarkup(createElement(Route.options.component 
 beforeEach(() => {
   vi.clearAllMocks(); harness.pending = false; harness.mutationError = null;
   harness.result = { data: structuredClone(record), isPending: false, isError: false, isFetching: false, error: null, refetch: harness.refetch };
+  harness.older = { ...harness.result };
 });
 
 describe("Registration detail", () => {
@@ -89,7 +97,7 @@ describe("Registration detail", () => {
       expect(html).toContain(text);
     expect(html).toContain("&lt;script&gt;unsafe&lt;/script&gt;");
     expect(html).not.toContain("<script>unsafe</script>");
-    expect(html).not.toContain("Retry email");
+    expect(html).toContain("Retry payment information");
     expect(html).toContain('href="/registrations/sessions/$sessionId"');
     expect(html).toContain("&quot;tab&quot;:&quot;registrations&quot;");
     expect(html).toContain("&quot;offset&quot;:50");
@@ -104,6 +112,22 @@ describe("Registration detail", () => {
     for (const text of ["previous verification is retained", "Cancelled", "Customer requested cancellation", "Bank transfer", "₱0", "BANK-123", "Sample Staff", "does not reserve a seat"])
       expect(html).toContain(text);
     expect(html).not.toContain(">Mark Paid<"); expect(html).not.toContain(">Correct to Unpaid<"); expect(html).not.toContain(">Cancel registration<");
+  });
+  it("loads older history independently and limits ordinary failures to the history section", () => {
+    harness.older.isError = true; harness.older.error = new Error("crm_unavailable");
+    vi.mocked(useState).mockReturnValueOnce([20, vi.fn()]);
+    const html = render();
+    expect(html).toContain("alice@example.invalid"); expect(html).toContain("Try again");
+    expect(html).not.toContain("No staff actions on this history page");
+    expect(harness.query.mock.calls[0][0].queryKey).toEqual(["workshop-registrations", "detail", record.id, 0]);
+    expect(harness.query.mock.calls[1][0]).toMatchObject({ enabled: true, queryKey: ["workshop-registrations", "detail", record.id, 20] });
+  });
+  it("hides the entire detail when an older history request loses staff access", () => {
+    harness.older.isError = true; harness.older.error = new Error("staff_access_required");
+    vi.mocked(useState).mockReturnValueOnce([20, vi.fn()]);
+    const html = render();
+    expect(html).toContain("Registration access unavailable");
+    expect(html).not.toContain("alice@example.invalid");
   });
   it("hides cached details on failures and renders loading/missing/access states safely", () => {
     harness.result.data = undefined; harness.result.isPending = true;
@@ -190,6 +214,7 @@ describe("Registration actions", () => {
     expect(harness.change).toHaveBeenCalledWith({ data: { id: record.id, action: RegistrationAction.MarkPaid } });
     await harness.mutation.onSuccess({ isPaid: true }, { action: RegistrationAction.MarkPaid });
     expect(setDraft).toHaveBeenCalledWith(emptyRegistrationDraft);
+    expect(harness.changed).toHaveBeenCalledOnce();
     expect(harness.invalidate).toHaveBeenCalledWith({ queryKey: registrationQueryKey });
     expect(harness.toast).toHaveBeenCalledWith("Registration marked Paid. Check email delivery separately.");
   });

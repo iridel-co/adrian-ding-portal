@@ -34,9 +34,9 @@ const actionLabels = {
 export const paymentMethodLabels: Record<typeof paymentMethod.enumValues[number], string> = { bank: "Bank transfer", gcash: "GCash", maya: "Maya" };
 type Registration = Awaited<ReturnType<typeof $getRegistration>>;
 
-export function RegistrationActions({ registration, draft, setDraft, onAccessError }: {
+export function RegistrationActions({ registration, draft, setDraft, onAccessError, onChanged }: {
   registration: Registration; draft: RegistrationDraft; setDraft: Dispatch<SetStateAction<RegistrationDraft>>;
-  onAccessError: (error: Error) => void;
+  onAccessError: (error: Error) => void; onChanged: () => void;
 }) {
   const queryClient = useQueryClient();
   const submitting = useRef(false);
@@ -48,6 +48,7 @@ export function RegistrationActions({ registration, draft, setDraft, onAccessErr
     retry: false,
     onSuccess: async (_result, input) => {
       setDraft(emptyRegistrationDraft);
+      onChanged();
       toast.success(input.action === RegistrationAction.MarkPaid ? "Registration marked Paid. Check email delivery separately."
         : input.action === RegistrationAction.Cancel ? "Registration cancelled. Its seat has been released." : "Payment corrected to Unpaid. The seat remains reserved.");
       await queryClient.invalidateQueries({ queryKey: registrationQueryKey });
