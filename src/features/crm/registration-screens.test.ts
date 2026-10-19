@@ -62,7 +62,7 @@ describe("Workshop run list", () => {
       expect(html).toContain(value);
     expect(html).toContain("&lt;script&gt;unsafe&lt;/script&gt;");
     expect(html).not.toContain("<script>unsafe</script>");
-    expect(html).not.toContain("/registrations/sessions/");
+    expect(html).toContain("/registrations/sessions/$sessionId");
   });
   it("shows registration-specific loading, empty and safe errors and suppresses cached rows on failure", () => {
     harness.result.isPending = true; harness.result.data = undefined;

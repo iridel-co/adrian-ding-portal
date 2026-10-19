@@ -3,6 +3,7 @@ const messages: Record<string, string> = {
   staff_access_required: "Your account does not have registration access. Contact your portal administrator.",
   access_unavailable: "Unable to check registration access. Try again.",
   origin_not_allowed: "This request was blocked. Open the portal at its configured address and try again.",
+  registration_session_not_found: "This workshop run could not be found. Return to the workshop run list.",
   crm_unavailable: "Unable to load workshop registrations. Try again."
 };
 

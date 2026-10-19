@@ -41,6 +41,7 @@ import { Route as AppContentSessionsIndexRouteImport } from './routes/_app/conte
 import { Route as AppContentSessionsIdRouteImport } from './routes/_app/content/sessions/$id'
 import { Route as AppContentWorkshopsIndexRouteImport } from './routes/_app/content/workshops/index'
 import { Route as AppContentWorkshopsIdRouteImport } from './routes/_app/content/workshops/$id'
+import { Route as AppRegistrationsSessionsSessionIdRouteImport } from './routes/_app/registrations/sessions/$sessionId'
 import { Route as ApiPublicWorkshopsIndexRouteImport } from './routes/api/public/workshops/index'
 import { Route as ApiPublicWorkshopsSlugRouteImport } from './routes/api/public/workshops/$slug'
 
@@ -207,6 +208,12 @@ const AppContentWorkshopsIdRoute = AppContentWorkshopsIdRouteImport.update({
   path: '/content/workshops/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const AppRegistrationsSessionsSessionIdRoute =
+  AppRegistrationsSessionsSessionIdRouteImport.update({
+    id: '/sessions/$sessionId',
+    path: '/sessions/$sessionId',
+    getParentRoute: () => AppRegistrationsRoute,
+  } as any)
 const ApiPublicWorkshopsIndexRoute = ApiPublicWorkshopsIndexRouteImport.update({
   id: '/api/public/workshops/',
   path: '/api/public/workshops/',
@@ -247,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
+  '/registrations/sessions/$sessionId': typeof AppRegistrationsSessionsSessionIdRoute
   '/api/public/workshops/$slug': typeof ApiPublicWorkshopsSlugRoute
   '/content/corporate-trainings/': typeof AppContentCorporateTrainingsIndexRoute
   '/content/sessions/': typeof AppContentSessionsIndexRoute
@@ -280,6 +288,7 @@ export interface FileRoutesByTo {
   '/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
+  '/registrations/sessions/$sessionId': typeof AppRegistrationsSessionsSessionIdRoute
   '/api/public/workshops/$slug': typeof ApiPublicWorkshopsSlugRoute
   '/content/corporate-trainings': typeof AppContentCorporateTrainingsIndexRoute
   '/content/sessions': typeof AppContentSessionsIndexRoute
@@ -317,6 +326,7 @@ export interface FileRoutesById {
   '/_app/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/_app/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/_app/content/workshops/$id': typeof AppContentWorkshopsIdRoute
+  '/_app/registrations/sessions/$sessionId': typeof AppRegistrationsSessionsSessionIdRoute
   '/api/public/workshops/$slug': typeof ApiPublicWorkshopsSlugRoute
   '/_app/content/corporate-trainings/': typeof AppContentCorporateTrainingsIndexRoute
   '/_app/content/sessions/': typeof AppContentSessionsIndexRoute
@@ -354,6 +364,7 @@ export interface FileRouteTypes {
     | '/content/corporate-trainings/$id'
     | '/content/sessions/$id'
     | '/content/workshops/$id'
+    | '/registrations/sessions/$sessionId'
     | '/api/public/workshops/$slug'
     | '/content/corporate-trainings/'
     | '/content/sessions/'
@@ -387,6 +398,7 @@ export interface FileRouteTypes {
     | '/content/corporate-trainings/$id'
     | '/content/sessions/$id'
     | '/content/workshops/$id'
+    | '/registrations/sessions/$sessionId'
     | '/api/public/workshops/$slug'
     | '/content/corporate-trainings'
     | '/content/sessions'
@@ -423,6 +435,7 @@ export interface FileRouteTypes {
     | '/_app/content/corporate-trainings/$id'
     | '/_app/content/sessions/$id'
     | '/_app/content/workshops/$id'
+    | '/_app/registrations/sessions/$sessionId'
     | '/api/public/workshops/$slug'
     | '/_app/content/corporate-trainings/'
     | '/_app/content/sessions/'
@@ -674,6 +687,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppContentWorkshopsIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/registrations/sessions/$sessionId': {
+      id: '/_app/registrations/sessions/$sessionId'
+      path: '/sessions/$sessionId'
+      fullPath: '/registrations/sessions/$sessionId'
+      preLoaderRoute: typeof AppRegistrationsSessionsSessionIdRouteImport
+      parentRoute: typeof AppRegistrationsRoute
+    }
     '/api/public/workshops/': {
       id: '/api/public/workshops/'
       path: '/api/public/workshops'
@@ -707,10 +727,13 @@ const AppInquiriesRouteWithChildren = AppInquiriesRoute._addFileChildren(
 
 interface AppRegistrationsRouteChildren {
   AppRegistrationsIndexRoute: typeof AppRegistrationsIndexRoute
+  AppRegistrationsSessionsSessionIdRoute: typeof AppRegistrationsSessionsSessionIdRoute
 }
 
 const AppRegistrationsRouteChildren: AppRegistrationsRouteChildren = {
   AppRegistrationsIndexRoute: AppRegistrationsIndexRoute,
+  AppRegistrationsSessionsSessionIdRoute:
+    AppRegistrationsSessionsSessionIdRoute,
 }
 
 const AppRegistrationsRouteWithChildren =
