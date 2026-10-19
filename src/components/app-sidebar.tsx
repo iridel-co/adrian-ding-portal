@@ -10,7 +10,8 @@ import {
   LogOut,
   MessagesSquare,
   Settings,
-  Tags
+  Tags,
+  Users
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -77,7 +78,11 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
           <SidebarGroupLabel>CRM</SidebarGroupLabel>
           <SidebarGroupContent><SidebarMenu><SidebarMenuItem><SidebarMenuButton asChild>
             <Link to="/inquiries" search={{ status: "all", search: "", offset: 0 }} activeProps={{ "data-active": true }}><MessagesSquare /><span>Inquiries</span></Link>
-          </SidebarMenuButton></SidebarMenuItem></SidebarMenu></SidebarGroupContent>
+          </SidebarMenuButton></SidebarMenuItem>
+            <SidebarMenuItem><SidebarMenuButton asChild>
+              <Link to="/registrations" search={{ when: "upcoming", offset: 0 }} activeProps={{ "data-active": true }}><Users /><span>Registrations</span></Link>
+            </SidebarMenuButton></SidebarMenuItem>
+          </SidebarMenu></SidebarGroupContent>
         </SidebarGroup>}
         {NAV_GROUPS.map((group) => (
           <SidebarGroup key={group.label}>

@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppInquiriesRouteImport } from './routes/_app/inquiries'
+import { Route as AppRegistrationsRouteImport } from './routes/_app/registrations'
 import { Route as ApiCorporateInquiriesRouteImport } from './routes/api/corporate-inquiries'
 import { Route as ApiRegistrationsRouteImport } from './routes/api/registrations'
 import { Route as PreviewProgramRouteImport } from './routes/preview/program'
@@ -22,6 +23,7 @@ import { Route as AppContentMediaRouteImport } from './routes/_app/content/media
 import { Route as AppContentTagsRouteImport } from './routes/_app/content/tags'
 import { Route as AppInquiriesIndexRouteImport } from './routes/_app/inquiries/index'
 import { Route as AppInquiriesIdRouteImport } from './routes/_app/inquiries/$id'
+import { Route as AppRegistrationsIndexRouteImport } from './routes/_app/registrations/index'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAccessRouteImport } from './routes/_app/settings/access'
 import { Route as AppSettingsIndustriesRouteImport } from './routes/_app/settings/industries'
@@ -66,6 +68,11 @@ const AppInquiriesRoute = AppInquiriesRouteImport.update({
   path: '/inquiries',
   getParentRoute: () => AppRoute,
 } as any)
+const AppRegistrationsRoute = AppRegistrationsRouteImport.update({
+  id: '/registrations',
+  path: '/registrations',
+  getParentRoute: () => AppRoute,
+} as any)
 const ApiCorporateInquiriesRoute = ApiCorporateInquiriesRouteImport.update({
   id: '/api/corporate-inquiries',
   path: '/api/corporate-inquiries',
@@ -105,6 +112,11 @@ const AppInquiriesIdRoute = AppInquiriesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => AppInquiriesRoute,
+} as any)
+const AppRegistrationsIndexRoute = AppRegistrationsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRegistrationsRoute,
 } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/settings/',
@@ -211,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
   '/inquiries': typeof AppInquiriesRouteWithChildren
+  '/registrations': typeof AppRegistrationsRouteWithChildren
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/api/registrations': typeof ApiRegistrationsRoute
   '/preview/program': typeof PreviewProgramRoute
@@ -229,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/api/public/programs': typeof ApiPublicProgramsRoute
   '/api/public/testimonials': typeof ApiPublicTestimonialsRoute
   '/inquiries/': typeof AppInquiriesIndexRoute
+  '/registrations/': typeof AppRegistrationsIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
@@ -261,6 +275,7 @@ export interface FileRoutesByTo {
   '/api/public/programs': typeof ApiPublicProgramsRoute
   '/api/public/testimonials': typeof ApiPublicTestimonialsRoute
   '/inquiries': typeof AppInquiriesIndexRoute
+  '/registrations': typeof AppRegistrationsIndexRoute
   '/settings': typeof AppSettingsIndexRoute
   '/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
@@ -277,6 +292,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
   '/_app/inquiries': typeof AppInquiriesRouteWithChildren
+  '/_app/registrations': typeof AppRegistrationsRouteWithChildren
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/api/registrations': typeof ApiRegistrationsRoute
   '/preview/program': typeof PreviewProgramRoute
@@ -296,6 +312,7 @@ export interface FileRoutesById {
   '/api/public/programs': typeof ApiPublicProgramsRoute
   '/api/public/testimonials': typeof ApiPublicTestimonialsRoute
   '/_app/inquiries/': typeof AppInquiriesIndexRoute
+  '/_app/registrations/': typeof AppRegistrationsIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/_app/content/sessions/$id': typeof AppContentSessionsIdRoute
@@ -313,6 +330,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/preview'
     | '/inquiries'
+    | '/registrations'
     | '/api/corporate-inquiries'
     | '/api/registrations'
     | '/preview/program'
@@ -331,6 +349,7 @@ export interface FileRouteTypes {
     | '/api/public/programs'
     | '/api/public/testimonials'
     | '/inquiries/'
+    | '/registrations/'
     | '/settings/'
     | '/content/corporate-trainings/$id'
     | '/content/sessions/$id'
@@ -363,6 +382,7 @@ export interface FileRouteTypes {
     | '/api/public/programs'
     | '/api/public/testimonials'
     | '/inquiries'
+    | '/registrations'
     | '/settings'
     | '/content/corporate-trainings/$id'
     | '/content/sessions/$id'
@@ -378,6 +398,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/preview'
     | '/_app/inquiries'
+    | '/_app/registrations'
     | '/api/corporate-inquiries'
     | '/api/registrations'
     | '/preview/program'
@@ -397,6 +418,7 @@ export interface FileRouteTypes {
     | '/api/public/programs'
     | '/api/public/testimonials'
     | '/_app/inquiries/'
+    | '/_app/registrations/'
     | '/_app/settings/'
     | '/_app/content/corporate-trainings/$id'
     | '/_app/content/sessions/$id'
@@ -463,6 +485,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInquiriesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/registrations': {
+      id: '/_app/registrations'
+      path: '/registrations'
+      fullPath: '/registrations'
+      preLoaderRoute: typeof AppRegistrationsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/corporate-inquiries': {
       id: '/api/corporate-inquiries'
       path: '/api/corporate-inquiries'
@@ -518,6 +547,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/inquiries/$id'
       preLoaderRoute: typeof AppInquiriesIdRouteImport
       parentRoute: typeof AppInquiriesRoute
+    }
+    '/_app/registrations/': {
+      id: '/_app/registrations/'
+      path: '/'
+      fullPath: '/registrations/'
+      preLoaderRoute: typeof AppRegistrationsIndexRouteImport
+      parentRoute: typeof AppRegistrationsRoute
     }
     '/_app/settings/': {
       id: '/_app/settings/'
@@ -669,8 +705,20 @@ const AppInquiriesRouteWithChildren = AppInquiriesRoute._addFileChildren(
   AppInquiriesRouteChildren,
 )
 
+interface AppRegistrationsRouteChildren {
+  AppRegistrationsIndexRoute: typeof AppRegistrationsIndexRoute
+}
+
+const AppRegistrationsRouteChildren: AppRegistrationsRouteChildren = {
+  AppRegistrationsIndexRoute: AppRegistrationsIndexRoute,
+}
+
+const AppRegistrationsRouteWithChildren =
+  AppRegistrationsRoute._addFileChildren(AppRegistrationsRouteChildren)
+
 interface AppRouteChildren {
   AppInquiriesRoute: typeof AppInquiriesRouteWithChildren
+  AppRegistrationsRoute: typeof AppRegistrationsRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppContentMediaRoute: typeof AppContentMediaRoute
   AppContentTagsRoute: typeof AppContentTagsRoute
@@ -687,6 +735,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppInquiriesRoute: AppInquiriesRouteWithChildren,
+  AppRegistrationsRoute: AppRegistrationsRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppContentMediaRoute: AppContentMediaRoute,
   AppContentTagsRoute: AppContentTagsRoute,
