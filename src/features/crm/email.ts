@@ -4,14 +4,14 @@ import { CrmEmailKind, CrmEmailState, corporateInquiry, crmEmailJob, registratio
 import type { DbOrTx } from "@/features/shared/db-types";
 import { logActivity } from "@/features/shared/audit";
 import type { PortalActor } from "@/lib/access";
-import { IntakeError, IntakeErrorCode } from "./errors";
+import { EmailDeliveryErrorCode, IntakeError, IntakeErrorCode } from "./errors";
 import { registrationMessageHasPlaceholders } from "./registration-template";
 import { corporateMessageHasPlaceholders } from "./templates";
 
 export type EmailTransport = (payload: CrmEmailPayload, key: string) => Promise<{ id: string }>;
 
 class DeliveryError extends Error {
-  constructor(public code: string) { super(code); }
+  constructor(public code: EmailDeliveryErrorCode) { super(code); }
 }
 
 export async function sendViaResend(payload: CrmEmailPayload, key: string, apiKey: string) {
@@ -22,10 +22,10 @@ export async function sendViaResend(payload: CrmEmailPayload, key: string, apiKe
     body: JSON.stringify({ ...message, ...(replyTo ? { reply_to: replyTo } : {}),
       ...(attachments ? { attachments: attachments.map(({ filename, content }) => ({ filename, content })) } : {}) })
   });
-  if (!response.ok) throw new DeliveryError(response.status === 409 ? "provider_conflict" : response.status === 429 ? "provider_throttled" : "provider_rejected");
+  if (!response.ok) throw new DeliveryError(response.status === 409 ? EmailDeliveryErrorCode.ProviderConflict : response.status === 429 ? EmailDeliveryErrorCode.ProviderThrottled : EmailDeliveryErrorCode.ProviderRejected);
   const body: unknown = await response.json();
   if (!body || typeof body !== "object" || !("id" in body) || typeof body.id !== "string" || !body.id.trim() || body.id.length > 256) {
-    throw new DeliveryError("provider_response_invalid");
+    throw new DeliveryError(EmailDeliveryErrorCode.ProviderResponseInvalid);
   }
   return { id: body.id };
 }
@@ -57,18 +57,18 @@ export async function sendEmailJob(db: DbOrTx, id: string, apiKey: string,
     const now = new Date(instant);
     if (job.state === CrmEmailState.Sending && job.leaseExpiresAt && job.leaseExpiresAt > now) return null;
     if (job.kind === CrmEmailKind.CorporateOverdue && (!inquiry || inquiry.status !== "NEW" || inquiry.slaDueAt >= now)) {
-      await tx.update(crmEmailJob).set({ state: CrmEmailState.Skipped, leaseExpiresAt: null, lastErrorCode: "inquiry_reminder_obsolete" }).where(eq(crmEmailJob.id, id));
+      await tx.update(crmEmailJob).set({ state: CrmEmailState.Skipped, leaseExpiresAt: null, lastErrorCode: EmailDeliveryErrorCode.InquiryReminderObsolete }).where(eq(crmEmailJob.id, id));
       return null;
     }
     if (job.registrationId && (!owner || owner.cancelledAt !== null || (job.kind === CrmEmailKind.PaymentInstructions && owner.isPaid))) {
-      await tx.update(crmEmailJob).set({ state: CrmEmailState.Skipped, leaseExpiresAt: null, lastErrorCode: job.kind === CrmEmailKind.PaymentInstructions ? "payment_instructions_obsolete" : "payment_acknowledgment_obsolete" })
+      await tx.update(crmEmailJob).set({ state: CrmEmailState.Skipped, leaseExpiresAt: null, lastErrorCode: job.kind === CrmEmailKind.PaymentInstructions ? EmailDeliveryErrorCode.PaymentInstructionsObsolete : EmailDeliveryErrorCode.PaymentAcknowledgmentObsolete })
         .where(eq(crmEmailJob.id, id));
       return null;
     }
     // Keep the original snapshot and provider key available if staff mark Paid again.
     if (job.kind === CrmEmailKind.PaymentAcknowledgment && !owner?.isPaid) return null;
     if (job.firstAttemptAt && now.getTime() - job.firstAttemptAt.getTime() >= RETRY_WINDOW_MS) {
-      await tx.update(crmEmailJob).set({ state: CrmEmailState.NeedsReconciliation, leaseExpiresAt: null, lastErrorCode: "idempotency_window_expired" }).where(eq(crmEmailJob.id, id));
+      await tx.update(crmEmailJob).set({ state: CrmEmailState.NeedsReconciliation, leaseExpiresAt: null, lastErrorCode: EmailDeliveryErrorCode.IdempotencyWindowExpired }).where(eq(crmEmailJob.id, id));
       return null;
     }
     if (job.corporateInquiryId && corporateMessageHasPlaceholders(job.payload)) throw new IntakeError(503, IntakeErrorCode.EmailUnavailable);
@@ -90,10 +90,10 @@ export async function sendEmailJob(db: DbOrTx, id: string, apiKey: string,
   let result: { id: string };
   try {
     result = await transport(claimed.payload, claimed.id);
-    if (!result.id?.trim() || result.id.length > 256) throw new DeliveryError("provider_response_invalid");
+    if (!result.id?.trim() || result.id.length > 256) throw new DeliveryError(EmailDeliveryErrorCode.ProviderResponseInvalid);
   } catch (error) {
     await db.update(crmEmailJob).set({ state: CrmEmailState.Failed, leaseExpiresAt: null,
-      lastErrorCode: error instanceof DeliveryError ? error.code : "provider_request_failed" })
+      lastErrorCode: error instanceof DeliveryError ? error.code : EmailDeliveryErrorCode.ProviderRequestFailed })
       .where(and(eq(crmEmailJob.id, id), eq(crmEmailJob.state, CrmEmailState.Sending), eq(crmEmailJob.attemptCount, claimed.attemptCount)));
     return;
   }

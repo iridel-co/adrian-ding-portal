@@ -2,6 +2,7 @@ import { createMiddleware, createServerFn, createServerOnlyFn } from "@tanstack/
 import { getRequest, setResponseHeader, setResponseStatus } from "@tanstack/react-start/server";
 
 import { getAuth } from "@/lib/auth";
+import { AccessErrorCode } from "./access-errors";
 
 type GetUserQuery = {
   disableCookieCache?: boolean;
@@ -36,7 +37,7 @@ export const authMiddleware = createMiddleware().server(async ({ next }) => {
 
   if (!user) {
     setResponseStatus(401);
-    throw new Error("Unauthorized");
+    throw new Error(AccessErrorCode.Unauthorized);
   }
 
   return next({ context: { user } });

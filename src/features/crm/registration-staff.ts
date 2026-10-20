@@ -1,14 +1,14 @@
 import "@tanstack/react-start/server-only";
 import { and, asc, desc, eq, getTableColumns, ilike, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
-import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
+import { alias, type PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { Db } from "@/db";
-import { CrmEmailKind, CrmEmailState, activityLog, crmEmailJob, paymentMethod, registration, workshop, workshopSession } from "@/db/schema";
+import { CrmEmailKind, CrmEmailState, activityLog, crmEmailJob, paymentMethod, registration, user, workshop, workshopSession } from "@/db/schema";
 import { diffChanges, logActivity } from "@/features/shared/audit";
 import { manilaWallClock } from "@/features/shared/time";
 import type { PortalActor } from "@/lib/access";
 import { sendEmailJob, type EmailTransport } from "./email";
-import { IntakeError, IntakeErrorCode } from "./errors";
+import { EmailDeliveryErrorCode, IntakeError, IntakeErrorCode } from "./errors";
 import { registrationAcknowledgmentMessage, registrationMessageHasPlaceholders, type RegistrationMailConfig } from "./registration-template";
 import { RegistrationAction, type registrationActionSchema, type registrationDetailSchema, type registrationListSchema, type registrationSessionListSchema } from "./registration-staff-schemas";
 
@@ -80,7 +80,13 @@ export async function listRegistrations(db: Db, input: z.output<typeof registrat
 }
 
 export async function registrationDetail(db: Db, id: string, page: z.output<typeof registrationDetailSchema>) {
-  const [row] = await db.select(registrationFields).from(registration).where(eq(registration.id, id));
+  const verifier = alias(user, "verifier");
+  const canceller = alias(user, "canceller");
+  const [row] = await db.select({ ...registrationFields, verifiedByName: verifier.name, cancelledByName: canceller.name })
+    .from(registration)
+    .leftJoin(verifier, eq(verifier.id, registration.verifiedBy))
+    .leftJoin(canceller, eq(canceller.id, registration.cancelledBy))
+    .where(eq(registration.id, id));
   if (!row) throw new IntakeError(404, IntakeErrorCode.RegistrationNotFound);
   const session = await registrationSessionDetail(db, row.workshopSessionId);
   const history = await db.select({ id: activityLog.id, action: activityLog.action, createdAt: activityLog.createdAt, changes: activityLog.changes })
@@ -147,7 +153,7 @@ export async function changeRegistration(db: Db, actor: PortalActor, input: z.ou
     }
     // A provider request already in flight cannot be recalled. Leave its outcome intact.
     if (input.action !== RegistrationAction.CorrectPayment) {
-      await tx.update(crmEmailJob).set({ state: CrmEmailState.Skipped, leaseExpiresAt: null, lastErrorCode: "payment_instructions_obsolete" })
+      await tx.update(crmEmailJob).set({ state: CrmEmailState.Skipped, leaseExpiresAt: null, lastErrorCode: EmailDeliveryErrorCode.PaymentInstructionsObsolete })
         .where(and(eq(crmEmailJob.registrationId, input.id), eq(crmEmailJob.kind, CrmEmailKind.PaymentInstructions), inArray(crmEmailJob.state, [CrmEmailState.Pending, CrmEmailState.Failed])));
     }
     await logActivity(tx, { userId: actor.id, action: "status_change", entityType: "registration", entityId: input.id,

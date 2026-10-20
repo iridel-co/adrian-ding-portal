@@ -6,7 +6,7 @@ import { CrmEmailKind, CrmEmailState, activityLog, corporateInquiry, corporateIn
 import { diffChanges, logActivity } from "@/features/shared/audit";
 import type { PortalActor } from "@/lib/access";
 import { sendEmailJob, type EmailTransport } from "./email";
-import { IntakeError, IntakeErrorCode } from "./errors";
+import { EmailDeliveryErrorCode, IntakeError, IntakeErrorCode } from "./errors";
 import { assertInquiryTransition } from "./lifecycle";
 import type { inquiryListSchema, inquiryPageSchema, inquiryTransitionSchema } from "./schemas";
 
@@ -80,7 +80,7 @@ export async function changeInquiry(db: Db, id: string, actor: PortalActor, inpu
       closedAt: corporateInquiry.closedAt, estimatedValueCentavos: corporateInquiry.estimatedValueCentavos, lostReason: corporateInquiry.lostReason
     });
     // An in-flight provider request cannot be retracted; only skip unclaimed reminders.
-    await tx.update(crmEmailJob).set({ state: CrmEmailState.Skipped, leaseExpiresAt: null, lastErrorCode: "inquiry_reminder_obsolete" })
+    await tx.update(crmEmailJob).set({ state: CrmEmailState.Skipped, leaseExpiresAt: null, lastErrorCode: EmailDeliveryErrorCode.InquiryReminderObsolete })
       .where(and(eq(crmEmailJob.corporateInquiryId, id), eq(crmEmailJob.kind, CrmEmailKind.CorporateOverdue),
         inArray(crmEmailJob.state, [CrmEmailState.Pending, CrmEmailState.Failed])));
     await logActivity(tx, {

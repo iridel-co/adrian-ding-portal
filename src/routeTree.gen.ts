@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppInquiriesRouteImport } from './routes/_app/inquiries'
+import { Route as AppRegistrationsRouteImport } from './routes/_app/registrations'
 import { Route as ApiCorporateInquiriesRouteImport } from './routes/api/corporate-inquiries'
 import { Route as ApiRegistrationsRouteImport } from './routes/api/registrations'
 import { Route as PreviewProgramRouteImport } from './routes/preview/program'
@@ -22,6 +23,8 @@ import { Route as AppContentMediaRouteImport } from './routes/_app/content/media
 import { Route as AppContentTagsRouteImport } from './routes/_app/content/tags'
 import { Route as AppInquiriesIndexRouteImport } from './routes/_app/inquiries/index'
 import { Route as AppInquiriesIdRouteImport } from './routes/_app/inquiries/$id'
+import { Route as AppRegistrationsIndexRouteImport } from './routes/_app/registrations/index'
+import { Route as AppRegistrationsIdRouteImport } from './routes/_app/registrations/$id'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAccessRouteImport } from './routes/_app/settings/access'
 import { Route as AppSettingsIndustriesRouteImport } from './routes/_app/settings/industries'
@@ -39,6 +42,7 @@ import { Route as AppContentSessionsIndexRouteImport } from './routes/_app/conte
 import { Route as AppContentSessionsIdRouteImport } from './routes/_app/content/sessions/$id'
 import { Route as AppContentWorkshopsIndexRouteImport } from './routes/_app/content/workshops/index'
 import { Route as AppContentWorkshopsIdRouteImport } from './routes/_app/content/workshops/$id'
+import { Route as AppRegistrationsSessionsSessionIdRouteImport } from './routes/_app/registrations/sessions/$sessionId'
 import { Route as ApiPublicProgramsIndexRouteImport } from './routes/api/public/programs/index'
 import { Route as ApiPublicProgramsSlugRouteImport } from './routes/api/public/programs/$slug'
 import { Route as ApiPublicWorkshopsIndexRouteImport } from './routes/api/public/workshops/index'
@@ -66,6 +70,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppInquiriesRoute = AppInquiriesRouteImport.update({
   id: '/inquiries',
   path: '/inquiries',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRegistrationsRoute = AppRegistrationsRouteImport.update({
+  id: '/registrations',
+  path: '/registrations',
   getParentRoute: () => AppRoute,
 } as any)
 const ApiCorporateInquiriesRoute = ApiCorporateInquiriesRouteImport.update({
@@ -107,6 +116,16 @@ const AppInquiriesIdRoute = AppInquiriesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => AppInquiriesRoute,
+} as any)
+const AppRegistrationsIndexRoute = AppRegistrationsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRegistrationsRoute,
+} as any)
+const AppRegistrationsIdRoute = AppRegistrationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppRegistrationsRoute,
 } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/settings/',
@@ -197,6 +216,12 @@ const AppContentWorkshopsIdRoute = AppContentWorkshopsIdRouteImport.update({
   path: '/content/workshops/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const AppRegistrationsSessionsSessionIdRoute =
+  AppRegistrationsSessionsSessionIdRouteImport.update({
+    id: '/sessions/$sessionId',
+    path: '/sessions/$sessionId',
+    getParentRoute: () => AppRegistrationsRoute,
+  } as any)
 const ApiPublicProgramsIndexRoute = ApiPublicProgramsIndexRouteImport.update({
   id: '/api/public/programs/',
   path: '/api/public/programs/',
@@ -223,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
   '/inquiries': typeof AppInquiriesRouteWithChildren
+  '/registrations': typeof AppRegistrationsRouteWithChildren
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/api/registrations': typeof ApiRegistrationsRoute
   '/preview/program': typeof PreviewProgramRoute
@@ -230,6 +256,7 @@ export interface FileRoutesByFullPath {
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
   '/inquiries/$id': typeof AppInquiriesIdRoute
+  '/registrations/$id': typeof AppRegistrationsIdRoute
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -241,10 +268,12 @@ export interface FileRoutesByFullPath {
   '/api/public/profile': typeof ApiPublicProfileRoute
   '/api/public/testimonials': typeof ApiPublicTestimonialsRoute
   '/inquiries/': typeof AppInquiriesIndexRoute
+  '/registrations/': typeof AppRegistrationsIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
+  '/registrations/sessions/$sessionId': typeof AppRegistrationsSessionsSessionIdRoute
   '/api/public/programs/$slug': typeof ApiPublicProgramsSlugRoute
   '/api/public/workshops/$slug': typeof ApiPublicWorkshopsSlugRoute
   '/content/corporate-trainings/': typeof AppContentCorporateTrainingsIndexRoute
@@ -264,6 +293,7 @@ export interface FileRoutesByTo {
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
   '/inquiries/$id': typeof AppInquiriesIdRoute
+  '/registrations/$id': typeof AppRegistrationsIdRoute
   '/settings/access': typeof AppSettingsAccessRoute
   '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -275,10 +305,12 @@ export interface FileRoutesByTo {
   '/api/public/profile': typeof ApiPublicProfileRoute
   '/api/public/testimonials': typeof ApiPublicTestimonialsRoute
   '/inquiries': typeof AppInquiriesIndexRoute
+  '/registrations': typeof AppRegistrationsIndexRoute
   '/settings': typeof AppSettingsIndexRoute
   '/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/content/workshops/$id': typeof AppContentWorkshopsIdRoute
+  '/registrations/sessions/$sessionId': typeof AppRegistrationsSessionsSessionIdRoute
   '/api/public/programs/$slug': typeof ApiPublicProgramsSlugRoute
   '/api/public/workshops/$slug': typeof ApiPublicWorkshopsSlugRoute
   '/content/corporate-trainings': typeof AppContentCorporateTrainingsIndexRoute
@@ -293,6 +325,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
   '/_app/inquiries': typeof AppInquiriesRouteWithChildren
+  '/_app/registrations': typeof AppRegistrationsRouteWithChildren
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/api/registrations': typeof ApiRegistrationsRoute
   '/preview/program': typeof PreviewProgramRoute
@@ -301,6 +334,7 @@ export interface FileRoutesById {
   '/_app/content/media': typeof AppContentMediaRoute
   '/_app/content/tags': typeof AppContentTagsRoute
   '/_app/inquiries/$id': typeof AppInquiriesIdRoute
+  '/_app/registrations/$id': typeof AppRegistrationsIdRoute
   '/_app/settings/access': typeof AppSettingsAccessRoute
   '/_app/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -312,10 +346,12 @@ export interface FileRoutesById {
   '/api/public/profile': typeof ApiPublicProfileRoute
   '/api/public/testimonials': typeof ApiPublicTestimonialsRoute
   '/_app/inquiries/': typeof AppInquiriesIndexRoute
+  '/_app/registrations/': typeof AppRegistrationsIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/content/corporate-trainings/$id': typeof AppContentCorporateTrainingsIdRoute
   '/_app/content/sessions/$id': typeof AppContentSessionsIdRoute
   '/_app/content/workshops/$id': typeof AppContentWorkshopsIdRoute
+  '/_app/registrations/sessions/$sessionId': typeof AppRegistrationsSessionsSessionIdRoute
   '/api/public/programs/$slug': typeof ApiPublicProgramsSlugRoute
   '/api/public/workshops/$slug': typeof ApiPublicWorkshopsSlugRoute
   '/_app/content/corporate-trainings/': typeof AppContentCorporateTrainingsIndexRoute
@@ -331,6 +367,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/preview'
     | '/inquiries'
+    | '/registrations'
     | '/api/corporate-inquiries'
     | '/api/registrations'
     | '/preview/program'
@@ -338,6 +375,7 @@ export interface FileRouteTypes {
     | '/content/media'
     | '/content/tags'
     | '/inquiries/$id'
+    | '/registrations/$id'
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
@@ -349,10 +387,12 @@ export interface FileRouteTypes {
     | '/api/public/profile'
     | '/api/public/testimonials'
     | '/inquiries/'
+    | '/registrations/'
     | '/settings/'
     | '/content/corporate-trainings/$id'
     | '/content/sessions/$id'
     | '/content/workshops/$id'
+    | '/registrations/sessions/$sessionId'
     | '/api/public/programs/$slug'
     | '/api/public/workshops/$slug'
     | '/content/corporate-trainings/'
@@ -372,6 +412,7 @@ export interface FileRouteTypes {
     | '/content/media'
     | '/content/tags'
     | '/inquiries/$id'
+    | '/registrations/$id'
     | '/settings/access'
     | '/settings/industries'
     | '/api/auth/$'
@@ -383,10 +424,12 @@ export interface FileRouteTypes {
     | '/api/public/profile'
     | '/api/public/testimonials'
     | '/inquiries'
+    | '/registrations'
     | '/settings'
     | '/content/corporate-trainings/$id'
     | '/content/sessions/$id'
     | '/content/workshops/$id'
+    | '/registrations/sessions/$sessionId'
     | '/api/public/programs/$slug'
     | '/api/public/workshops/$slug'
     | '/content/corporate-trainings'
@@ -400,6 +443,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/preview'
     | '/_app/inquiries'
+    | '/_app/registrations'
     | '/api/corporate-inquiries'
     | '/api/registrations'
     | '/preview/program'
@@ -408,6 +452,7 @@ export interface FileRouteTypes {
     | '/_app/content/media'
     | '/_app/content/tags'
     | '/_app/inquiries/$id'
+    | '/_app/registrations/$id'
     | '/_app/settings/access'
     | '/_app/settings/industries'
     | '/api/auth/$'
@@ -419,10 +464,12 @@ export interface FileRouteTypes {
     | '/api/public/profile'
     | '/api/public/testimonials'
     | '/_app/inquiries/'
+    | '/_app/registrations/'
     | '/_app/settings/'
     | '/_app/content/corporate-trainings/$id'
     | '/_app/content/sessions/$id'
     | '/_app/content/workshops/$id'
+    | '/_app/registrations/sessions/$sessionId'
     | '/api/public/programs/$slug'
     | '/api/public/workshops/$slug'
     | '/_app/content/corporate-trainings/'
@@ -489,6 +536,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInquiriesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/registrations': {
+      id: '/_app/registrations'
+      path: '/registrations'
+      fullPath: '/registrations'
+      preLoaderRoute: typeof AppRegistrationsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/corporate-inquiries': {
       id: '/api/corporate-inquiries'
       path: '/api/corporate-inquiries'
@@ -544,6 +598,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/inquiries/$id'
       preLoaderRoute: typeof AppInquiriesIdRouteImport
       parentRoute: typeof AppInquiriesRoute
+    }
+    '/_app/registrations/': {
+      id: '/_app/registrations/'
+      path: '/'
+      fullPath: '/registrations/'
+      preLoaderRoute: typeof AppRegistrationsIndexRouteImport
+      parentRoute: typeof AppRegistrationsRoute
+    }
+    '/_app/registrations/$id': {
+      id: '/_app/registrations/$id'
+      path: '/$id'
+      fullPath: '/registrations/$id'
+      preLoaderRoute: typeof AppRegistrationsIdRouteImport
+      parentRoute: typeof AppRegistrationsRoute
     }
     '/_app/settings/': {
       id: '/_app/settings/'
@@ -664,6 +732,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppContentWorkshopsIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/registrations/sessions/$sessionId': {
+      id: '/_app/registrations/sessions/$sessionId'
+      path: '/sessions/$sessionId'
+      fullPath: '/registrations/sessions/$sessionId'
+      preLoaderRoute: typeof AppRegistrationsSessionsSessionIdRouteImport
+      parentRoute: typeof AppRegistrationsRoute
+    }
     '/api/public/programs/': {
       id: '/api/public/programs/'
       path: '/api/public/programs'
@@ -709,8 +784,25 @@ const AppInquiriesRouteWithChildren = AppInquiriesRoute._addFileChildren(
   AppInquiriesRouteChildren,
 )
 
+interface AppRegistrationsRouteChildren {
+  AppRegistrationsIdRoute: typeof AppRegistrationsIdRoute
+  AppRegistrationsIndexRoute: typeof AppRegistrationsIndexRoute
+  AppRegistrationsSessionsSessionIdRoute: typeof AppRegistrationsSessionsSessionIdRoute
+}
+
+const AppRegistrationsRouteChildren: AppRegistrationsRouteChildren = {
+  AppRegistrationsIdRoute: AppRegistrationsIdRoute,
+  AppRegistrationsIndexRoute: AppRegistrationsIndexRoute,
+  AppRegistrationsSessionsSessionIdRoute:
+    AppRegistrationsSessionsSessionIdRoute,
+}
+
+const AppRegistrationsRouteWithChildren =
+  AppRegistrationsRoute._addFileChildren(AppRegistrationsRouteChildren)
+
 interface AppRouteChildren {
   AppInquiriesRoute: typeof AppInquiriesRouteWithChildren
+  AppRegistrationsRoute: typeof AppRegistrationsRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppContentMediaRoute: typeof AppContentMediaRoute
   AppContentTagsRoute: typeof AppContentTagsRoute
@@ -727,6 +819,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppInquiriesRoute: AppInquiriesRouteWithChildren,
+  AppRegistrationsRoute: AppRegistrationsRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppContentMediaRoute: AppContentMediaRoute,
   AppContentTagsRoute: AppContentTagsRoute,

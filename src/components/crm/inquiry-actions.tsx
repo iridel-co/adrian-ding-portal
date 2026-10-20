@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { $changeInquiry } from "@/features/crm/functions";
 import { inquiryTransitions, type InquiryStatus } from "@/features/crm/lifecycle";
-import { inquiryActionLabels, inquiryErrorMessage, inquiryStatusLabels, isInquiryAccessError } from "@/features/crm/presentation";
+import { inquiryActionLabels, inquiryErrorMessage, inquiryStatusLabels, isCrmAccessError } from "@/features/crm/presentation";
 import { inquiryQueryKey } from "@/features/crm/queries";
 import { inquiryTransitionSchema } from "@/features/crm/schemas";
 
@@ -27,7 +27,7 @@ export function InquiryActions({ inquiry, draft, setDraft }: {
     mutationFn: (data: Parameters<typeof $changeInquiry>[0]["data"]) => $changeInquiry({ data }),
     onSuccess: async () => { updateDraft({ selected: null }); toast.success("Inquiry status updated."); await queryClient.invalidateQueries({ queryKey: inquiryQueryKey }); },
     onError: async error => {
-      if (error.message === IntakeErrorCode.InquiryStatusChanged || error.message === IntakeErrorCode.InvalidInquiryTransition || isInquiryAccessError(error)) {
+      if (error.message === IntakeErrorCode.InquiryStatusChanged || error.message === IntakeErrorCode.InvalidInquiryTransition || isCrmAccessError(error)) {
         await queryClient.invalidateQueries({ queryKey: inquiryQueryKey });
       }
     }

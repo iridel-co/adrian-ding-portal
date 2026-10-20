@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { inquiriesQueryOptions } from "@/features/crm/queries";
 import { inquiryListSchema } from "@/features/crm/schemas";
-import { formatInquiryTime, inquiryStatusLabels, inquiryStatusOptions, isInquiryOverdue } from "@/features/crm/presentation";
+import { formatCrmTime, inquiryStatusLabels, inquiryStatusOptions, isInquiryOverdue } from "@/features/crm/presentation";
 
 const searchSchema = inquiryListSchema.pick({ status: true, search: true }).extend({
   offset: z.coerce.number().int().min(0).max(100000).catch(0).transform(offset => Math.floor(offset / 50) * 50)
@@ -45,8 +45,8 @@ function InquiriesPage() {
           <TableCell className="whitespace-normal"><Link to="/inquiries/$id" params={{ id: item.id }} className="font-medium underline underline-offset-4">{item.company}</Link><p>{item.fullName}</p><p className="text-xs text-muted-foreground break-all">{item.email}</p></TableCell>
           <TableCell className="max-w-64 whitespace-normal">{item.program}</TableCell>
           <TableCell><Badge variant="secondary">{inquiryStatusLabels[item.status]}</Badge></TableCell>
-          <TableCell>{formatInquiryTime(item.createdAt)}</TableCell>
-          <TableCell>{formatInquiryTime(item.slaDueAt)}{isInquiryOverdue(item) && <p className="mt-1 font-medium text-destructive">Overdue</p>}</TableCell>
+          <TableCell>{formatCrmTime(item.createdAt)}</TableCell>
+          <TableCell>{formatCrmTime(item.slaDueAt)}{isInquiryOverdue(item) && <p className="mt-1 font-medium text-destructive">Overdue</p>}</TableCell>
         </TableRow>)}</TableBody>
       </Table>}
       <div className="flex items-center justify-between gap-3"><Button variant="outline" disabled={search.offset === 0 || inquiries.isFetching} onClick={() => void navigate({ search: { ...search, offset: Math.max(0, search.offset - 50) } })}>Previous</Button>

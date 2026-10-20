@@ -1,3 +1,19 @@
+export enum CrmErrorCode {
+  Unavailable = "crm_unavailable"
+}
+
+export enum EmailDeliveryErrorCode {
+  ProviderRequestFailed = "provider_request_failed",
+  ProviderRejected = "provider_rejected",
+  ProviderThrottled = "provider_throttled",
+  ProviderResponseInvalid = "provider_response_invalid",
+  ProviderConflict = "provider_conflict",
+  IdempotencyWindowExpired = "idempotency_window_expired",
+  InquiryReminderObsolete = "inquiry_reminder_obsolete",
+  PaymentInstructionsObsolete = "payment_instructions_obsolete",
+  PaymentAcknowledgmentObsolete = "payment_acknowledgment_obsolete"
+}
+
 export enum IntakeErrorCode {
   BodyTooLarge = "body_too_large",
   ConsentRequired = "consent_required",
