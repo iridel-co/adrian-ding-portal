@@ -46,8 +46,7 @@ function RegistrationDetail({ id }: { id: string }) {
     }
   }, [error, queryClient]);
   const registration = result.data;
-  const verifier = registration?.history.find(entry => entry.changes.actor?.to?.id === registration.verifiedBy)?.changes.actor?.to;
-  const canceller = registration?.history.find(entry => entry.changes.actor?.to?.id === registration.cancelledBy)?.changes.actor?.to;
+  const showRegistration = !result.isError && !error && !!registration;
   return <div className="mx-auto flex max-w-5xl flex-col gap-6">
     <div className="flex items-center justify-between gap-3">
       <Link to="/registrations" search={{ when: search.runWhen, offset: search.runOffset }} className="text-sm underline underline-offset-4">Workshop runs</Link>
@@ -56,7 +55,7 @@ function RegistrationDetail({ id }: { id: string }) {
     <CrmReadState pending={result.isPending && !actionAccessError} error={error}
       retry={() => { setActionAccessError(null); refresh(); }} loadingMessage="Loading registration…"
       accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />
-    {!result.isError && !error && registration && <>
+    {showRegistration && <>
       <Link to="/registrations/sessions/$sessionId" params={{ sessionId: registration.workshopSessionId }} search={search}
         className="text-sm underline underline-offset-4">Back to {search.tab === "overview" ? "run overview" : "run registrations"}</Link>
       <header className="space-y-3">
@@ -89,7 +88,7 @@ function RegistrationDetail({ id }: { id: string }) {
             <Field label="Verified amount">{registration.paidAmountCentavos === null ? "Not recorded" : formatPesos(registration.paidAmountCentavos)}</Field>
             <Field label="Payer name">{registration.payerName}</Field><Field label="Provider transaction reference">{registration.providerTransactionReference}</Field>
             <Field label="Verified at">{formatInquiryTime(registration.verifiedAt)}</Field>
-            <Field label="Verified by">{verifier ? `${verifier.name} (${verifier.email})` : "Staff identity not available"}</Field>
+            <Field label="Verified by">{registration.verifiedByName ?? "Staff identity not available"}</Field>
           </dl>
         </> : <p className="text-sm text-muted-foreground">Payment has not been verified.</p>}
       </section>
@@ -97,7 +96,7 @@ function RegistrationDetail({ id }: { id: string }) {
         <h2 id="registration-cancellation" className="text-xl font-medium">Cancellation</h2>
         <dl className="grid gap-4 sm:grid-cols-2"><Field label="Cancelled at">{formatInquiryTime(registration.cancelledAt)}</Field>
           <Field label="Reason">{registration.cancellationReason}</Field>
-          <Field label="Cancelled by">{canceller ? `${canceller.name} (${canceller.email})` : "Staff identity not available"}</Field></dl>
+          <Field label="Cancelled by">{registration.cancelledByName ?? "Staff identity not available"}</Field></dl>
         <p className="text-sm text-muted-foreground">This registration does not reserve a seat.</p>
       </section>}
       <RegistrationActions registration={registration} draft={draft} setDraft={setDraft} onAccessError={setActionAccessError}

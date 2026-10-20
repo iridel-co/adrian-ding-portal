@@ -52,7 +52,7 @@ const record: Registration = {
   occupation: "Sales manager", salaryRange: "Prefer not to say", city: "Cebu", consentAt: date,
   priceCentavos: 650000, isPaid: false, paymentMethod: null, paidAmountCentavos: null, payerName: null,
   providerTransactionReference: null, verifiedAt: null, verifiedBy: null, cancelledAt: null, cancelledBy: null,
-  cancellationReason: null, createdAt: date, updatedAt: date,
+  verifiedByName: null, cancelledByName: null, cancellationReason: null, createdAt: date, updatedAt: date,
   session: { id: "22345678-abcd-4000-8000-123456789abc", workshopId: "32345678-abcd-4000-8000-123456789abc",
     workshopTitle: "Practical Selling", courseCode: "PSW", workshopStatus: "draft", date: "2027-01-12", endDate: "2027-01-13",
     startTime: "09:00:00", endTime: "17:00:00", venueName: "Training Room", city: "Cebu", status: "open", capacity: 20,
@@ -105,13 +105,28 @@ describe("Registration detail", () => {
   });
   it("retains previous verification after correction and shows cancellation reason without actions", () => {
     harness.result.data = { ...record, paymentMethod: "bank", paidAmountCentavos: 0, payerName: "Alice", providerTransactionReference: "BANK-123",
-      verifiedAt: date, verifiedBy: "staff", cancelledAt: date, cancelledBy: "staff", cancellationReason: "Customer requested cancellation",
+      verifiedAt: date, verifiedBy: "staff", verifiedByName: "Sample Staff", cancelledAt: date, cancelledBy: "staff",
+      cancelledByName: "Sample Staff", cancellationReason: "Customer requested cancellation",
       history: [{ id: "audit-1", action: "status_change", createdAt: date,
         changes: { actor: { from: null, to: { id: "staff", name: "Sample Staff", email: "staff@example.invalid" } } } }] };
     const html = render();
     for (const text of ["previous verification is retained", "Cancelled", "Customer requested cancellation", "Bank transfer", "₱0", "BANK-123", "Sample Staff", "does not reserve a seat"])
       expect(html).toContain(text);
     expect(html).not.toContain(">Mark Paid<"); expect(html).not.toContain(">Correct to Unpaid<"); expect(html).not.toContain(">Cancel registration<");
+  });
+  it.each([0, 20])("shows staff names independently of history at offset %s", offset => {
+    harness.result.data = { ...record, verifiedAt: date, verifiedBy: "verifier", verifiedByName: "Payment Verifier",
+      cancelledAt: date, cancelledBy: "canceller", cancelledByName: "Registration Canceller", history: [], historyHasMore: true };
+    harness.older.data = { ...record, history: [], historyHasMore: false };
+    vi.mocked(useState).mockReturnValueOnce([offset, vi.fn()]);
+    const html = render();
+    expect(html).toContain('Verified by</dt><dd class="mt-1 whitespace-pre-wrap break-words">Payment Verifier');
+    expect(html).toContain('Cancelled by</dt><dd class="mt-1 whitespace-pre-wrap break-words">Registration Canceller');
+    expect(html).not.toContain("Staff identity not available");
+  });
+  it("shows a fallback when staff names are unavailable", () => {
+    harness.result.data = { ...record, verifiedAt: date, cancelledAt: date };
+    expect(render().match(/Staff identity not available/g)).toHaveLength(2);
   });
   it("loads older history independently and limits ordinary failures to the history section", () => {
     harness.older.isError = true; harness.older.error = new Error("crm_unavailable");

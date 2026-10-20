@@ -1,9 +1,9 @@
 import "@tanstack/react-start/server-only";
 import { and, asc, desc, eq, getTableColumns, ilike, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
-import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
+import { alias, type PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { Db } from "@/db";
-import { CrmEmailKind, CrmEmailState, activityLog, crmEmailJob, paymentMethod, registration, workshop, workshopSession } from "@/db/schema";
+import { CrmEmailKind, CrmEmailState, activityLog, crmEmailJob, paymentMethod, registration, user, workshop, workshopSession } from "@/db/schema";
 import { diffChanges, logActivity } from "@/features/shared/audit";
 import { manilaWallClock } from "@/features/shared/time";
 import type { PortalActor } from "@/lib/access";
@@ -80,7 +80,13 @@ export async function listRegistrations(db: Db, input: z.output<typeof registrat
 }
 
 export async function registrationDetail(db: Db, id: string, page: z.output<typeof registrationDetailSchema>) {
-  const [row] = await db.select(registrationFields).from(registration).where(eq(registration.id, id));
+  const verifier = alias(user, "verifier");
+  const canceller = alias(user, "canceller");
+  const [row] = await db.select({ ...registrationFields, verifiedByName: verifier.name, cancelledByName: canceller.name })
+    .from(registration)
+    .leftJoin(verifier, eq(verifier.id, registration.verifiedBy))
+    .leftJoin(canceller, eq(canceller.id, registration.cancelledBy))
+    .where(eq(registration.id, id));
   if (!row) throw new IntakeError(404, IntakeErrorCode.RegistrationNotFound);
   const session = await registrationSessionDetail(db, row.workshopSessionId);
   const history = await db.select({ id: activityLog.id, action: activityLog.action, createdAt: activityLog.createdAt, changes: activityLog.changes })

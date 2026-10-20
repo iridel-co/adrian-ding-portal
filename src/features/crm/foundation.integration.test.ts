@@ -1104,6 +1104,28 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
       .rejects.toMatchObject({ status: 404, code: "registration_not_found" });
   });
 
+  it("returns staff names independently of paginated registration history", async () => {
+    const fixture = await staffRegistration();
+    const page = registrationDetailSchema.parse({ id: fixture.id, limit: 20 });
+    expect(await registrationDetail(db, fixture.id, page)).toMatchObject({ verifiedByName: null, cancelledByName: null });
+    await changeRegistration(db, actor, staffInput(fixture.row, RegistrationAction.MarkPaid));
+    const [paid] = await sql`select * from registration where id = ${fixture.id}`;
+    await changeRegistration(db, actor, staffInput(paid, RegistrationAction.CorrectPayment));
+    const [unpaid] = await sql`select * from registration where id = ${fixture.id}`;
+    await changeRegistration(db, actor, staffInput(unpaid, RegistrationAction.Cancel));
+    await sql`insert into activity_log (user_id, action, entity_type, entity_id, changes, created_at)
+      select ${actor.id}, 'status_change', 'registration', ${fixture.id}, '{}', now() + interval '1 minute'
+      from generate_series(1, 20)`;
+    const detail = await registrationDetail(db, fixture.id, page);
+    expect(detail.history).toHaveLength(20);
+    expect(detail.history.every(entry => !entry.changes.actor)).toBe(true);
+    expect(detail.historyHasMore).toBe(true);
+    for (const offset of [0, 20, 40]) {
+      expect(await registrationDetail(db, fixture.id, { ...page, offset }))
+        .toMatchObject({ verifiedByName: actor.name, cancelledByName: actor.name });
+    }
+  });
+
   it("retries only email jobs belonging to that registration and audits the verified actor", async () => {
     const fixture = await staffRegistration();
     const other = await staffRegistration();
