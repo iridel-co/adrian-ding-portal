@@ -35,7 +35,8 @@ vi.mock("@tanstack/react-router", () => ({
     createElement("a", { href: to, "data-search": JSON.stringify(search), "data-params": JSON.stringify(params) }, children)
 }));
 import { Route } from "@/routes/_app/registrations/$id";
-import { emptyRegistrationDraft, RegistrationActions, type RegistrationDraft } from "@/components/crm/registration-actions";
+import { RegistrationActions } from "@/components/crm/registration-actions";
+import { emptyRegistrationDraft, type RegistrationDraft } from "./registration-presentation";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { RegistrationAction } from "./registration-staff-schemas";

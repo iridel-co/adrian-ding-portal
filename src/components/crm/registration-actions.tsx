@@ -12,26 +12,16 @@ import { paymentMethod } from "@/db/schema/payments";
 import { IntakeErrorCode } from "@/features/crm/errors";
 import { $changeRegistration, type $getRegistration } from "@/features/crm/functions";
 import { formatInquiryTime, isInquiryAccessError } from "@/features/crm/presentation";
-import { registrationErrorMessage } from "@/features/crm/registration-presentation";
+import { emptyRegistrationDraft, paymentMethodLabels, registrationErrorMessage, type RegistrationDraft } from "@/features/crm/registration-presentation";
 import { registrationQueryKey } from "@/features/crm/registration-queries";
 import { RegistrationAction, registrationActionSchema } from "@/features/crm/registration-staff-schemas";
 import { formatPesos } from "@/features/shared/money";
 
-export type RegistrationDraft = {
-  action: RegistrationAction | null; open: boolean; expectedIsPaid: boolean; expectedUpdatedAt: string;
-  paymentMethod: typeof paymentMethod.enumValues[number] | ""; amount: number | null;
-  payerName: string; transactionReference: string; reason: string; validation: string; needsReview: boolean;
-};
-export const emptyRegistrationDraft: RegistrationDraft = {
-  action: null, open: false, expectedIsPaid: false, expectedUpdatedAt: "", paymentMethod: "", amount: null,
-  payerName: "", transactionReference: "", reason: "", validation: "", needsReview: false
-};
 const actionLabels = {
   [RegistrationAction.MarkPaid]: "Mark Paid",
   [RegistrationAction.CorrectPayment]: "Correct to Unpaid",
   [RegistrationAction.Cancel]: "Cancel registration"
 };
-export const paymentMethodLabels: Record<typeof paymentMethod.enumValues[number], string> = { bank: "Bank transfer", gcash: "GCash", maya: "Maya" };
 type Registration = Awaited<ReturnType<typeof $getRegistration>>;
 
 export function RegistrationActions({ registration, draft, setDraft, onAccessError, onChanged }: {

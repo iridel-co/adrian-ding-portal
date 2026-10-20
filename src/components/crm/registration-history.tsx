@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { CrmReadState } from "@/components/crm/read-state";
-import { paymentMethodLabels } from "@/components/crm/registration-actions";
+import { paymentMethodLabels } from "@/features/crm/registration-presentation";
 import { Button } from "@/components/ui/button";
 import type { $getRegistration } from "@/features/crm/functions";
 import { emailStateLabels, formatInquiryTime } from "@/features/crm/presentation";

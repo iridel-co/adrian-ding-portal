@@ -1,5 +1,7 @@
 import { CrmEmailKind } from "@/db/schema/crm-email-kind";
 import { CrmEmailState } from "@/db/schema/crm-email-state";
+import type { paymentMethod } from "@/db/schema/payments";
+import type { RegistrationAction } from "./registration-staff-schemas";
 import { canRetryInquiryEmail } from "./presentation";
 import { AccessErrorCode } from "@/lib/access-errors";
 import { commonErrorMessages, fallbackErrorMessage } from "./error-presentation";
@@ -42,3 +44,14 @@ export function canRetryRegistrationEmail(job: RegistrationEmail, registration: 
     && (job.kind === CrmEmailKind.PaymentInstructions && !registration.isPaid
       || job.kind === CrmEmailKind.PaymentAcknowledgment && registration.isPaid);
 }
+
+export type RegistrationDraft = {
+  action: RegistrationAction | null; open: boolean; expectedIsPaid: boolean; expectedUpdatedAt: string;
+  paymentMethod: typeof paymentMethod.enumValues[number] | ""; amount: number | null;
+  payerName: string; transactionReference: string; reason: string; validation: string; needsReview: boolean;
+};
+export const emptyRegistrationDraft: RegistrationDraft = {
+  action: null, open: false, expectedIsPaid: false, expectedUpdatedAt: "", paymentMethod: "", amount: null,
+  payerName: "", transactionReference: "", reason: "", validation: "", needsReview: false
+};
+export const paymentMethodLabels: Record<typeof paymentMethod.enumValues[number], string> = { bank: "Bank transfer", gcash: "GCash", maya: "Maya" };
