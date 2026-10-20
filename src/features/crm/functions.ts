@@ -5,7 +5,7 @@ import { getDb } from "@/db";
 import { staffMiddleware } from "@/lib/access.functions";
 import { getCorporateMailConfig, getRegistrationMailConfig } from "./config";
 import { sendEmailJob } from "./email";
-import { IntakeError, IntakeErrorCode } from "./errors";
+import { CrmErrorCode, IntakeError, IntakeErrorCode } from "./errors";
 import { inquiryListSchema, inquiryPageSchema, inquiryTransitionSchema } from "./schemas";
 import { changeInquiry, inquiryDetail, listInquiries, retryInquiryEmail } from "./staff";
 import { RegistrationAction, registrationActionSchema, registrationDetailSchema, registrationEmailRetrySchema, registrationListSchema,
@@ -17,7 +17,7 @@ async function staffAction<T>(action: () => Promise<T>) {
   try { return await action(); }
   catch (error) {
     setResponseStatus(error instanceof IntakeError ? error.status : 503);
-    throw new Error(error instanceof IntakeError ? error.code : "crm_unavailable");
+    throw new Error(error instanceof IntakeError ? error.code : CrmErrorCode.Unavailable);
   }
 }
 

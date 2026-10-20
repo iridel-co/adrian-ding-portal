@@ -96,6 +96,21 @@ describe("Registration email controls", () => {
     expect(cancelled).toContain("No further email attempts");
     expect(cancelled).not.toContain(">Retry payment information<");
   });
+  it.each([
+    ["provider_request_failed", "delivery outcome may be uncertain"],
+    ["provider_rejected", "provider rejected the attempt"],
+    ["provider_throttled", "wait before retrying"],
+    ["provider_response_invalid", "unexpected response"],
+    ["provider_conflict", "conflicting request"],
+    ["idempotency_window_expired", "safe retry period has ended"],
+    ["payment_instructions_obsolete", "Payment information is no longer applicable"],
+    ["payment_acknowledgment_obsolete", "acknowledgment is no longer applicable"],
+    ["unknown_private_code", "last attempt needs review"]
+  ])("explains saved delivery code %s safely", (lastErrorCode, message) => {
+    const markup = html({ ...owner, emailJobs: [{ ...job, lastErrorCode }] });
+    expect(markup).toContain(message);
+    expect(markup).not.toContain(lastErrorCode);
+  });
   it("shows reconciliation and in-progress explanations without retry controls", () => {
     for (const state of [CrmEmailState.Sent, CrmEmailState.Skipped, CrmEmailState.NeedsReconciliation, CrmEmailState.Sending]) {
       const markup = html({ ...owner, emailJobs: [{ ...job, state, leaseExpiresAt: new Date(Date.now() + 60000) }] });

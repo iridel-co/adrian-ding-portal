@@ -2,6 +2,7 @@ import { createMiddleware } from "@tanstack/react-start";
 import { getRequest, setResponseHeader, setResponseStatus } from "@tanstack/react-start/server";
 import { getDb } from "@/db";
 import { AccessError, authorizePortalUser } from "./access";
+import { AccessErrorCode } from "./access-errors";
 import { authMiddleware } from "./auth.functions";
 import { getEnv } from "./env";
 
@@ -17,12 +18,12 @@ export const staffMiddleware = createMiddleware().middleware([authMiddleware]).s
       && !request.headers.has("x-tsr-serverFn");
     if ((request.headers.get("sec-fetch-site") === "cross-site" && !pageNavigation)
       || (origin !== null && origin !== portalOrigin)
-      || (request.method !== "GET" && origin !== portalOrigin)) throw new AccessError(403, "origin_not_allowed");
+      || (request.method !== "GET" && origin !== portalOrigin)) throw new AccessError(403, AccessErrorCode.OriginNotAllowed);
     actor = await authorizePortalUser(getDb(), context.user.id, "staff");
   }
   catch (error) {
     setResponseStatus(error instanceof AccessError ? error.status : 503);
-    throw new Error(error instanceof AccessError ? error.code : "access_unavailable");
+    throw new Error(error instanceof AccessError ? error.code : AccessErrorCode.AccessUnavailable);
   }
   return next({ context: { actor } });
 });

@@ -21,9 +21,9 @@ describe("Corporate inquiry mail provider", () => {
     expect(JSON.parse(options.body as string)).toEqual({ from: payload.from, to: payload.to, subject: payload.subject, html: payload.html, text: payload.text, reply_to: payload.replyTo });
   });
   it("rejects provider errors and malformed acknowledgments without returning their contents", async () => {
-    for (const status of [401, 409, 429, 503]) {
+    for (const [status, code] of [[401, "provider_rejected"], [409, "provider_conflict"], [429, "provider_throttled"], [503, "provider_rejected"]] as const) {
       vi.stubGlobal("fetch", vi.fn(async () => new Response("private provider detail", { status })));
-      await expect(sendViaResend(payload, "job-key", "synthetic-key")).rejects.toThrow(/^provider_/);
+      await expect(sendViaResend(payload, "job-key", "synthetic-key")).rejects.toThrow(code);
     }
     for (const body of [{}, { id: 123 }, { id: "" }]) {
       vi.stubGlobal("fetch", vi.fn(async () => Response.json(body)));

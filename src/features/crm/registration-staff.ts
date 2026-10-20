@@ -8,7 +8,7 @@ import { diffChanges, logActivity } from "@/features/shared/audit";
 import { manilaWallClock } from "@/features/shared/time";
 import type { PortalActor } from "@/lib/access";
 import { sendEmailJob, type EmailTransport } from "./email";
-import { IntakeError, IntakeErrorCode } from "./errors";
+import { EmailDeliveryErrorCode, IntakeError, IntakeErrorCode } from "./errors";
 import { registrationAcknowledgmentMessage, registrationMessageHasPlaceholders, type RegistrationMailConfig } from "./registration-template";
 import { RegistrationAction, type registrationActionSchema, type registrationDetailSchema, type registrationListSchema, type registrationSessionListSchema } from "./registration-staff-schemas";
 
@@ -153,7 +153,7 @@ export async function changeRegistration(db: Db, actor: PortalActor, input: z.ou
     }
     // A provider request already in flight cannot be recalled. Leave its outcome intact.
     if (input.action !== RegistrationAction.CorrectPayment) {
-      await tx.update(crmEmailJob).set({ state: CrmEmailState.Skipped, leaseExpiresAt: null, lastErrorCode: "payment_instructions_obsolete" })
+      await tx.update(crmEmailJob).set({ state: CrmEmailState.Skipped, leaseExpiresAt: null, lastErrorCode: EmailDeliveryErrorCode.PaymentInstructionsObsolete })
         .where(and(eq(crmEmailJob.registrationId, input.id), eq(crmEmailJob.kind, CrmEmailKind.PaymentInstructions), inArray(crmEmailJob.state, [CrmEmailState.Pending, CrmEmailState.Failed])));
     }
     await logActivity(tx, { userId: actor.id, action: "status_change", entityType: "registration", entityId: input.id,

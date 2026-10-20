@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CrmEmailKind } from "@/db/schema/crm-email-kind";
 import { CrmEmailState } from "@/db/schema/crm-email-state";
-import { IntakeErrorCode } from "@/features/crm/errors";
+import { EmailDeliveryErrorCode, IntakeErrorCode } from "@/features/crm/errors";
 import { $retryRegistrationEmail, type $getRegistration } from "@/features/crm/functions";
 import { canRetryInquiryEmail, emailStateLabels, formatInquiryTime, isInquiryAccessError } from "@/features/crm/presentation";
 import { canRetryRegistrationEmail, registrationEmailErrorMessage, registrationEmailLabels } from "@/features/crm/registration-presentation";
@@ -13,14 +13,14 @@ import { registrationQueryKey } from "@/features/crm/registration-queries";
 
 type Registration = Awaited<ReturnType<typeof $getRegistration>>;
 const deliveryMessages: Record<string, string> = {
-  provider_request_failed: "The provider request did not complete. The delivery outcome may be uncertain.",
-  provider_rejected: "The email provider rejected the attempt.",
-  provider_throttled: "The email provider asked us to wait before retrying.",
-  provider_response_invalid: "The provider returned an unexpected response.",
-  provider_conflict: "The provider reported a conflicting request. Ask an administrator to review it.",
-  idempotency_window_expired: "The safe retry period has ended. Check delivery with the provider.",
-  payment_instructions_obsolete: "Payment information is no longer applicable to this registration.",
-  payment_acknowledgment_obsolete: "The acknowledgment is no longer applicable to this registration."
+  [EmailDeliveryErrorCode.ProviderRequestFailed]: "The provider request did not complete. The delivery outcome may be uncertain.",
+  [EmailDeliveryErrorCode.ProviderRejected]: "The email provider rejected the attempt.",
+  [EmailDeliveryErrorCode.ProviderThrottled]: "The email provider asked us to wait before retrying.",
+  [EmailDeliveryErrorCode.ProviderResponseInvalid]: "The provider returned an unexpected response.",
+  [EmailDeliveryErrorCode.ProviderConflict]: "The provider reported a conflicting request. Ask an administrator to review it.",
+  [EmailDeliveryErrorCode.IdempotencyWindowExpired]: "The safe retry period has ended. Check delivery with the provider.",
+  [EmailDeliveryErrorCode.PaymentInstructionsObsolete]: "Payment information is no longer applicable to this registration.",
+  [EmailDeliveryErrorCode.PaymentAcknowledgmentObsolete]: "The acknowledgment is no longer applicable to this registration."
 };
 
 export function RegistrationEmails({ registration, onChanged, onAccessError }: {

@@ -1,5 +1,7 @@
 import { CrmEmailState } from "@/db/schema/crm-email-state";
-import { IntakeErrorCode } from "./errors";
+import { AccessErrorCode } from "@/lib/access-errors";
+import { commonErrorMessages, fallbackErrorMessage } from "./error-presentation";
+import { CrmErrorCode, IntakeErrorCode } from "./errors";
 import type { InquiryStatus } from "./lifecycle";
 
 export const inquiryStatusLabels: Record<InquiryStatus, string> = {
@@ -32,11 +34,10 @@ export const emailStateLabels: Record<string, string> = {
 };
 
 const messages: Record<string, string> = {
-  Unauthorized: "Your session has ended. Sign in again.",
-  staff_access_required: "Your account does not have inquiry access. Contact your portal administrator.",
-  [IntakeErrorCode.OriginNotAllowed]: "This request was blocked. Open the portal at its configured address and try again.",
-  access_unavailable: "Unable to check inquiry access. Try again.",
-  crm_unavailable: "Unable to load or save this inquiry. Try again.",
+  ...commonErrorMessages,
+  [AccessErrorCode.StaffAccessRequired]: "Your account does not have inquiry access. Contact your portal administrator.",
+  [AccessErrorCode.AccessUnavailable]: "Unable to check inquiry access. Try again.",
+  [CrmErrorCode.Unavailable]: "Unable to load or save this inquiry. Try again.",
   [IntakeErrorCode.InquiryNotFound]: "This inquiry could not be found.",
   [IntakeErrorCode.InquiryStatusChanged]: "Another staff member changed this inquiry. Review the latest status before trying again. Your input has been kept.",
   [IntakeErrorCode.InvalidInquiryTransition]: "This action is no longer available. Refresh and review the inquiry.",
@@ -45,8 +46,8 @@ const messages: Record<string, string> = {
   [IntakeErrorCode.EmailJobNotFound]: "This email could not be found for the inquiry."
 };
 export function inquiryErrorMessage(error: unknown) {
-  return error instanceof Error && messages[error.message] ? messages[error.message] : "The request could not be completed. Try again.";
+  return error instanceof Error && messages[error.message] ? messages[error.message] : fallbackErrorMessage;
 }
 export function isInquiryAccessError(error: unknown) {
-  return error instanceof Error && ["Unauthorized", "staff_access_required"].includes(error.message);
+  return error instanceof Error && [AccessErrorCode.Unauthorized, AccessErrorCode.StaffAccessRequired].some(code => code === error.message);
 }
