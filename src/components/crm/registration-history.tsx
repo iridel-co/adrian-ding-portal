@@ -3,7 +3,7 @@ import { CrmReadState } from "@/components/crm/read-state";
 import { paymentMethodLabels } from "@/features/crm/registration-presentation";
 import { Button } from "@/components/ui/button";
 import type { $getRegistration } from "@/features/crm/functions";
-import { emailStateLabels, formatInquiryTime } from "@/features/crm/presentation";
+import { emailStateLabels, formatCrmTime } from "@/features/crm/presentation";
 import { registrationErrorMessage } from "@/features/crm/registration-presentation";
 import { formatPesos } from "@/features/shared/money";
 
@@ -40,7 +40,7 @@ function HistoryEntry({ entry }: { entry: History }) {
     : changes.isPaid?.to === true ? "Marked Paid" : changes.isPaid?.to === false ? "Corrected to Unpaid" : "Registration updated";
   return <li className="space-y-2 rounded-lg border p-5">
     <h3 className="font-medium">{title}</h3>
-    <p className="text-sm text-muted-foreground">{formatInquiryTime(entry.createdAt)} · {actor ? `${actor.name} (${actor.email})` : "Staff identity not recorded"}</p>
+    <p className="text-sm text-muted-foreground">{formatCrmTime(entry.createdAt)} · {actor ? `${actor.name} (${actor.email})` : "Staff identity not recorded"}</p>
     <dl className="space-y-2 text-sm">
       {changes.isPaid && <Change label="Payment status" from={payment(changes.isPaid.from)} to={payment(changes.isPaid.to)} />}
       {changes.paymentMethod && <Change label="Payment method" from={changes.paymentMethod.from ? paymentMethodLabels[changes.paymentMethod.from] : "Not recorded"}
@@ -49,8 +49,8 @@ function HistoryEntry({ entry }: { entry: History }) {
         to={changes.paidAmountCentavos.to === null ? "Not recorded" : formatPesos(changes.paidAmountCentavos.to)} />}
       {changes.payerName && <Change label="Payer name" from={changes.payerName.from ?? "Not recorded"} to={changes.payerName.to ?? "Not recorded"} />}
       {changes.providerTransactionReference && <Change label="Provider transaction reference" from={changes.providerTransactionReference.from ?? "Not recorded"} to={changes.providerTransactionReference.to ?? "Not recorded"} />}
-      {changes.verifiedAt && <Change label="Verified at" from={formatInquiryTime(changes.verifiedAt.from)} to={formatInquiryTime(changes.verifiedAt.to)} />}
-      {changes.cancelledAt?.to && <div><dt className="text-muted-foreground">Cancelled at</dt><dd>{formatInquiryTime(changes.cancelledAt.to)}</dd></div>}
+      {changes.verifiedAt && <Change label="Verified at" from={formatCrmTime(changes.verifiedAt.from)} to={formatCrmTime(changes.verifiedAt.to)} />}
+      {changes.cancelledAt?.to && <div><dt className="text-muted-foreground">Cancelled at</dt><dd>{formatCrmTime(changes.cancelledAt.to)}</dd></div>}
       {(changes.reason?.to || changes.cancellationReason?.to) && <div><dt className="text-muted-foreground">Reason</dt><dd className="whitespace-pre-wrap break-words">{changes.reason?.to || changes.cancellationReason?.to}</dd></div>}
     </dl>
     {changes.emailRetry?.to && <div className="space-y-1 text-sm">

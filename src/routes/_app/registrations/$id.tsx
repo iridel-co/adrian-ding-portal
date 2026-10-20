@@ -8,7 +8,7 @@ import { RegistrationEmails } from "@/components/crm/registration-emails";
 import { RegistrationHistory } from "@/components/crm/registration-history";
 import { RegistrationStatus } from "@/components/crm/registration-status";
 import { Button } from "@/components/ui/button";
-import { formatInquiryTime, isInquiryAccessError } from "@/features/crm/presentation";
+import { formatCrmTime, isCrmAccessError } from "@/features/crm/presentation";
 import { registrationWorkspaceSearchSchema } from "@/features/crm/registration-navigation";
 import { emptyRegistrationDraft, paymentMethodLabels, registrationErrorMessage, type RegistrationDraft } from "@/features/crm/registration-presentation";
 import { registrationQueryKey, registrationQueryOptions } from "@/features/crm/registration-queries";
@@ -37,9 +37,9 @@ function RegistrationDetail({ id }: { id: string }) {
   const refresh = () => { void result.refetch(); if (historyOffset > 0) void olderHistory.refetch(); };
   const [draft, setDraft] = useState<RegistrationDraft>(emptyRegistrationDraft);
   const [actionAccessError, setActionAccessError] = useState<Error | null>(null);
-  const error = actionAccessError || result.error || (isInquiryAccessError(history.error) ? history.error : null);
+  const error = actionAccessError || result.error || (isCrmAccessError(history.error) ? history.error : null);
   useEffect(() => {
-    if (isInquiryAccessError(error)) {
+    if (isCrmAccessError(error)) {
       setActionAccessError(error instanceof Error ? error : null);
       setDraft(emptyRegistrationDraft);
       queryClient.removeQueries({ queryKey: registrationQueryKey });
@@ -76,7 +76,7 @@ function RegistrationDetail({ id }: { id: string }) {
           <Field label="Email">{registration.email}</Field><Field label="Phone">{registration.phone}</Field>
           <Field label="Occupation">{registration.occupation}</Field><Field label="Salary range">{registration.salaryRange}</Field>
           <Field label="City">{registration.city || "Not provided"}</Field><Field label="Saved registration price">{formatPesos(registration.priceCentavos)}</Field>
-          <Field label="Submitted">{formatInquiryTime(registration.createdAt)}</Field><Field label="Consent recorded">{formatInquiryTime(registration.consentAt)}</Field>
+          <Field label="Submitted">{formatCrmTime(registration.createdAt)}</Field><Field label="Consent recorded">{formatCrmTime(registration.consentAt)}</Field>
         </dl>
       </section>
       <section className="space-y-4 rounded-lg border p-5" aria-labelledby="registration-payment">
@@ -87,14 +87,14 @@ function RegistrationDetail({ id }: { id: string }) {
             <Field label="Payment method">{registration.paymentMethod ? paymentMethodLabels[registration.paymentMethod] : "Not recorded"}</Field>
             <Field label="Verified amount">{registration.paidAmountCentavos === null ? "Not recorded" : formatPesos(registration.paidAmountCentavos)}</Field>
             <Field label="Payer name">{registration.payerName}</Field><Field label="Provider transaction reference">{registration.providerTransactionReference}</Field>
-            <Field label="Verified at">{formatInquiryTime(registration.verifiedAt)}</Field>
+            <Field label="Verified at">{formatCrmTime(registration.verifiedAt)}</Field>
             <Field label="Verified by">{registration.verifiedByName ?? "Staff identity not available"}</Field>
           </dl>
         </> : <p className="text-sm text-muted-foreground">Payment has not been verified.</p>}
       </section>
       {registration.cancelledAt && <section className="space-y-4 rounded-lg border p-5" aria-labelledby="registration-cancellation">
         <h2 id="registration-cancellation" className="text-xl font-medium">Cancellation</h2>
-        <dl className="grid gap-4 sm:grid-cols-2"><Field label="Cancelled at">{formatInquiryTime(registration.cancelledAt)}</Field>
+        <dl className="grid gap-4 sm:grid-cols-2"><Field label="Cancelled at">{formatCrmTime(registration.cancelledAt)}</Field>
           <Field label="Reason">{registration.cancellationReason}</Field>
           <Field label="Cancelled by">{registration.cancelledByName ?? "Staff identity not available"}</Field></dl>
         <p className="text-sm text-muted-foreground">This registration does not reserve a seat.</p>

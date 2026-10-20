@@ -7,7 +7,7 @@ import { CrmEmailKind } from "@/db/schema/crm-email-kind";
 import { CrmEmailState } from "@/db/schema/crm-email-state";
 import { EmailDeliveryErrorCode, IntakeErrorCode } from "@/features/crm/errors";
 import { $retryRegistrationEmail, type $getRegistration } from "@/features/crm/functions";
-import { canRetryInquiryEmail, emailStateLabels, formatInquiryTime, isInquiryAccessError } from "@/features/crm/presentation";
+import { canRetryEmail, emailStateLabels, formatCrmTime, isCrmAccessError } from "@/features/crm/presentation";
 import { canRetryRegistrationEmail, registrationEmailErrorMessage, registrationEmailLabels } from "@/features/crm/registration-presentation";
 import { registrationQueryKey } from "@/features/crm/registration-queries";
 
@@ -41,7 +41,7 @@ export function RegistrationEmails({ registration, onChanged, onAccessError }: {
       await queryClient.invalidateQueries({ queryKey: registrationQueryKey });
     },
     onError: async error => {
-      if (isInquiryAccessError(error)) { onAccessError(error); return; }
+      if (isCrmAccessError(error)) { onAccessError(error); return; }
       if ([IntakeErrorCode.EmailNotRetryable, IntakeErrorCode.EmailJobNotFound].some(code => code === error.message)) {
         await queryClient.invalidateQueries({ queryKey: registrationQueryKey });
       }
@@ -61,12 +61,12 @@ export function RegistrationEmails({ registration, onChanged, onAccessError }: {
       <p className="text-sm font-medium">{emailStateLabels[job.state]}</p>
       <dl className="space-y-2 text-sm">
         <div><dt className="text-muted-foreground">Attempts</dt><dd>{job.attemptCount}</dd></div>
-        <div><dt className="text-muted-foreground">Last attempt</dt><dd>{formatInquiryTime(job.lastAttemptAt)}</dd></div>
-        <div><dt className="text-muted-foreground">Accepted by provider</dt><dd>{formatInquiryTime(job.sentAt)}</dd></div>
+        <div><dt className="text-muted-foreground">Last attempt</dt><dd>{formatCrmTime(job.lastAttemptAt)}</dd></div>
+        <div><dt className="text-muted-foreground">Accepted by provider</dt><dd>{formatCrmTime(job.sentAt)}</dd></div>
       </dl>
       {job.lastErrorCode && <p className="text-sm text-muted-foreground">{deliveryMessages[job.lastErrorCode] ?? "The last attempt needs review. Check the current delivery state."}</p>}
       {job.state === CrmEmailState.NeedsReconciliation && <p className="text-sm">An administrator must check the provider outside this screen before any new send. Automatic retry is unavailable.</p>}
-      {job.state === CrmEmailState.Sending && <p className="text-sm text-muted-foreground">{canRetryInquiryEmail(job)
+      {job.state === CrmEmailState.Sending && <p className="text-sm text-muted-foreground">{canRetryEmail(job)
         ? "The previous attempt did not finish updating. Recovery uses the same saved message."
         : "An attempt is still in progress. Refresh to check its result before retrying."}</p>}
       {[CrmEmailState.Pending, CrmEmailState.Failed, CrmEmailState.Sending].some(state => state === job.state) && (registration.cancelledAt

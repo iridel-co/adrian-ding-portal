@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canRetryInquiryEmail, formatInquiryTime, inquiryErrorMessage, inquiryStatusOptions, isInquiryOverdue } from "./presentation";
+import { canRetryEmail, formatCrmTime, inquiryErrorMessage, inquiryStatusOptions, isInquiryOverdue } from "./presentation";
 import { registrationEmailErrorMessage, registrationErrorMessage } from "./registration-presentation";
 
 describe("Inquiry screen rules", () => {
@@ -12,15 +12,15 @@ describe("Inquiry screen rules", () => {
     expect(isInquiryOverdue({ status: "NEW", slaDueAt: new Date(now - 1) }, now)).toBe(true);
   });
   it("offers retry for pending/failed and expired sending leases, never completed jobs", () => {
-    for (const state of ["pending", "failed"]) expect(canRetryInquiryEmail({ state, leaseExpiresAt: null }, now)).toBe(true);
-    for (const state of ["sent", "skipped", "needs_reconciliation"]) expect(canRetryInquiryEmail({ state, leaseExpiresAt: null }, now)).toBe(false);
-    expect(canRetryInquiryEmail({ state: "sending", leaseExpiresAt: new Date(now + 1) }, now)).toBe(false);
-    expect(canRetryInquiryEmail({ state: "sending", leaseExpiresAt: new Date(now) }, now)).toBe(true);
+    for (const state of ["pending", "failed"]) expect(canRetryEmail({ state, leaseExpiresAt: null }, now)).toBe(true);
+    for (const state of ["sent", "skipped", "needs_reconciliation"]) expect(canRetryEmail({ state, leaseExpiresAt: null }, now)).toBe(false);
+    expect(canRetryEmail({ state: "sending", leaseExpiresAt: new Date(now + 1) }, now)).toBe(false);
+    expect(canRetryEmail({ state: "sending", leaseExpiresAt: new Date(now) }, now)).toBe(true);
   });
   it("provides every filter and shows instants in Manila time", () => {
     expect(inquiryStatusOptions.map(option => option.value)).toEqual(["all", "non-spam", "NEW", "CONTACTED", "PROPOSAL_SENT", "WON", "LOST", "SPAM"]);
-    expect(formatInquiryTime("2026-10-11T16:00:00Z")).toContain("Oct 12, 2026");
-    expect(formatInquiryTime("2026-10-11T16:00:00Z")).toContain("12:00 AM");
+    expect(formatCrmTime("2026-10-11T16:00:00Z")).toContain("Oct 12, 2026");
+    expect(formatCrmTime("2026-10-11T16:00:00Z")).toContain("12:00 AM");
   });
   it("explains conflicts and hides unknown server errors", () => {
     expect(inquiryErrorMessage(new Error("inquiry_status_changed"))).toContain("Your input has been kept");

@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { $listRegistrations } from "@/features/crm/functions";
-import { formatInquiryTime, isInquiryAccessError } from "@/features/crm/presentation";
+import { formatCrmTime, isCrmAccessError } from "@/features/crm/presentation";
 import { registrationErrorMessage } from "@/features/crm/registration-presentation";
 import { registrationSessionQueryOptions, registrationsQueryOptions } from "@/features/crm/registration-queries";
 import { registrationWorkspaceSearchSchema as searchSchema } from "@/features/crm/registration-navigation";
@@ -47,7 +47,7 @@ function RegistrationWorkspace() {
     offset: overview ? 0 : search.offset, limit: overview ? 5 : 50 }), enabled: !!summary.data && !summary.isError });
   const refresh = () => { void summary.refetch(); void registrations.refetch(); };
   const run = summary.data;
-  const accessError = [summary.error, registrations.error].find(isInquiryAccessError);
+  const accessError = [summary.error, registrations.error].find(isCrmAccessError);
   const error = accessError || summary.error;
   const listState = <CrmReadState pending={registrations.isPending} error={registrations.error}
     retry={() => void registrations.refetch()} loadingMessage="Loading registrations…"
@@ -134,7 +134,7 @@ function RegistrationRows({ items, search }: { items: RegistrationRow[]; search:
       <TableCell className="whitespace-normal py-4"><Link to="/registrations/$id" params={{ id: item.id }} search={search} className="font-medium underline underline-offset-4">{item.fullName}</Link><p className="mt-1 break-all text-xs text-muted-foreground">{item.email}</p><p className="mt-1 text-xs text-muted-foreground">{item.phone}</p></TableCell>
       <TableCell>{item.reference}</TableCell>
       <TableCell><RegistrationStatus isPaid={item.isPaid} cancelledAt={item.cancelledAt} /></TableCell>
-      <TableCell>{formatPesos(item.priceCentavos)}</TableCell><TableCell>{formatInquiryTime(item.createdAt)}</TableCell>
+      <TableCell>{formatPesos(item.priceCentavos)}</TableCell><TableCell>{formatCrmTime(item.createdAt)}</TableCell>
     </TableRow>)}</TableBody>
   </Table>;
 }

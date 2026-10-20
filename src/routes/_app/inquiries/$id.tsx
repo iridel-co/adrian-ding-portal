@@ -7,7 +7,7 @@ import { InquiryEmails } from "@/components/crm/inquiry-emails";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { inquiryQueryOptions } from "@/features/crm/queries";
-import { formatInquiryTime, inquiryStatusLabels, isInquiryOverdue } from "@/features/crm/presentation";
+import { formatCrmTime, inquiryStatusLabels, isInquiryOverdue } from "@/features/crm/presentation";
 import { formatDate, formatDateRange } from "@/features/shared/format";
 import { formatPesos } from "@/features/shared/money";
 import type { $getInquiry } from "@/features/crm/functions";
@@ -42,9 +42,9 @@ function InquiryDetail({ id }: { id: string }) {
         <Field label="Context">{inquiry.context || "None provided"}</Field>
       </dl></section>
       <section className="rounded-lg border p-5"><h2 className="mb-4 text-xl font-medium">Progress and response deadline</h2><p className="mb-4 text-sm text-muted-foreground">All times are in Manila. The first reply deadline is two weekdays after submission.</p><dl className="grid gap-4 sm:grid-cols-2">
-        <Field label="Received">{formatInquiryTime(inquiry.createdAt)}</Field><Field label="First reply due">{formatInquiryTime(inquiry.slaDueAt)}</Field>
-        <Field label="First reply recorded">{formatInquiryTime(inquiry.contactedAt)}</Field><Field label="Proposal recorded">{formatInquiryTime(inquiry.proposalSentAt)}</Field>
-        <Field label="Proposal value">{inquiry.estimatedValueCentavos === null ? "Not recorded" : formatPesos(inquiry.estimatedValueCentavos)}</Field><Field label="Closed">{formatInquiryTime(inquiry.closedAt)}</Field>
+        <Field label="Received">{formatCrmTime(inquiry.createdAt)}</Field><Field label="First reply due">{formatCrmTime(inquiry.slaDueAt)}</Field>
+        <Field label="First reply recorded">{formatCrmTime(inquiry.contactedAt)}</Field><Field label="Proposal recorded">{formatCrmTime(inquiry.proposalSentAt)}</Field>
+        <Field label="Proposal value">{inquiry.estimatedValueCentavos === null ? "Not recorded" : formatPesos(inquiry.estimatedValueCentavos)}</Field><Field label="Closed">{formatCrmTime(inquiry.closedAt)}</Field>
         {inquiry.lostReason && <Field label="Loss reason">{inquiry.lostReason}</Field>}
       </dl></section>
       <InquiryActions inquiry={inquiry} draft={draft} setDraft={setDraft} />
@@ -67,7 +67,7 @@ function HistoryEntry({ entry }: { entry: History }) {
   const actor = changes.actor?.to;
   return <li className="space-y-2 rounded-lg border p-4">
     <p className="font-medium">{changes.emailRetry ? "Email retry attempted" : "Status changed"}</p>
-    <p className="text-sm text-muted-foreground">{formatInquiryTime(entry.createdAt)} · {actor ? `${actor.name} (${actor.email})` : "Staff"}</p>
+    <p className="text-sm text-muted-foreground">{formatCrmTime(entry.createdAt)} · {actor ? `${actor.name} (${actor.email})` : "Staff"}</p>
     {changes.status && <p>{changes.status.from ? inquiryStatusLabels[changes.status.from] : "Not recorded"} → {changes.status.to ? inquiryStatusLabels[changes.status.to] : "Not recorded"}</p>}
     {changes.estimatedValueCentavos && <p>Proposal value: {changes.estimatedValueCentavos.from === null ? "Not recorded" : formatPesos(changes.estimatedValueCentavos.from)} → {changes.estimatedValueCentavos.to === null ? "Not recorded" : formatPesos(changes.estimatedValueCentavos.to)}</p>}
     {changes.lostReason?.to && <p className="whitespace-pre-wrap break-words">Loss reason: {changes.lostReason.to}</p>}

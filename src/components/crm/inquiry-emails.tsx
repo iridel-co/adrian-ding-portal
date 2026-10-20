@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { $retryInquiryEmail, $getInquiry } from "@/features/crm/functions";
 import { inquiryQueryKey } from "@/features/crm/queries";
-import { canRetryInquiryEmail, emailStateLabels, formatInquiryTime, inquiryErrorMessage, isInquiryAccessError } from "@/features/crm/presentation";
+import { canRetryEmail, emailStateLabels, formatCrmTime, inquiryErrorMessage, isCrmAccessError } from "@/features/crm/presentation";
 
 type EmailJob = Awaited<ReturnType<typeof $getInquiry>>["emailJobs"][number];
 export function InquiryEmails({ inquiryId, jobs }: { inquiryId: string; jobs: EmailJob[] }) {
@@ -23,7 +23,7 @@ export function InquiryEmails({ inquiryId, jobs }: { inquiryId: string; jobs: Em
       await queryClient.invalidateQueries({ queryKey: inquiryQueryKey });
     },
     onError: async error => {
-      if (error.message === IntakeErrorCode.EmailNotRetryable || isInquiryAccessError(error)) await queryClient.invalidateQueries({ queryKey: inquiryQueryKey });
+      if (error.message === IntakeErrorCode.EmailNotRetryable || isCrmAccessError(error)) await queryClient.invalidateQueries({ queryKey: inquiryQueryKey });
     }
   });
   const selectedJob = jobs.find(job => job.id === selected);
@@ -31,16 +31,16 @@ export function InquiryEmails({ inquiryId, jobs }: { inquiryId: string; jobs: Em
     <p className="text-sm text-muted-foreground">Provider acceptance does not confirm inbox delivery. Replies and proposals are handled outside the portal.</p>
     <div className="grid gap-3 sm:grid-cols-2">{jobs.map(job => <div className="space-y-2 rounded-lg border p-4" key={job.id}>
       <h3 className="font-medium">{job.kind === CrmEmailKind.CorporateAcknowledgment ? "Customer acknowledgement" : job.kind === CrmEmailKind.CorporateOverdue ? "Overdue reply reminder" : "Staff notification"}</h3>
-      <p>{emailStateLabels[job.state] ?? job.state}</p><p className="text-sm text-muted-foreground">Attempts: {job.attemptCount}<br />Last attempt: {formatInquiryTime(job.lastAttemptAt)}{job.sentAt && <><br />Accepted: {formatInquiryTime(job.sentAt)}</>}</p>
+      <p>{emailStateLabels[job.state] ?? job.state}</p><p className="text-sm text-muted-foreground">Attempts: {job.attemptCount}<br />Last attempt: {formatCrmTime(job.lastAttemptAt)}{job.sentAt && <><br />Accepted: {formatCrmTime(job.sentAt)}</>}</p>
       {job.lastErrorCode && <p className="text-sm text-muted-foreground">Last result: {job.lastErrorCode.replaceAll("_", " ")}</p>}
       {job.state === CrmEmailState.NeedsReconciliation && <p className="text-sm">Ask an administrator to check the provider before attempting any new send.</p>}
-      {canRetryInquiryEmail(job) && <Button variant="outline" disabled={retry.isPending} onClick={() => { setSelected(job.id); retry.reset(); }}>Retry email</Button>}
+      {canRetryEmail(job) && <Button variant="outline" disabled={retry.isPending} onClick={() => { setSelected(job.id); retry.reset(); }}>Retry email</Button>}
     </div>)}</div>
     <Dialog open={selected !== null} onOpenChange={open => { if (!open && !retry.isPending) setSelected(null); }}>
       <DialogContent><DialogHeader><DialogTitle>Retry this email?</DialogTitle><DialogDescription>The portal will attempt the original saved message again. It will record who requested the attempt. Sending settings and the saved content must be ready.</DialogDescription></DialogHeader>
         {retry.error && <p role="alert" className="text-sm text-destructive">{inquiryErrorMessage(retry.error)}</p>}
-        {selectedJob && !canRetryInquiryEmail(selectedJob) && <p role="alert">The email state changed. A retry is no longer available.</p>}
-        <DialogFooter><Button variant="outline" disabled={retry.isPending} onClick={() => setSelected(null)}>Cancel</Button><Button disabled={retry.isPending || !selectedJob || !canRetryInquiryEmail(selectedJob)} onClick={() => selected && retry.mutate(selected)}>{retry.isPending ? "Attempting…" : "Confirm retry"}</Button></DialogFooter>
+        {selectedJob && !canRetryEmail(selectedJob) && <p role="alert">The email state changed. A retry is no longer available.</p>}
+        <DialogFooter><Button variant="outline" disabled={retry.isPending} onClick={() => setSelected(null)}>Cancel</Button><Button disabled={retry.isPending || !selectedJob || !canRetryEmail(selectedJob)} onClick={() => selected && retry.mutate(selected)}>{retry.isPending ? "Attempting…" : "Confirm retry"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   </section>;

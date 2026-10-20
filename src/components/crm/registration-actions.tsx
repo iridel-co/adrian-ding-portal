@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { paymentMethod } from "@/db/schema/payments";
 import { IntakeErrorCode } from "@/features/crm/errors";
 import { $changeRegistration, type $getRegistration } from "@/features/crm/functions";
-import { formatInquiryTime, isInquiryAccessError } from "@/features/crm/presentation";
+import { formatCrmTime, isCrmAccessError } from "@/features/crm/presentation";
 import { emptyRegistrationDraft, paymentMethodLabels, registrationErrorMessage, type RegistrationDraft } from "@/features/crm/registration-presentation";
 import { registrationQueryKey } from "@/features/crm/registration-queries";
 import { RegistrationAction, registrationActionSchema } from "@/features/crm/registration-staff-schemas";
@@ -44,7 +44,7 @@ export function RegistrationActions({ registration, draft, setDraft, onAccessErr
       await queryClient.invalidateQueries({ queryKey: registrationQueryKey });
     },
     onError: async error => {
-      if (isInquiryAccessError(error)) { onAccessError(error); return; }
+      if (isCrmAccessError(error)) { onAccessError(error); return; }
       if ([IntakeErrorCode.RegistrationStatusChanged, IntakeErrorCode.RegistrationCancelled].some(code => code === error.message)) {
         updateDraft({ needsReview: true });
         await queryClient.invalidateQueries({ queryKey: registrationQueryKey });
@@ -112,7 +112,7 @@ export function RegistrationActions({ registration, draft, setDraft, onAccessErr
               <Textarea id="registration-action-reason" value={draft.reason} required maxLength={2000} onChange={event => updateDraft({ reason: event.target.value })} /></div>}
           </fieldset>
           {(draft.validation || change.error) && <p role="alert" className="text-sm text-destructive">{draft.validation || registrationErrorMessage(change.error)}</p>}
-          {stale && <p role="alert" className="text-sm">The record changed. Its latest state is {registration.cancelledAt ? "Cancelled" : registration.isPaid ? "Paid" : "Unpaid"}, updated {formatInquiryTime(registration.updatedAt)}.
+          {stale && <p role="alert" className="text-sm">The record changed. Its latest state is {registration.cancelledAt ? "Cancelled" : registration.isPaid ? "Paid" : "Unpaid"}, updated {formatCrmTime(registration.updatedAt)}.
             Your input has been kept. Close this dialog, review the latest record and reopen an available action.</p>}
           <DialogFooter><Button type="button" variant="outline" disabled={change.isPending} onClick={close}>Close</Button>
             <Button type="submit" variant={draft.action === RegistrationAction.Cancel ? "destructive" : "default"}

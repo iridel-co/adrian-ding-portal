@@ -2,7 +2,7 @@ import { CrmEmailKind } from "@/db/schema/crm-email-kind";
 import { CrmEmailState } from "@/db/schema/crm-email-state";
 import type { paymentMethod } from "@/db/schema/payments";
 import type { RegistrationAction } from "./registration-staff-schemas";
-import { canRetryInquiryEmail } from "./presentation";
+import { canRetryEmail } from "./presentation";
 import { AccessErrorCode } from "@/lib/access-errors";
 import { commonErrorMessages, fallbackErrorMessage } from "./error-presentation";
 import { CrmErrorCode, IntakeErrorCode } from "./errors";
@@ -40,7 +40,7 @@ export const registrationEmailLabels = {
 type RegistrationEmail = { kind: CrmEmailKind; state: CrmEmailState; leaseExpiresAt: Date | string | null };
 type RegistrationPayment = { isPaid: boolean; cancelledAt: Date | string | null };
 export function canRetryRegistrationEmail(job: RegistrationEmail, registration: RegistrationPayment, now = Date.now()) {
-  return !registration.cancelledAt && canRetryInquiryEmail(job, now)
+  return !registration.cancelledAt && canRetryEmail(job, now)
     && (job.kind === CrmEmailKind.PaymentInstructions && !registration.isPaid
       || job.kind === CrmEmailKind.PaymentAcknowledgment && registration.isPaid);
 }

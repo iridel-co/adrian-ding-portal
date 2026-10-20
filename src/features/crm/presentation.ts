@@ -19,12 +19,12 @@ export function isInquiryOverdue(inquiry: { status: InquiryStatus; slaDueAt: Dat
   return inquiry.status === "NEW" && new Date(inquiry.slaDueAt).getTime() < now;
 }
 
-export function canRetryInquiryEmail(job: { state: string; leaseExpiresAt: Date | string | null }, now = Date.now()) {
+export function canRetryEmail(job: { state: string; leaseExpiresAt: Date | string | null }, now = Date.now()) {
   return job.state === CrmEmailState.Pending || job.state === CrmEmailState.Failed
     || (job.state === CrmEmailState.Sending && (!job.leaseExpiresAt || new Date(job.leaseExpiresAt).getTime() <= now));
 }
 
-export function formatInquiryTime(value: Date | string | null) {
+export function formatCrmTime(value: Date | string | null) {
   return value ? new Date(value).toLocaleString("en-PH", { timeZone: "Asia/Manila", dateStyle: "medium", timeStyle: "short" }) : "Not recorded";
 }
 
@@ -48,6 +48,6 @@ const messages: Record<string, string> = {
 export function inquiryErrorMessage(error: unknown) {
   return error instanceof Error && messages[error.message] ? messages[error.message] : fallbackErrorMessage;
 }
-export function isInquiryAccessError(error: unknown) {
+export function isCrmAccessError(error: unknown) {
   return error instanceof Error && [AccessErrorCode.Unauthorized, AccessErrorCode.StaffAccessRequired].some(code => code === error.message);
 }
