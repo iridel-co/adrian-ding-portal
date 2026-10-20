@@ -34,3 +34,12 @@ export async function readJson(request: Request) {
   try { return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body)) as unknown; }
   catch { throw new IntakeError(400, IntakeErrorCode.InvalidJson); }
 }
+
+export function handleOptions(request: Request, headers: Headers) {
+  if (request.headers.get("access-control-request-method") !== "POST") throw new IntakeError(405, IntakeErrorCode.MethodNotAllowed);
+  const requested = request.headers.get("access-control-request-headers")?.toLowerCase().split(",").map(value => value.trim()) ?? [];
+  if (requested.some(header => !["content-type", "idempotency-key"].includes(header))) throw new IntakeError(400, IntakeErrorCode.HeadersNotAllowed);
+  headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  headers.set("Access-Control-Allow-Headers", "Content-Type, Idempotency-Key");
+  return new Response(null, { status: 204, headers });
+}

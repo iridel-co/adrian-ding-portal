@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("@tanstack/react-start/server-only", () => ({}));
-import { verifyCorporateTurnstile } from "./turnstile";
+import { verifyCorporateTurnstile, verifyTurnstile } from "./turnstile";
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Corporate Turnstile verification", () => {
   it("checks the token server-side using the corporate action and approved hostname", async () => {
-    const fetch = vi.fn().mockResolvedValue(Response.json({ success: true, hostname: "website.test", action: "corporate-inquiry" }));
+    const fetch = vi.fn().mockImplementation(async () => Response.json({ success: true, hostname: "website.test", action: "corporate-inquiry" }));
     vi.stubGlobal("fetch", fetch);
     await verifyCorporateTurnstile("token", "private-secret", ["https://website.test"]);
     expect(fetch.mock.calls[0][0]).toBe("https://challenges.cloudflare.com/turnstile/v0/siteverify");
@@ -30,4 +30,14 @@ describe("Corporate Turnstile verification", () => {
     await expect(verifyCorporateTurnstile("token", "secret", ["https://website.test"]))
       .rejects.toMatchObject({ code: "verification_unavailable" });
   });
+});
+
+it("accepts only the workshop action for workshop tokens", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => Response.json({ success: true, hostname: "website.test", action: "workshop-registration" })));
+  await verifyTurnstile("token", "secret", ["https://website.test"], "workshop-registration");
+  await expect(verifyCorporateTurnstile("token", "secret", ["https://website.test"]))
+    .rejects.toMatchObject({ code: "verification_failed" });
+  vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => Response.json({ success: true, hostname: "website.test", action: "corporate-inquiry" })));
+  await expect(verifyTurnstile("token", "secret", ["https://website.test"], "workshop-registration"))
+    .rejects.toMatchObject({ code: "verification_failed" });
 });

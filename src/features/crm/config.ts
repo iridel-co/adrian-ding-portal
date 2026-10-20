@@ -10,7 +10,7 @@ const originsSchema = z.string().default("").transform(value => value.split(",")
     } catch { return false; }
   })).min(1));
 
-export function getCorporateOrigins() {
+export function getIntakeOrigins() {
   const result = originsSchema.safeParse(process.env.SITE_ORIGINS);
   if (!result.success) throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
   return result.data;
@@ -49,4 +49,36 @@ export function getCorporateMailConfig() {
     throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
   }
   return { ...config, EMAIL_FROM: config.CORPORATE_EMAIL_FROM, EMAIL_REPLY_TO: config.CORPORATE_REPLY_TO };
+}
+
+// Preserve the corporate intake contract while sharing the exact origin allowlist.
+export const getCorporateOrigins = getIntakeOrigins;
+
+export function getRegistrationConfig() {
+  const secret = z.string().min(1).safeParse(process.env.TURNSTILE_SECRET_KEY);
+  if (process.env.REGISTRATION_INTAKE_ENABLED !== "true" || !secret.success) {
+    throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
+  }
+  return { ...getRegistrationMailConfig(), TURNSTILE_SECRET_KEY: secret.data };
+}
+
+const registrationMailSchema = z.object({
+  REGISTRATION_EMAIL_ENABLED: z.enum(["true", "false"]).default("false").transform(value => value === "true"),
+  REGISTRATION_PAYMENT_ACCOUNT_ID: z.uuid(),
+  REGISTRATION_EMAIL_FROM: z.string().trim().min(1).max(320).default("Adrian Ding Team <registrations@example.invalid>")
+    .refine(value => !/[\r\n]/.test(value)
+      && z.email().safeParse(value.match(/^[^<>]+<([^<>]+)>$/)?.[1] ?? value).success),
+  REGISTRATION_REPLY_TO: z.email().default("registrations@example.invalid"),
+  RESEND_API_KEY: z.string().default("")
+});
+
+export function getRegistrationMailConfig() {
+  const result = registrationMailSchema.safeParse(process.env);
+  if (!result.success) throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
+  const config = result.data;
+  if (config.REGISTRATION_EMAIL_ENABLED && (!config.RESEND_API_KEY
+    || /example\.|\.invalid/i.test(`${config.REGISTRATION_EMAIL_FROM} ${config.REGISTRATION_REPLY_TO}`))) {
+    throw new IntakeError(503, IntakeErrorCode.EmailUnavailable);
+  }
+  return { ...config, EMAIL_FROM: config.REGISTRATION_EMAIL_FROM, EMAIL_REPLY_TO: config.REGISTRATION_REPLY_TO };
 }

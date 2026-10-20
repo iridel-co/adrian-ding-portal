@@ -221,7 +221,9 @@ export async function updateWorkshop(db: DbOrTx, actor: Actor, data: z.infer<typ
   const { tagIds, ...values } = data.values;
 
   await db.transaction(async (tx) => {
-    const before = await getWorkshopRow(tx, data.id);
+    // Registration intake locks the workshop before its session and counter.
+    const [before] = await tx.select().from(workshop).where(eq(workshop.id, data.id)).for("update");
+    if (!before) throw new CmsValidationError("This workshop no longer exists.");
 
     await assertSlugAvailable(tx, {
       table: workshop,
