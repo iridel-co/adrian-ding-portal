@@ -159,6 +159,18 @@ describe("Registration detail", () => {
 });
 
 describe("Registration actions", () => {
+  it.each([
+    [RegistrationAction.MarkPaid, "Mark Paid", "Confirm only after checking the actual funds.", "Registration marked Paid. Check email delivery separately."],
+    [RegistrationAction.CorrectPayment, "Correct to Unpaid", "Correct a mistaken payment verification.", "Payment corrected to Unpaid. The seat remains reserved."],
+    [RegistrationAction.Cancel, "Cancel registration", "This cancels the unpaid registration and releases its reserved seat.", "Registration cancelled. Its seat has been released."]
+  ] as const)("uses the matching confirmation and success message for %s", async (action, label, description, message) => {
+    const isPaid = action === RegistrationAction.CorrectPayment;
+    const tree = actionTree({ ...record, isPaid }, { ...paidDraft, action, expectedIsPaid: isPaid });
+    expect(find(tree, Button, label)).toBeDefined();
+    expect(formHtml(tree)).toContain(description);
+    await harness.mutation.onSuccess({}, { action });
+    expect(harness.toast).toHaveBeenCalledWith(message);
+  });
   it("offers actions only for the current state and leaves payment inputs blank on opening", () => {
     for (const [registration, expected] of [[record, ["Mark Paid", "Cancel registration"]], [{ ...record, isPaid: true }, ["Correct to Unpaid"]],
       [{ ...record, cancelledAt: date }, []]] as const) {
