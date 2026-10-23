@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import {
   apiError,
@@ -10,6 +11,7 @@ import {
   HttpStatus,
   json,
   matchesEtag,
+  publicHandlers,
   toPrice,
   toPublicMedia
 } from "@/features/shared/public-api";
@@ -44,6 +46,19 @@ describe("toPrice", () => {
 });
 
 describe("responses", () => {
+  it("keeps the workshop cache policy on successful and conditional responses", async () => {
+    const handlers = publicHandlers(z.object({}), async () => ({ seatsLeft: 3 }), CACHE_CONTROL.availability);
+    const request = new Request("https://cms.example.com/api/public/workshops");
+    const response = await handlers.GET({ request });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=0, s-maxage=15, must-revalidate");
+    const revalidated = await handlers.GET({ request: new Request(request, {
+      headers: { "If-None-Match": response.headers.get("ETag")! }
+    }) });
+    expect(revalidated.status).toBe(304);
+    expect(revalidated.headers.get("Cache-Control")).toBe(response.headers.get("Cache-Control"));
+  });
+
   it("caches successful responses", () => {
     const response = json({ ok: true }, CACHE_CONTROL.ok, {});
     expect(response.status).toBe(200);

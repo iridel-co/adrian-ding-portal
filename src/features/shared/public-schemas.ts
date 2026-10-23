@@ -56,6 +56,7 @@ export const sessionSchema = z
     registrationCutoffAt: z.string().nullable().describe("ISO 8601 instant"),
     price: priceSchema,
     capacity: z.number().int(),
+    seatsLeft: z.number().int().min(0).describe("Capacity minus non-cancelled registrations, including unpaid reservations; minimum zero"),
     status: z.enum(sessionStatus.enumValues),
     isRegistrationOpen: z.boolean()
   })

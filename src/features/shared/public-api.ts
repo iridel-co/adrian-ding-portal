@@ -39,6 +39,7 @@ export function toPrice(centavos: number | null, note: string): Price | null {
 
 export const CACHE_CONTROL = {
   ok: "public, max-age=60, s-maxage=300, stale-while-revalidate=86400",
+  availability: "public, max-age=0, s-maxage=15, must-revalidate",
   notFound: "public, max-age=0, s-maxage=60",
   noStore: "no-store"
 } as const;
@@ -120,10 +121,10 @@ export function matchesEtag(ifNoneMatch: string | null, etag: string) {
 }
 
 /* A 200 JSON response with an ETag, or a 304 when the client copy is current. */
-export async function conditionalJson(request: Request, data: unknown, cors: Record<string, string>) {
+export async function conditionalJson(request: Request, data: unknown, cors: Record<string, string>, cacheControl: string = CACHE_CONTROL.ok) {
   const body = JSON.stringify(data);
   const etag = await computeEtag(body);
-  const headers = { ...cors, "Cache-Control": CACHE_CONTROL.ok, ETag: etag };
+  const headers = { ...cors, "Cache-Control": cacheControl, ETag: etag };
 
   if (matchesEtag(request.headers.get("If-None-Match"), etag)) {
     return new Response(null, { status: HttpStatus.NotModified, headers });
@@ -153,7 +154,8 @@ type HandlerContext = {
 */
 export function publicGet<Schema extends z.ZodType>(
   schema: Schema,
-  load: (input: z.infer<Schema>) => Promise<unknown>
+  load: (input: z.infer<Schema>) => Promise<unknown>,
+  cacheControl: string = CACHE_CONTROL.ok
 ) {
   return async ({ request, params }: HandlerContext) => {
     const cors = requestCorsHeaders(request);
@@ -165,7 +167,7 @@ export function publicGet<Schema extends z.ZodType>(
     }
 
     try {
-      return await conditionalJson(request, await load(parsed.data), cors);
+      return await conditionalJson(request, await load(parsed.data), cors, cacheControl);
     } catch (error) {
       if (error instanceof NotFoundError) {
         return apiError(HttpStatus.NotFound, ApiErrorCode.NotFound, error.message, cors);
@@ -197,10 +199,11 @@ function methodNotAllowed({ request }: HandlerContext) {
 */
 export function publicHandlers<Schema extends z.ZodType>(
   schema: Schema,
-  load: (input: z.infer<Schema>) => Promise<unknown>
+  load: (input: z.infer<Schema>) => Promise<unknown>,
+  cacheControl: string = CACHE_CONTROL.ok
 ) {
   return {
-    GET: publicGet(schema, load),
+    GET: publicGet(schema, load, cacheControl),
     OPTIONS: publicPreflight,
     POST: methodNotAllowed,
     PUT: methodNotAllowed,

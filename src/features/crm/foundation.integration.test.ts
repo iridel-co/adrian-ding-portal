@@ -19,7 +19,7 @@ import { getDb } from "@/db";
 import { handleRegistration } from "./registration-intake";
 import { updateSession, setSessionStatus } from "@/features/sessions/service";
 import { sessionSaveSchema } from "@/features/sessions/schemas";
-import { getPublicWorkshopBySlug } from "@/features/workshops/public";
+import { getPublicWorkshopBySlug, listPublicWorkshops } from "@/features/workshops/public";
 import { readPaymentQr } from "@/features/media/r2";
 import { queueOverdueInquiries, runCorporateScheduler } from "./scheduler";
 import { relations, registration, workshop, workshopSession } from "@/db/schema";
@@ -544,6 +544,35 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     return { ...fixture, answers };
   }
 
+  it("returns public seats left per run, counting paid and unpaid reservations until cancellation", async () => {
+    const fixture = await intakeFixture(2);
+    const [course] = await sql`select slug from workshop where id = ${fixture.courseId}`;
+    const seats = async () => {
+      const detail = await getPublicWorkshopBySlug(db, course.slug);
+      const list = await listPublicWorkshops(db, { upcoming: true });
+      const first = detail.sessions.find(session => session.id === fixture.sessions[0])!;
+      expect(list.find(item => item.slug === course.slug)?.nextSession?.seatsLeft).toBe(first.seatsLeft);
+      expect(detail.sessions.find(session => session.id === fixture.sessions[1])?.seatsLeft).toBe(2);
+      return first.seatsLeft;
+    };
+    expect(await seats()).toBe(2);
+    const key = randomUUID();
+    await acceptRegistration(db, fixture.answers, key, now);
+    expect(await seats()).toBe(1);
+    const [first] = await sql`select * from registration where idempotency_key = ${key}`;
+    await changeRegistration(db, actor, staffInput(first, RegistrationAction.MarkPaid));
+    expect(await seats()).toBe(1);
+    const secondKey = randomUUID();
+    await acceptRegistration(db, { ...fixture.answers, email: `${randomUUID()}@company.test` }, secondKey, now);
+    expect(await seats()).toBe(0);
+    await sql`update workshop_session set capacity = 1 where id = ${fixture.sessions[0]}`;
+    expect(await seats()).toBe(0);
+    await sql`update workshop_session set capacity = 2 where id = ${fixture.sessions[0]}`;
+    const [second] = await sql`select * from registration where idempotency_key = ${secondKey}`;
+    await changeRegistration(db, actor, staffInput(second, RegistrationAction.Cancel));
+    expect(await seats()).toBe(1);
+  });
+
   it("accepts concurrent retries once, preserves price/consent, and returns the original result after closure", async () => {
     const fixture = await intakeFixture();
     const key = randomUUID();
@@ -947,7 +976,7 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
       expect(messages[1].payload.subject).toContain("Payment acknowledged");
       const [course] = await sql`select slug from workshop where id = ${fixture.courseId}`;
       const catalogue = await getPublicWorkshopBySlug(db, course.slug);
-      expect(catalogue.sessions.find(session => session.id === fixture.sessions[0])).toMatchObject({ capacity: 1, status: "open" });
+      expect(catalogue.sessions.find(session => session.id === fixture.sessions[0])).toMatchObject({ capacity: 1, seatsLeft: 0, status: "open" });
       for (const privateValue of [fixture.answers.email, row.reference, "1234567890", "idempotencyKey", "emailJobs", "reserved"])
         expect(JSON.stringify(catalogue)).not.toContain(privateValue);
     } finally { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.mocked(getDb).mockReset(); }

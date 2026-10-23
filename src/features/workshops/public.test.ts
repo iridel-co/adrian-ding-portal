@@ -23,6 +23,7 @@ function session(overrides: Partial<Parameters<typeof toPublicSession>[0]> = {})
     priceCentavos: 650000,
     priceNote: "",
     capacity: 40,
+    reserved: 0,
     status: "open" as const,
     createdBy: null,
     updatedBy: null,
@@ -33,6 +34,17 @@ function session(overrides: Partial<Parameters<typeof toPublicSession>[0]> = {})
 }
 
 describe("toPublicSession", () => {
+  it.each([
+    [0, 40],
+    [17, 23],
+    [40, 0],
+    [41, 0]
+  ])("returns seats left for %i reserved seats", (reserved, seatsLeft) => {
+    const result = toPublicSession(session({ reserved }), now);
+    expect(result.seatsLeft).toBe(seatsLeft);
+    expect(result).not.toHaveProperty("reserved");
+  });
+
   it("returns Manila times without seconds and the price in centavos", () => {
     expect(toPublicSession(session(), now)).toMatchObject({
       date: "2026-10-09",

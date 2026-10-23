@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 
-import { media, taxonomyTerm, workshop, workshopSession, workshopTag } from "@/db/schema";
+import { media, registration, taxonomyTerm, workshop, workshopSession, workshopTag } from "@/db/schema";
 import type { DbOrTx } from "@/features/shared/db-types";
 import { NotFoundError } from "@/features/shared/errors";
 import { toPrice, toPublicMedia } from "@/features/shared/public-api";
@@ -14,7 +14,7 @@ import {
   upcomingPublicSessionCondition
 } from "@/features/shared/visibility";
 
-type SessionRow = typeof workshopSession.$inferSelect;
+type SessionRow = typeof workshopSession.$inferSelect & { reserved: number };
 
 export function toPublicSession(session: SessionRow, now: Date = new Date()) {
   return {
@@ -30,6 +30,7 @@ export function toPublicSession(session: SessionRow, now: Date = new Date()) {
     registrationCutoffAt: session.registrationCutoffAt?.toISOString() ?? null,
     price: toPrice(session.priceCentavos, session.priceNote),
     capacity: session.capacity,
+    seatsLeft: Math.max(session.capacity - session.reserved, 0),
     status: session.status,
     isRegistrationOpen: isRegistrationOpen(session, now)
   };
@@ -88,7 +89,12 @@ async function loadSessions(db: DbOrTx, workshopIds: string[], now: Date) {
   if (workshopIds.length === 0) return new Map<string, PublicSession[]>();
 
   const rows = await db
-    .select()
+    .select({
+      ...getTableColumns(workshopSession),
+      reserved: sql<number>`(select count(*) from ${registration}
+        where ${registration.workshopSessionId} = ${workshopSession.id}
+          and ${registration.cancelledAt} is null)`.mapWith(Number)
+    })
     .from(workshopSession)
     .where(
       and(inArray(workshopSession.workshopId, workshopIds), upcomingPublicSessionCondition(now))

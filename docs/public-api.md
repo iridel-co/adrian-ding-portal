@@ -86,12 +86,14 @@ Every error has the same shape:
 | Response | `Cache-Control` |
 |---|---|
 | 200 | `public, max-age=60, s-maxage=300, stale-while-revalidate=86400` |
+| 200, workshop list and detail | `public, max-age=0, s-maxage=15, must-revalidate` |
 | 404 | `public, max-age=0, s-maxage=60` |
 | 304 | Same as 200 |
 | 400, 405, 500 | `no-store` |
 
 A CMS edit can take up to 5 minutes to show on the site.
 Nothing purges the cache on publish.
+Workshop list and detail responses require browser revalidation and can be cached by shared caches for 15 seconds, without serving stale responses.
 
 ### Conditional requests
 
@@ -128,6 +130,10 @@ Server-to-server calls ignore CORS.
 
 ### Workshop sessions
 
+- `capacity` is the run's total seat limit. `seatsLeft` is capacity minus non-cancelled registrations, with a minimum of zero.
+- Paid and Unpaid registrations both reserve one seat. Unpaid reservations do not expire automatically.
+- The workshop list returns `nextSession.seatsLeft`; workshop detail returns `sessions[].seatsLeft`.
+- Availability is a snapshot. Registration submission checks capacity again before accepting a reservation.
 - A session appears only while it is `open` or `closed` and has not ended.
 - Draft and cancelled sessions never appear.
 - `isRegistrationOpen` is `true` only when the status is `open` and the cutoff has not passed.
