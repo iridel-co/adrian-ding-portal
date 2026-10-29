@@ -14,16 +14,11 @@ it("enables registration without corporate or mail settings", () => {
   vi.stubEnv("REGISTRATION_INTAKE_ENABLED", "true");
   vi.stubEnv("TURNSTILE_SECRET_KEY", "secret");
   vi.stubEnv("CORPORATE_INTAKE_ENABLED", "false");
-  expect(getRegistrationConfig()).toMatchObject({ TURNSTILE_SECRET_KEY: "secret", REGISTRATION_EMAIL_ENABLED: false });
+  expect(getRegistrationConfig()).toMatchObject({ TURNSTILE_SECRET_KEY: "", REGISTRATION_EMAIL_ENABLED: false });
 });
 it.each(["false", "", "TRUE"])("fails closed for intake flag %s", flag => {
   vi.stubEnv("REGISTRATION_INTAKE_ENABLED", flag);
   vi.stubEnv("TURNSTILE_SECRET_KEY", "secret");
-  expect(() => getRegistrationConfig()).toThrow("intake_unavailable");
-});
-it("requires a configured bot secret", () => {
-  vi.stubEnv("REGISTRATION_INTAKE_ENABLED", "true");
-  vi.stubEnv("TURNSTILE_SECRET_KEY", "");
   expect(() => getRegistrationConfig()).toThrow("intake_unavailable");
 });
 
@@ -51,18 +46,11 @@ it.each(["bad", "Injected\r\nBcc: other@company.test"])("rejects invalid sender 
   expect(() => getRegistrationMailConfig()).toThrow("intake_unavailable");
 });
 
-it("allows an explicit diagnostic bypass without a Turnstile secret", () => {
-  vi.stubEnv("REGISTRATION_INTAKE_ENABLED", "true");
-  vi.stubEnv("TURNSTILE_ENABLED", "false");
-  vi.stubEnv("TURNSTILE_SECRET_KEY", "");
-  expect(getRegistrationConfig().TURNSTILE_SECRET_KEY).toBe("");
-  vi.stubEnv("REGISTRATION_INTAKE_ENABLED", "false");
-  expect(() => getRegistrationConfig()).toThrow("intake_unavailable");
-});
-
-it.each([undefined, "", "FALSE", "true"])("requires verification unless explicitly disabled: %s", flag => {
+it.each([undefined, "false", "true"])("bypasses Turnstile regardless of the env flag: %s", flag => {
   vi.stubEnv("REGISTRATION_INTAKE_ENABLED", "true");
   vi.stubEnv("TURNSTILE_ENABLED", flag);
   vi.stubEnv("TURNSTILE_SECRET_KEY", "");
+  expect(getRegistrationConfig().TURNSTILE_SECRET_KEY).toBe("");
+  vi.stubEnv("REGISTRATION_INTAKE_ENABLED", "false");
   expect(() => getRegistrationConfig()).toThrow("intake_unavailable");
 });

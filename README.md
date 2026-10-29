@@ -176,13 +176,12 @@ Add shadcn components with `pnpm dlx shadcn@latest add <name>`.
 
 ### Temporary Turnstile diagnosis
 
-Set `TURNSTILE_ENABLED=false` in both portal and web to test both public forms
-without the widget, token requirement, or server verification. Deploy portal
-first, then web. All intake flags, origin checks, honeypot, validation, email
-configuration and payment-account requirements still apply. This does not
-necessarily resolve `intake_unavailable`.
+Turnstile is temporarily hard-coded off in `src/features/crm/config.ts` and
+web's `src/lib/intake-config.ts`, regardless of `TURNSTILE_ENABLED`. Deploy
+portal first, then web. All intake flags, origin checks, honeypot, validation,
+email configuration and payment-account requirements still apply. This does
+not necessarily resolve `intake_unavailable`.
 
-Restore `TURNSTILE_ENABLED=true` in web and deploy it first, then restore it in
-portal. Keep the existing site/secret keys for restoration. While disabled,
-public submissions have no Turnstile bot protection. An absent or unrecognized
-flag value keeps verification enabled.
+Restore the environment switch in both configuration files after diagnosis,
+then deploy web verification before portal enforcement. Keep the existing keys.
+While disabled, public submissions have no Turnstile bot protection.
