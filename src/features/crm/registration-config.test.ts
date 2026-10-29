@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 vi.mock("@tanstack/react-start/server-only", () => ({}));
 import { getRegistrationConfig, getRegistrationMailConfig } from "./config";
 beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
   vi.stubEnv("TURNSTILE_ENABLED", "true");
   vi.stubEnv("REGISTRATION_PAYMENT_ACCOUNT_ID", "12345678-abcd-4000-8000-123456789abc");
   vi.stubEnv("REGISTRATION_EMAIL_ENABLED", "false");
@@ -9,7 +10,7 @@ beforeEach(() => {
   vi.stubEnv("REGISTRATION_REPLY_TO", "registrations@example.invalid");
   vi.stubEnv("RESEND_API_KEY", "");
 });
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 it("enables registration without corporate or mail settings", () => {
   vi.stubEnv("REGISTRATION_INTAKE_ENABLED", "true");
   vi.stubEnv("TURNSTILE_SECRET_KEY", "secret");
@@ -53,4 +54,13 @@ it.each([undefined, "false", "true"])("bypasses Turnstile regardless of the env 
   expect(getRegistrationConfig().TURNSTILE_SECRET_KEY).toBe("");
   vi.stubEnv("REGISTRATION_INTAKE_ENABLED", "false");
   expect(() => getRegistrationConfig()).toThrow("intake_unavailable");
+});
+
+it("logs the invalid payment-account field without its value", () => {
+  vi.stubEnv("REGISTRATION_PAYMENT_ACCOUNT_ID", "private-invalid-account");
+  expect(getRegistrationMailConfig).toThrow("intake_unavailable");
+  expect(JSON.parse(vi.mocked(console.error).mock.calls[0][0])).toEqual({
+    event: "crm_intake_config_invalid", reason: "invalid_format", fields: ["REGISTRATION_PAYMENT_ACCOUNT_ID"]
+  });
+  expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain("private-invalid-account");
 });

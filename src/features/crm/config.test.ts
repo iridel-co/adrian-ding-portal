@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@tanstack/react-start/server-only", () => ({}));
 import { getCorporateConfig, getCorporateMailConfig, getCorporateOrigins } from "./config";
 
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 describe("Corporate intake configuration", () => {
   beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
     vi.stubEnv("TURNSTILE_ENABLED", "true");
     vi.stubEnv("CORPORATE_INTAKE_ENABLED", "true");
     vi.stubEnv("CORPORATE_EMAIL_ENABLED", "false");
@@ -62,4 +63,29 @@ describe("Corporate intake configuration", () => {
     vi.stubEnv("CORPORATE_INTAKE_ENABLED", "false");
     expect(() => getCorporateConfig()).toThrow("intake_unavailable");
   });
+  it("logs invalid configuration field names without leaking values", () => {
+    vi.stubEnv("CORPORATE_EMAIL_FROM", "private-invalid-sender");
+    vi.stubEnv("RESEND_API_KEY", "private-provider-key");
+    expect(getCorporateConfig).toThrow("intake_unavailable");
+    expect(JSON.parse(vi.mocked(console.error).mock.calls[0][0])).toEqual({
+      event: "crm_intake_config_invalid", reason: "invalid_format", fields: ["CORPORATE_EMAIL_FROM"]
+    });
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain("private-");
+  });
+
+  it("identifies disabled intake and missing delivery configuration", () => {
+    vi.stubEnv("CORPORATE_INTAKE_ENABLED", "false");
+    expect(getCorporateConfig).toThrow("intake_unavailable");
+    expect(JSON.parse(vi.mocked(console.error).mock.calls[0][0])).toMatchObject({
+      reason: "intake_disabled", fields: ["CORPORATE_INTAKE_ENABLED"]
+    });
+    vi.stubEnv("CORPORATE_INTAKE_ENABLED", "true");
+    vi.stubEnv("CORPORATE_EMAIL_ENABLED", "true");
+    expect(getCorporateConfig).toThrow("intake_unavailable");
+    const log = JSON.parse(vi.mocked(console.error).mock.calls[1][0]);
+    expect(log.reason).toBe("email_delivery_not_configured");
+    expect(log.fields).toContain("RESEND_API_KEY");
+    expect(log.fields).toContain("CORPORATE_INQUIRY_RECIPIENTS");
+  });
+
 });

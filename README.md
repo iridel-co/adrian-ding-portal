@@ -185,3 +185,38 @@ not necessarily resolve `intake_unavailable`.
 Restore the environment switch in both configuration files after diagnosis,
 then deploy web verification before portal enforcement. Keep the existing keys.
 While disabled, public submissions have no Turnstile bot protection.
+
+
+### Public form runtime logs
+
+Both public submission handlers emit JSON through server-side `console.error`
+and `console.info`. Vercel captures this console output in the Portal project's
+runtime Logs tab automatically; no logging package, new environment variable,
+or `vercel.json` change is required. See [Vercel Function Logs](https://vercel.com/docs/functions/logs).
+
+After deploying Portal, reproduce the failure, then open the Portal project's
+Logs tab, select the deployment/environment serving `portal.adrianding.com`,
+and filter to `/api/corporate-inquiries` or `/api/registrations`. Search for:
+
+- `crm_intake_config_invalid`: configuration field names and a reason such as
+  `intake_disabled`, `invalid_format`, or `email_delivery_not_configured`.
+- `crm_intake_failed`: form, failing stage, HTTP status, public error code and
+  whether the exception was unexpected. Stages distinguish origin configuration,
+  origin check, method, form configuration, input validation, verification,
+  database initialization, save, and email handling. Shared environment schema
+  failures also include their field names. Use the surrounding invocation logs
+  to pair configuration failures with their request's form/stage.
+- `crm_intake_accepted`: the handler is returning HTTP 202 after a successful save.
+  Email delivery can still fail separately; check the saved email job state.
+
+For example, an invalid registration payment-account setting produces:
+
+```json
+{"event":"crm_intake_config_invalid","reason":"invalid_format","fields":["REGISTRATION_PAYMENT_ACCOUNT_ID"]}
+```
+
+Logs contain no submitted answers, token/secret values, raw headers, exception
+messages or stacks. Public error responses remain unchanged. The generic
+`intake_unavailable` response alone still cannot identify the failing setting.
+Local logs appear in the server terminal. Previously deployed requests will not
+gain these diagnostics retroactively; reproduce after the new Portal deployment.

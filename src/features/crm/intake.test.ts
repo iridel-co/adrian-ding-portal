@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@/db", () => ({ getDb: vi.fn(() => "database") }));
 vi.mock("./config", () => ({ getCorporateOrigins: vi.fn(() => ["https://website.test"]), getCorporateConfig: vi.fn() }));
@@ -6,6 +6,7 @@ vi.mock("./turnstile", () => ({ verifyCorporateTurnstile: vi.fn() }));
 vi.mock("./service", () => ({ acceptCorporateInquiry: vi.fn() }));
 vi.mock("./email", () => ({ sendEmailJob: vi.fn() }));
 import { getDb } from "@/db";
+import { z } from "zod";
 import { getCorporateConfig } from "./config";
 import { verifyCorporateTurnstile } from "./turnstile";
 import { acceptCorporateInquiry } from "./service";
@@ -24,6 +25,8 @@ const request = (body: unknown = answers, origin = "https://website.test") => ne
 describe("Corporate public intake", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "info").mockImplementation(() => {});
     vi.mocked(getCorporateConfig).mockReturnValue({ TURNSTILE_SECRET_KEY: "secret", CORPORATE_EMAIL_ENABLED: true,
       RESEND_API_KEY: "provider-key", CORPORATE_EMAIL_FROM: "team@company.test", CORPORATE_REPLY_TO: "sales@company.test",
       EMAIL_FROM: "team@company.test", EMAIL_REPLY_TO: "sales@company.test", CORPORATE_INQUIRY_RECIPIENTS: ["a@company.test", "b@company.test"],
@@ -96,6 +99,48 @@ describe("Corporate public intake", () => {
     expect(sendEmailJob).not.toHaveBeenCalled();
   });
 
+  it("logs configuration failures before database access", async () => {
+    vi.mocked(getCorporateConfig).mockImplementation(() => { throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable); });
+    const response = await handleCorporateInquiry(request());
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "intake_unavailable" });
+    expect(getDb).not.toHaveBeenCalled();
+    expect(JSON.parse(vi.mocked(console.error).mock.calls[0][0])).toEqual({
+      event: "crm_intake_failed", form: "corporate", stage: "config", status: 503, code: "intake_unavailable", unexpected: false
+    });
+  });
+
+  it("logs unexpected save failures without exception details or submitted answers", async () => {
+    vi.mocked(acceptCorporateInquiry).mockRejectedValue(new Error("private-database-password"));
+    expect((await handleCorporateInquiry(request())).status).toBe(503);
+    expect(JSON.parse(vi.mocked(console.error).mock.calls[0][0])).toMatchObject({
+      event: "crm_intake_failed", form: "corporate", stage: "save", unexpected: true
+    });
+    const logs = JSON.stringify(vi.mocked(console.error).mock.calls);
+    for (const value of [answers.email, answers.fullName, answers.turnstileToken, "private-database-password"]) {
+      expect(logs).not.toContain(value);
+    }
+  });
+
+  it("logs shared environment field names when database initialization fails", async () => {
+    const invalid = z.object({ DATABASE_URL: z.url() }).safeParse({ DATABASE_URL: "private-connection-string" });
+    if (invalid.success) throw new Error("fixture must be invalid");
+    vi.mocked(getDb).mockImplementationOnce(() => { throw invalid.error; });
+    expect((await handleCorporateInquiry(request())).status).toBe(503);
+    expect(JSON.parse(vi.mocked(console.error).mock.calls[0][0])).toMatchObject({
+      stage: "database", fields: ["DATABASE_URL"], unexpected: true
+    });
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain("private-connection-string");
+  });
+
+  it("logs acceptance without including submitted answers", async () => {
+    expect((await handleCorporateInquiry(request())).status).toBe(202);
+    expect(JSON.parse(vi.mocked(console.info).mock.calls[0][0])).toEqual({
+      event: "crm_intake_accepted", form: "corporate", status: 202
+    });
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
   it("accepts without a token only when verification is explicitly disabled", async () => {
     vi.mocked(getCorporateConfig).mockReturnValue({ ...getCorporateConfig(), TURNSTILE_SECRET_KEY: "" });
     const body = { ...answers, turnstileToken: "" };
@@ -131,3 +176,5 @@ describe("Corporate public intake", () => {
     expect(getDb).not.toHaveBeenCalled();
   });
 });
+
+afterEach(() => vi.restoreAllMocks());
