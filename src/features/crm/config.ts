@@ -32,11 +32,18 @@ const configSchema = z.object({
     .transform(value => value.replace(/\/+$/, ""))
 });
 
-export function getCorporateConfig() {
-  if (process.env.CORPORATE_INTAKE_ENABLED !== "true") throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
+function getTurnstileSecret() {
+  // Temporary diagnostic switch; only an explicit false disables verification.
+  if (process.env.TURNSTILE_ENABLED === "false") return "";
   const secret = z.string().min(1).safeParse(process.env.TURNSTILE_SECRET_KEY);
   if (!secret.success) throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
-  return { ...getCorporateMailConfig(), TURNSTILE_SECRET_KEY: secret.data };
+  return secret.data;
+}
+
+export function getCorporateConfig() {
+  if (process.env.CORPORATE_INTAKE_ENABLED !== "true") throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
+  const secret = getTurnstileSecret();
+  return { ...getCorporateMailConfig(), TURNSTILE_SECRET_KEY: secret };
 }
 
 export function getCorporateMailConfig() {
@@ -55,11 +62,11 @@ export function getCorporateMailConfig() {
 export const getCorporateOrigins = getIntakeOrigins;
 
 export function getRegistrationConfig() {
-  const secret = z.string().min(1).safeParse(process.env.TURNSTILE_SECRET_KEY);
-  if (process.env.REGISTRATION_INTAKE_ENABLED !== "true" || !secret.success) {
+  if (process.env.REGISTRATION_INTAKE_ENABLED !== "true") {
     throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
   }
-  return { ...getRegistrationMailConfig(), TURNSTILE_SECRET_KEY: secret.data };
+  const secret = getTurnstileSecret();
+  return { ...getRegistrationMailConfig(), TURNSTILE_SECRET_KEY: secret };
 }
 
 const registrationMailSchema = z.object({

@@ -5,6 +5,7 @@ import { getCorporateConfig, getCorporateMailConfig, getCorporateOrigins } from 
 afterEach(() => vi.unstubAllEnvs());
 describe("Corporate intake configuration", () => {
   beforeEach(() => {
+  vi.stubEnv("TURNSTILE_ENABLED", "true");
     vi.stubEnv("CORPORATE_INTAKE_ENABLED", "true");
     vi.stubEnv("CORPORATE_EMAIL_ENABLED", "false");
     vi.stubEnv("TURNSTILE_SECRET_KEY", "test-secret");
@@ -53,4 +54,21 @@ describe("Corporate intake configuration", () => {
     vi.stubEnv("SITE_ORIGINS", origin);
     expect(getCorporateOrigins).toThrow("intake_unavailable");
   });
+
+it("allows an explicit diagnostic bypass without a Turnstile secret", () => {
+  vi.stubEnv("CORPORATE_INTAKE_ENABLED", "true");
+  vi.stubEnv("TURNSTILE_ENABLED", "false");
+  vi.stubEnv("TURNSTILE_SECRET_KEY", "");
+  expect(getCorporateConfig().TURNSTILE_SECRET_KEY).toBe("");
+  vi.stubEnv("CORPORATE_INTAKE_ENABLED", "false");
+  expect(() => getCorporateConfig()).toThrow("intake_unavailable");
+});
+
+it.each([undefined, "", "FALSE", "true"])("requires verification unless explicitly disabled: %s", flag => {
+  vi.stubEnv("CORPORATE_INTAKE_ENABLED", "true");
+  vi.stubEnv("TURNSTILE_ENABLED", flag);
+  vi.stubEnv("TURNSTILE_SECRET_KEY", "");
+  expect(() => getCorporateConfig()).toThrow("intake_unavailable");
+});
+
 });

@@ -26,12 +26,14 @@ export async function handleRegistration(request: Request) {
     const config = getRegistrationConfig();
     const key = idempotencyKeySchema.safeParse(request.headers.get("idempotency-key"));
     if (!key.success) throw new IntakeError(400, IntakeErrorCode.InvalidIdempotencyKey);
-    const parsed = submissionSchema.safeParse(await readJson(request));
+    const schema = config.TURNSTILE_SECRET_KEY ? submissionSchema
+      : submissionSchema.safeExtend({ turnstileToken: z.string().max(2048) });
+    const parsed = schema.safeParse(await readJson(request));
     if (!parsed.success) throw new IntakeError(400, IntakeErrorCode.InvalidSubmission);
     const { website, turnstileToken, ...answers } = parsed.data;
     if (website) throw new IntakeError(400, IntakeErrorCode.SubmissionRejected);
     // Every retry needs a fresh token; only accepted answers enter the payload hash.
-    await verifyTurnstile(turnstileToken, config.TURNSTILE_SECRET_KEY, origins, "workshop-registration");
+    if (config.TURNSTILE_SECRET_KEY) await verifyTurnstile(turnstileToken, config.TURNSTILE_SECRET_KEY, origins, "workshop-registration");
     const db = getDb();
     const { response, jobs } = await acceptRegistration(db, answers, key.data, config);
     // Delivery failures cannot undo an accepted registration and its saved message.

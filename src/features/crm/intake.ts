@@ -1,4 +1,5 @@
 import "@tanstack/react-start/server-only";
+import { z } from "zod";
 import { getDb } from "@/db";
 import { getCorporateConfig, getCorporateOrigins } from "./config";
 import { sendEmailJob } from "./email";
@@ -28,12 +29,14 @@ async function handlePost(request: Request, headers: Headers, origins: string[])
   const config = getCorporateConfig();
   const key = idempotencyKeySchema.safeParse(request.headers.get("idempotency-key"));
   if (!key.success) throw new IntakeError(400, IntakeErrorCode.InvalidIdempotencyKey);
-  const parsed = corporateInquirySubmissionSchema.safeParse(await readJson(request));
+  const schema = config.TURNSTILE_SECRET_KEY ? corporateInquirySubmissionSchema
+    : corporateInquirySubmissionSchema.safeExtend({ turnstileToken: z.string().max(2048) });
+  const parsed = schema.safeParse(await readJson(request));
   if (!parsed.success) throw new IntakeError(400, IntakeErrorCode.InvalidSubmission);
   const { website, turnstileToken, ...answers } = parsed.data;
   if (website) throw new IntakeError(400, IntakeErrorCode.SubmissionRejected);
   // Verify every attempt; a retry needs a fresh token, which is excluded from the saved hash.
-  await verifyCorporateTurnstile(turnstileToken, config.TURNSTILE_SECRET_KEY, origins);
+  if (config.TURNSTILE_SECRET_KEY) await verifyCorporateTurnstile(turnstileToken, config.TURNSTILE_SECRET_KEY, origins);
   const db = getDb();
   const jobs = await acceptCorporateInquiry(db, answers, key.data, config);
   if (config.CORPORATE_EMAIL_ENABLED) {

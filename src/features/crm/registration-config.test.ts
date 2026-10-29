@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 vi.mock("@tanstack/react-start/server-only", () => ({}));
 import { getRegistrationConfig, getRegistrationMailConfig } from "./config";
 beforeEach(() => {
+  vi.stubEnv("TURNSTILE_ENABLED", "true");
   vi.stubEnv("REGISTRATION_PAYMENT_ACCOUNT_ID", "12345678-abcd-4000-8000-123456789abc");
   vi.stubEnv("REGISTRATION_EMAIL_ENABLED", "false");
   vi.stubEnv("REGISTRATION_EMAIL_FROM", "Team <registrations@example.invalid>");
@@ -48,4 +49,20 @@ it.each(["bad", ""])("requires a selected payment account: %s", value => {
 it.each(["bad", "Injected\r\nBcc: other@company.test"])("rejects invalid sender headers", value => {
   vi.stubEnv("REGISTRATION_EMAIL_FROM", value);
   expect(() => getRegistrationMailConfig()).toThrow("intake_unavailable");
+});
+
+it("allows an explicit diagnostic bypass without a Turnstile secret", () => {
+  vi.stubEnv("REGISTRATION_INTAKE_ENABLED", "true");
+  vi.stubEnv("TURNSTILE_ENABLED", "false");
+  vi.stubEnv("TURNSTILE_SECRET_KEY", "");
+  expect(getRegistrationConfig().TURNSTILE_SECRET_KEY).toBe("");
+  vi.stubEnv("REGISTRATION_INTAKE_ENABLED", "false");
+  expect(() => getRegistrationConfig()).toThrow("intake_unavailable");
+});
+
+it.each([undefined, "", "FALSE", "true"])("requires verification unless explicitly disabled: %s", flag => {
+  vi.stubEnv("REGISTRATION_INTAKE_ENABLED", "true");
+  vi.stubEnv("TURNSTILE_ENABLED", flag);
+  vi.stubEnv("TURNSTILE_SECRET_KEY", "");
+  expect(() => getRegistrationConfig()).toThrow("intake_unavailable");
 });

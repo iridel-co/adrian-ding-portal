@@ -96,6 +96,18 @@ describe("Corporate public intake", () => {
     expect(sendEmailJob).not.toHaveBeenCalled();
   });
 
+  it("accepts without a token only when verification is explicitly disabled", async () => {
+    vi.mocked(getCorporateConfig).mockReturnValue({ ...getCorporateConfig(), TURNSTILE_SECRET_KEY: "" });
+    const body = { ...answers, turnstileToken: "" };
+    expect((await handleCorporateInquiry(request(body))).status).toBe(202);
+    expect(verifyCorporateTurnstile).not.toHaveBeenCalled();
+    expect(acceptCorporateInquiry).toHaveBeenCalledOnce();
+    vi.clearAllMocks();
+    expect((await handleCorporateInquiry(request({ ...body, consent: false }))).status).toBe(400);
+    expect((await handleCorporateInquiry(request({ ...body, website: "spam" }))).status).toBe(400);
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
   it("allows the expected preflight without bot, mail or database configuration", async () => {
     const response = await handleCorporateInquiry(new Request("https://portal.test/api/corporate-inquiries", {
       method: "OPTIONS", headers: { Origin: "https://website.test", "Access-Control-Request-Method": "POST",

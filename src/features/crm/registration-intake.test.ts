@@ -101,6 +101,18 @@ describe("Workshop public intake", () => {
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: "intake_unavailable" });
   });
+  it("accepts without a token only when verification is explicitly disabled", async () => {
+    vi.mocked(getRegistrationConfig).mockReturnValue({ ...getRegistrationConfig(), TURNSTILE_SECRET_KEY: "" });
+    const body = { ...answers, turnstileToken: "" };
+    expect((await handleRegistration(request(body))).status).toBe(202);
+    expect(verifyTurnstile).not.toHaveBeenCalled();
+    expect(acceptRegistration).toHaveBeenCalledOnce();
+    vi.clearAllMocks();
+    expect((await handleRegistration(request({ ...body, consent: false }))).status).toBe(400);
+    expect((await handleRegistration(request({ ...body, website: "spam" }))).status).toBe(400);
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
   it("handles preflight without intake configuration or database access", async () => {
     const response = await handleRegistration(new Request("https://portal.test/api/registrations", { method: "OPTIONS",
       headers: { Origin: "https://website.test", "Access-Control-Request-Method": "POST",
