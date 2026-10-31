@@ -148,13 +148,12 @@ function RegistrationRows({ items, search }: { items: RegistrationRow[]; search:
       <TableHead><Checkbox aria-label="Select all unpaid registrations on this page" disabled={!eligible.length}
         checked={chosen.length > 0 && chosen.length === eligible.length ? true : chosen.length ? "indeterminate" : false}
         onCheckedChange={checked => setSelected(checked === true ? eligible.map(item => item.id) : [])} /></TableHead>
-      <TableHead>Registrant</TableHead><TableHead>Reference</TableHead><TableHead>Status</TableHead><TableHead>Saved price</TableHead><TableHead>Submitted</TableHead><TableHead>Actions</TableHead>
+      <TableHead>Registrant</TableHead><TableHead>Status</TableHead><TableHead>Saved price</TableHead><TableHead>Submitted</TableHead><TableHead>Actions</TableHead>
     </TableRow></TableHeader>
     <TableBody>{items.map(item => <TableRow key={item.id}>
       <TableCell><Checkbox aria-label={`Select ${item.reference}`} disabled={item.isPaid || !!item.cancelledAt}
         checked={chosen.some(row => row.id === item.id)} onCheckedChange={checked => toggle(item.id, checked === true)} /></TableCell>
       <TableCell className="whitespace-normal py-4"><Link to="/registrations/$id" params={{ id: item.id }} search={search} className="font-medium underline underline-offset-4">{item.fullName}</Link><p className="mt-1 break-all text-xs text-muted-foreground">{item.email}</p><p className="mt-1 text-xs text-muted-foreground">{item.phone}</p></TableCell>
-      <TableCell>{item.reference}</TableCell>
       <TableCell><RegistrationStatus isPaid={item.isPaid} cancelledAt={item.cancelledAt} /></TableCell>
       <TableCell>{formatPesos(item.priceCentavos)}</TableCell><TableCell>{formatCrmTime(item.createdAt)}</TableCell>
       <TableCell>{!item.isPaid && !item.cancelledAt && <div className="flex gap-2">

@@ -85,11 +85,13 @@ describe("Workshop run workspace", () => {
     expect(harness.query.mock.calls[1][0]).toMatchObject({ enabled: true,
       queryKey: ["workshop-registrations", "list", { workshopSessionId: sessionId, filter: "all", search: "", offset: 0, limit: 5 }] });
     for (const value of ["Practical Selling", "Training Room", "Cebu", "Manila time", "Recent registrations", "18 / 20",
-      "Reserved capacity", "AD-PSW-0001", "Cancelled", "₱6,500", "alice@example.invalid"])
+      "Reserved capacity", "Cancelled", "₱6,500", "alice@example.invalid"])
       expect(html).toContain(value);
     expect(html).toContain("aria-valuenow=\"90\"");
     expect(html).toContain("&lt;script&gt;unsafe&lt;/script&gt;");
     expect(html).toContain("/registrations/$id");
+    expect(html).not.toContain(">Reference</th>");
+    expect(html).not.toContain(">AD-PSW-0001</td>");
     expect(html).not.toContain("Page 2");
   });
   it("clamps empty, full and over-capacity bars while retaining actual counts", () => {
