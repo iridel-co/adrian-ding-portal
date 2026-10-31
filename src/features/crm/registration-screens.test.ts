@@ -5,14 +5,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { z } from "zod";
 
 const harness = vi.hoisted(() => ({
-  result: {} as Record<string, unknown>, search: { when: "upcoming", offset: 0 },
-  access: vi.fn(), list: vi.fn(), navigate: vi.fn(), refetch: vi.fn()
+
+  result: {} as Record<string, unknown>, search: { when: "upcoming", offset: 0, limit: 50 },
+  query: vi.fn(), access: vi.fn(), list: vi.fn(), navigate: vi.fn(), refetch: vi.fn()
 }));
 vi.mock("./functions", () => ({ $crmAccess: harness.access, $listRegistrationSessions: harness.list,
   $listInquiries: vi.fn(), $getInquiry: vi.fn() }));
 vi.mock("@tanstack/react-query", async original => ({
   ...await original<typeof import("@tanstack/react-query")>(),
-  useQuery: () => harness.result,
+  useQuery: (options: unknown) => { harness.query(options); return harness.result; },
   useQueryClient: () => ({ clear: vi.fn() })
 }));
 vi.mock("@tanstack/react-router", () => ({
@@ -26,6 +27,7 @@ import { Route as GuardRoute } from "@/routes/_app/registrations";
 import { Route as ListRoute } from "@/routes/_app/registrations/index";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { CrmTablePagination } from "@/components/crm/table-pagination";
 import { Button } from "@/components/ui/button";
 import { registrationSessionsQueryOptions } from "./registration-queries";
 
@@ -41,7 +43,11 @@ const tree = () => (Component as () => ReactElement<Record<string, unknown>>)();
 function findButton(node: ReactNode, label: string): ReactElement<Record<string, unknown>> | undefined {
   for (const child of Children.toArray(node)) {
     if (!isValidElement<Record<string, unknown>>(child)) continue;
-    if (child.type === Button && child.props.children === label) return child;
+    if (child.type === Button && (child.props.children === label || child.props["aria-label"] === `${label} page`)) return child;
+    if (child.type === CrmTablePagination) {
+      const found = findButton(CrmTablePagination(child.props as Parameters<typeof CrmTablePagination>[0]), label);
+      if (found) return found;
+    }
     const found = findButton(child.props.children as ReactNode, label);
     if (found) return found;
   }
@@ -49,12 +55,13 @@ function findButton(node: ReactNode, label: string): ReactElement<Record<string,
 const click = (button: ReactElement<Record<string, unknown>>) => (button.props.onClick as () => void)();
 beforeEach(() => {
   vi.clearAllMocks();
-  harness.search = { when: "upcoming", offset: 0 };
+  harness.search = { when: "upcoming", offset: 0, limit: 50 };
   harness.result = { isPending: false, isError: false, isFetching: false, error: null,
     data: { items: [run], hasMore: true }, refetch: harness.refetch };
 });
 
 describe("Workshop run list", () => {
+
   it("shows run context, independent seat/payment counts and safely escaped titles", () => {
     const html = render();
     for (const value of ["Workshop registrations", "PSW", "Jan 12, 2027", "Jan 13, 2027", "Training Room", "Cebu",
@@ -80,19 +87,26 @@ describe("Workshop run list", () => {
     }
   });
   it("keeps filters/page in navigation state and resets pagination when dates change", () => {
-    harness.search = { when: "past", offset: 100 };
+    harness.search = { when: "past", offset: 100, limit: 50 };
     const page = tree();
     click(findButton(page.props.filters as ReactNode, "All dates")!);
-    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { when: "all", offset: 0 } });
+    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { when: "all", offset: 0, limit: 50 } });
     click(findButton(page, "Next")!);
-    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { when: "past", offset: 150 } });
+    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { when: "past", offset: 150, limit: 50 } });
     click(findButton(page, "Previous")!);
-    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { when: "past", offset: 50 } });
+    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { when: "past", offset: 50, limit: 50 } });
     click(page.props.action as ReactElement<Record<string, unknown>>);
     expect(harness.refetch).toHaveBeenCalledOnce();
   });
+  it("uses the chosen size for run queries and pagination navigation", () => {
+    harness.search = { when: "past", offset: 20, limit: 10 };
+    const page = tree();
+    expect(harness.query.mock.calls[0][0].queryKey[2]).toEqual({ when: "past", offset: 20, limit: 10 });
+    click(findButton(page, "Next")!);
+    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { when: "past", offset: 30, limit: 10 } });
+  });
   it("makes date filters visible and labels past runs independently of run status", () => {
-    harness.search = { when: "past", offset: 0 };
+    harness.search = { when: "past", offset: 0, limit: 50 };
     expect(render()).toContain("Past workshop runs");
     expect(findButton(tree().props.filters as ReactNode, "Past")!.props["aria-pressed"]).toBe(true);
     expect(findButton(tree().props.filters as ReactNode, "Upcoming")!.props["aria-pressed"]).toBe(false);
@@ -119,9 +133,9 @@ describe("Workshop run list", () => {
   });
   it("normalizes URL page offsets and defaults to Upcoming without accepting arbitrary date filters", () => {
     const schema = ListRoute.options.validateSearch as z.ZodType;
-    expect(schema.parse({})).toEqual({ when: "upcoming", offset: 0 });
-    expect(schema.parse({ when: "all", offset: "79" })).toEqual({ when: "all", offset: 50 });
-    for (const offset of [-1, "bad", 100001]) expect(schema.parse({ when: "past", offset })).toEqual({ when: "past", offset: 0 });
+    expect(schema.parse({})).toEqual({ when: "upcoming", offset: 0, limit: 25 });
+    expect(schema.parse({ when: "all", offset: "79", limit: 50 })).toEqual({ when: "all", offset: 50, limit: 50 });
+    for (const offset of [-1, "bad", 100001]) expect(schema.parse({ when: "past", offset })).toEqual({ when: "past", offset: 0, limit: 25 });
     expect(schema.safeParse({ when: "arbitrary" }).success).toBe(false);
   });
 });

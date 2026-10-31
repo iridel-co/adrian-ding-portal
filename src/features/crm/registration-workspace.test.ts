@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { z } from "zod";
 
 const harness = vi.hoisted(() => ({
-  search: { tab: "overview", filter: "paid", search: "Alice", offset: 50, runWhen: "past", runOffset: 100 },
+
+  search: { tab: "overview", filter: "paid", search: "Alice", offset: 50, limit: 50, runLimit: 50, runWhen: "past", runOffset: 100 },
   summary: {} as Record<string, unknown>, list: {} as Record<string, unknown>,
   navigate: vi.fn(), summaryRefresh: vi.fn(), listRefresh: vi.fn(), query: vi.fn(), get: vi.fn(), registrations: vi.fn()
 }));
@@ -24,9 +25,10 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: ReactNode; to: string }) => createElement("a", { href: to }, children)
 }));
 import { Route } from "@/routes/_app/registrations/sessions/$sessionId";
+import { CrmTablePagination } from "@/components/crm/table-pagination";
 import { Button } from "@/components/ui/button";
-import { Tabs } from "@/components/ui/tabs";
 import { FilterSelect } from "@/components/cms/content-list-page";
+import { Tabs } from "@/components/ui/tabs";
 import { registrationSessionQueryOptions, registrationsQueryOptions } from "./registration-queries";
 
 const sessionId = "12345678-abcd-4000-8000-123456789abc";
@@ -51,19 +53,24 @@ function tree() {
 function find(node: ReactNode, type: unknown, label?: string): ReactElement<Record<string, unknown>> | undefined {
   for (const child of Children.toArray(node)) {
     if (!isValidElement<Record<string, unknown>>(child)) continue;
-    if (child.type === type && (!label || child.props.children === label)) return child;
+    if (child.type === type && (!label || child.props.children === label || child.props["aria-label"] === `${label} page`)) return child;
+    if (child.type === CrmTablePagination) {
+      const found = find(CrmTablePagination(child.props as Parameters<typeof CrmTablePagination>[0]), type, label);
+      if (found) return found;
+    }
     const result = find(child.props.children as ReactNode, type, label);
     if (result) return result;
   }
 }
 beforeEach(() => {
   vi.clearAllMocks();
-  harness.search = { tab: "overview", filter: "paid", search: "Alice", offset: 50, runWhen: "past", runOffset: 100 };
+  harness.search = { tab: "overview", filter: "paid", search: "Alice", offset: 50, limit: 50, runLimit: 50, runWhen: "past", runOffset: 100 };
   harness.summary = { data: structuredClone(run), isError: false, isPending: false, isFetching: false, error: null, refetch: harness.summaryRefresh };
   harness.list = { data: { items: [item], hasMore: true }, isError: false, isPending: false, isFetching: false, error: null, refetch: harness.listRefresh };
 });
 
 describe("Workshop run workspace", () => {
+
   it("offers row and bulk actions for unpaid registrations only", () => {
     harness.search.tab = "registrations";
     harness.list.data = { items: [
@@ -107,9 +114,9 @@ describe("Workshop run workspace", () => {
     harness.list.isError = true; harness.list.error = new Error("crm_unavailable");
     let html = render();
     expect(html).toContain("18 / 20"); expect(html).toContain("Try again");
-    expect(html).not.toContain("alice@example.invalid"); expect(html).not.toContain("No registrations for this run yet");
+    expect(html).not.toContain("alice@example.invalid"); expect(html).not.toContain("No registrations for this workshop run yet");
     harness.list.isError = false; harness.list.error = null; harness.list.data = { items: [], hasMore: false };
-    expect(render()).toContain("No registrations for this run yet");
+    expect(render()).toContain("No registrations for this workshop run yet");
     harness.summary.isError = true; harness.summary.error = new Error("registration_session_not_found");
     html = render();
     expect(html).toContain("This workshop run could not be found"); expect(html).not.toContain("Practical Selling");
@@ -139,7 +146,7 @@ describe("Workshop run workspace", () => {
     expect(harness.summaryRefresh).toHaveBeenCalledOnce(); expect(harness.listRefresh).toHaveBeenCalledOnce();
     const top = Children.toArray(page.props.children as ReactNode)[0] as ReactElement<{ children: ReactNode }>;
     const back = Children.toArray(top.props.children)[0] as ReactElement<{ search: unknown }>;
-    expect(back.props.search).toEqual({ when: "past", offset: 100 });
+    expect(back.props.search).toEqual({ when: "past", offset: 100, limit: 50 });
   });
   it("uses the scoped full-list query and resets page on search and filter changes", () => {
     harness.search.tab = "registrations";
@@ -162,6 +169,19 @@ describe("Workshop run workspace", () => {
     (find(page, Button, "Previous")!.props.onClick as () => void)();
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, offset: 0 } });
   });
+
+  it("queries the selected page size and keeps filters when the pagination changes", () => {
+    harness.search.tab = "registrations";
+    harness.search.limit = 10;
+    harness.search.offset = 20;
+    const page = tree();
+    expect(harness.query.mock.calls[1][0].queryKey[2]).toEqual({
+      workshopSessionId: sessionId, filter: "paid", search: "Alice", offset: 20, limit: 10
+    });
+    const controls = find(page, CrmTablePagination)!;
+    (controls.props.onChange as (value: object) => void)({ limit: 25, offset: 0 });
+    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, limit: 25, offset: 0 } });
+  });
   it("handles empty full lists and disables paging at boundaries and while fetching", () => {
     harness.search.tab = "registrations"; harness.search.offset = 0;
     harness.list.data = { items: [], hasMore: false };
@@ -177,9 +197,9 @@ describe("Workshop run workspace", () => {
   });
   it("validates direct-link defaults and URL state without arbitrary tabs or filters", () => {
     const schema = Route.options.validateSearch as z.ZodType;
-    expect(schema.parse({})).toEqual({ tab: "overview", filter: "active", search: "", offset: 0, runWhen: "upcoming", runOffset: 0 });
+    expect(schema.parse({})).toEqual({ tab: "overview", filter: "active", search: "", offset: 0, limit: 25, runLimit: 25, runWhen: "upcoming", runOffset: 0 });
     expect(schema.parse({ tab: "registrations", search: " Alice ", offset: "79", runWhen: "past", runOffset: "129" }))
-      .toMatchObject({ search: "Alice", offset: 50, runWhen: "past", runOffset: 100 });
+      .toMatchObject({ search: "Alice", offset: 75, limit: 25, runLimit: 25, runWhen: "past", runOffset: 125 });
     for (const offset of [-1, "bad", 100001]) expect(schema.parse({ offset })).toMatchObject({ offset: 0 });
     for (const invalid of [{ tab: "bad" }, { filter: "bad" }, { search: "x".repeat(201) }]) expect(schema.safeParse(invalid).success).toBe(false);
   });

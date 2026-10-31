@@ -6,6 +6,7 @@ import { InquiryActions, type InquiryDraft } from "@/components/crm/inquiry-acti
 import { InquiryEmails } from "@/components/crm/inquiry-emails";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { inquirySearchSchema } from "@/features/crm/inquiry-navigation";
 import { inquiryQueryOptions } from "@/features/crm/queries";
 import { formatCrmTime, inquiryStatusLabels, isInquiryOverdue } from "@/features/crm/presentation";
 import { formatDate, formatDateRange } from "@/features/shared/format";
@@ -13,6 +14,7 @@ import { formatPesos } from "@/features/shared/money";
 import type { $getInquiry } from "@/features/crm/functions";
 
 export const Route = createFileRoute("/_app/inquiries/$id")({
+  validateSearch: inquirySearchSchema,
   head: () => ({ meta: [{ title: "Corporate inquiry" }] }),
   component: InquiryPage
 });
@@ -23,13 +25,14 @@ function InquiryPage() {
 }
 
 function InquiryDetail({ id }: { id: string }) {
+  const search = Route.useSearch();
   const [offset, setOffset] = useState(0);
   // Keep entered values if a failed refresh temporarily hides the detail panels.
   const [draft, setDraft] = useState<InquiryDraft>({ selected: null, expectedStatus: "NEW", value: null, reason: "", validation: "" });
   const result = useQuery(inquiryQueryOptions(id, offset));
   const inquiry = result.data;
   return <div className="mx-auto flex max-w-5xl flex-col gap-6">
-    <div className="flex items-center justify-between gap-3"><Link to="/inquiries" search={{ status: "all", search: "", offset: 0 }} className="text-sm underline underline-offset-4">Back to inquiries</Link><Button variant="outline" disabled={result.isFetching} onClick={() => void result.refetch()}>Refresh</Button></div>
+    <div className="flex items-center justify-between gap-3"><Link to="/inquiries" search={search} className="text-sm underline underline-offset-4">Back to inquiries</Link><Button variant="outline" disabled={result.isFetching} onClick={() => void result.refetch()}>Refresh</Button></div>
     <CrmReadState pending={result.isPending} error={result.error} retry={() => void result.refetch()} />
     {!result.isError && inquiry && <>
       <header><h1 className="font-display text-4xl break-words">{inquiry.company}</h1><p className="mt-2">{inquiry.program}</p><div className="mt-3 flex flex-wrap gap-2"><Badge variant="secondary">{inquiryStatusLabels[inquiry.status]}</Badge>{isInquiryOverdue(inquiry) && <Badge variant="destructive">First reply overdue</Badge>}</div><p className="mt-2 text-xs text-muted-foreground break-all">Inquiry ID: {inquiry.id}</p></header>

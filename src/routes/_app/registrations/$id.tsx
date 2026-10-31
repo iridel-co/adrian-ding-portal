@@ -49,7 +49,7 @@ function RegistrationDetail({ id }: { id: string }) {
   const showRegistration = !result.isError && !error && !!registration;
   return <div className="mx-auto flex max-w-5xl flex-col gap-6">
     <div className="flex items-center justify-between gap-3">
-      <Link to="/registrations" search={{ when: search.runWhen, offset: search.runOffset }} className="text-sm underline underline-offset-4">Workshop runs</Link>
+      <Link to="/registrations" search={{ when: search.runWhen, offset: search.runOffset, limit: search.runLimit }} className="text-sm underline underline-offset-4">Workshop runs</Link>
       <Button variant="outline" disabled={result.isFetching} onClick={refresh}>Refresh</Button>
     </div>
     <CrmReadState pending={result.isPending && !actionAccessError} error={error}

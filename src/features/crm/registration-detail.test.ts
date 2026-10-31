@@ -30,7 +30,7 @@ vi.mock("sonner", () => ({ toast: { success: harness.toast } }));
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: object) => ({ options,
     useParams: () => ({ id: "12345678-abcd-4000-8000-123456789abc" }),
-    useSearch: () => ({ tab: "registrations", filter: "paid", search: "Alice", offset: 50, runWhen: "past", runOffset: 100 }) }),
+    useSearch: () => ({ tab: "registrations", filter: "paid", search: "Alice", offset: 50, limit: 25, runLimit: 10, runWhen: "past", runOffset: 100 }) }),
   Link: ({ children, to, search, params }: { children: ReactNode; to: string; search: unknown; params: unknown }) =>
     createElement("a", { href: to, "data-search": JSON.stringify(search), "data-params": JSON.stringify(params) }, children)
 }));

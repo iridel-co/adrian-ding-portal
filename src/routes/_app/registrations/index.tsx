@@ -1,21 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
+import { CrmTablePagination } from "@/components/crm/table-pagination";
 import { ContentListPage, EmptyState } from "@/components/cms/content-list-page";
 import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { CrmReadState } from "@/components/crm/read-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { crmPaginationSearchSchema } from "@/features/crm/pagination";
 import { registrationErrorMessage } from "@/features/crm/registration-presentation";
 import { registrationSessionsQueryOptions } from "@/features/crm/registration-queries";
 import { registrationSessionListSchema } from "@/features/crm/registration-staff-schemas";
 import { formatDateRange, formatTimeRange } from "@/features/shared/format";
 import { hasSessionEnded } from "@/features/shared/time";
 
-const searchSchema = registrationSessionListSchema.pick({ when: true }).extend({
-  offset: z.coerce.number().int().min(0).max(100000).catch(0).transform(offset => Math.floor(offset / 50) * 50)
-});
+const searchSchema = registrationSessionListSchema.pick({ when: true }).and(crmPaginationSearchSchema);
 const whenOptions: { value: z.output<typeof searchSchema>["when"]; label: string }[] = [
   { value: "upcoming", label: "Upcoming" }, { value: "past", label: "Past" }, { value: "all", label: "All dates" }
 ];
@@ -29,7 +29,7 @@ export const Route = createFileRoute("/_app/registrations/")({
 function RegistrationRunsPage() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const runs = useQuery(registrationSessionsQueryOptions({ ...search, limit: 50 }));
+  const runs = useQuery(registrationSessionsQueryOptions(search));
   return <ContentListPage title="Workshop registrations" description="Reserved seats and payment counts for each workshop run. All dates and times are in Manila."
     action={<Button variant="outline" disabled={runs.isFetching} onClick={() => void runs.refetch()}>Refresh</Button>}
     filters={<div role="group" aria-label="Workshop run dates" className="flex flex-wrap gap-2">
@@ -50,7 +50,7 @@ function RegistrationRunsPage() {
           <TableBody>{runs.data.items.map(run => <TableRow key={run.id}>
             <TableCell className="whitespace-normal py-5">
               <Link to="/registrations/sessions/$sessionId" params={{ sessionId: run.id }}
-                search={{ tab: "overview", filter: "active", search: "", offset: 0, runWhen: search.when, runOffset: search.offset }}
+                search={{ tab: "overview", filter: "active", search: "", offset: 0, runWhen: search.when, runOffset: search.offset, runLimit: search.limit }}
                 className="font-medium underline underline-offset-4">{run.workshopTitle}</Link>
               <p className="mt-1 text-xs text-muted-foreground">{run.courseCode || "No course code"}</p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -65,11 +65,9 @@ function RegistrationRunsPage() {
           </TableRow>)}</TableBody>
         </Table>
       </>}
-      <div className="flex items-center justify-between gap-3"><Button variant="outline" disabled={search.offset === 0 || runs.isFetching}
-        onClick={() => void navigate({ search: { ...search, offset: Math.max(0, search.offset - 50) } })}>Previous</Button>
-        <p className="text-sm" aria-live="polite">Page {Math.floor(search.offset / 50) + 1}</p>
-        <Button variant="outline" disabled={!runs.data.hasMore || runs.isFetching || search.offset >= 100000}
-          onClick={() => void navigate({ search: { ...search, offset: search.offset + 50 } })}>Next</Button></div>
+      <CrmTablePagination limit={search.limit} offset={search.offset} count={runs.data.items.length}
+        hasMore={runs.data.hasMore} fetching={runs.isFetching}
+        onChange={page => void navigate({ search: { ...search, ...page } })} />
     </>}
   </ContentListPage>;
 }

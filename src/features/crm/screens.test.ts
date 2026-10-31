@@ -2,17 +2,18 @@ import { Children, createElement, isValidElement, type ReactElement, type ReactN
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const harness = vi.hoisted(() => ({ result: {} as Record<string, unknown>, access: vi.fn(), navigate: vi.fn(), mutate: vi.fn(), invalidate: vi.fn(), mutationError: null as Error | null }));
+const harness = vi.hoisted(() => ({
+ result: {} as Record<string, unknown>, query: vi.fn(), search: { status: "all", search: "", offset: 0, limit: 50 }, access: vi.fn(), navigate: vi.fn(), mutate: vi.fn(), invalidate: vi.fn(), mutationError: null as Error | null }));
 vi.mock("./functions", () => ({ $crmAccess: harness.access, $listInquiries: vi.fn(), $getInquiry: vi.fn(), $changeInquiry: vi.fn(), $retryInquiryEmail: vi.fn() }));
 vi.mock("@tanstack/react-query", async original => ({
   ...await original<typeof import("@tanstack/react-query")>(),
-  useQuery: () => harness.result,
+  useQuery: (options: unknown) => { harness.query(options); return harness.result; },
   useQueryClient: () => ({ invalidateQueries: harness.invalidate }),
   useMutation: () => ({ isPending: false, error: harness.mutationError, reset: vi.fn(), mutate: harness.mutate })
 }));
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: object) => ({ options, useParams: () => ({ id: "12345678-abcd-4000-8000-123456789abc" }),
-    useSearch: () => ({ status: "all", search: "", offset: 0 }), useNavigate: () => harness.navigate }),
+    useSearch: () => harness.search, useNavigate: () => harness.navigate }),
   Link: ({ children }: { children: import("react").ReactNode }) => createElement("a", {}, children),
   redirect: (options: object) => ({ redirect: true, ...options })
 }));
@@ -36,9 +37,16 @@ const inquiry = {
   ]
 };
 const render = (route: typeof ListRoute | typeof DetailRoute) => renderToStaticMarkup(createElement(route.options.component as ComponentType));
-beforeEach(() => { harness.result = { isPending: false, isError: false, isFetching: false, error: null }; harness.access.mockReset(); harness.mutate.mockReset(); harness.mutationError = null; });
+beforeEach(() => { harness.search = { status: "all", search: "", offset: 0, limit: 50 }; harness.query.mockClear(); harness.result = { isPending: false, isError: false, isFetching: false, error: null }; harness.access.mockReset(); harness.mutate.mockReset(); harness.mutationError = null; });
 
 describe("Staff inquiry screens", () => {
+
+  it("uses the chosen page size and offset for inquiry queries", () => {
+    harness.search = { status: "WON", search: "Company", offset: 20, limit: 10 };
+    harness.result.data = { items: [inquiry], hasMore: true };
+    render(ListRoute);
+    expect(harness.query.mock.calls[0][0].queryKey[2]).toEqual(harness.search);
+  });
   it("shows list fields and overdue state", () => {
     harness.result.data = { items: [inquiry], hasMore: false };
     const html = render(ListRoute);
