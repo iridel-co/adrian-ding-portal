@@ -45,7 +45,7 @@ export async function acceptRegistration(db: DbOrTx, data: RegistrationInput, ke
     const [saved] = await tx.insert(registration).values({ ...answers, reference, idempotencyKey: key, payloadHash: hash,
       priceCentavos: session.priceCentavos, consentAt: acceptedAt, createdAt: acceptedAt }).returning({ id: registration.id });
     await tx.insert(crmSubmissionKey).values({ key, payloadHash: hash, registrationId: saved.id });
-    const payload = registrationPaymentMessage(config, { ...data, reference, priceCentavos: session.priceCentavos },
+    const payload = await registrationPaymentMessage(config, { ...data, reference, priceCentavos: session.priceCentavos },
       course, session, destination.account, qrUrl, attachment);
     if (config.REGISTRATION_EMAIL_ENABLED && registrationMessageHasPlaceholders(payload)) {
       throw new IntakeError(503, IntakeErrorCode.EmailUnavailable);

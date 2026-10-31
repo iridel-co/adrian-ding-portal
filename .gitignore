@@ -11,3 +11,5 @@ dist
 *.log
 .DS_Store
 .dev.vars
+
+.react-email

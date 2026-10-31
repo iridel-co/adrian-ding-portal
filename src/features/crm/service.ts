@@ -26,7 +26,7 @@ export async function acceptCorporateInquiry(db: DbOrTx, data: CorporateInquiryI
     const { consent: _consent, ...answers } = data;
     const [saved] = await tx.insert(corporateInquiry).values({ ...answers, idempotencyKey: key, payloadHash: hash,
       createdAt: now, slaDueAt: inquiryDeadline(now) }).returning({ id: corporateInquiry.id });
-    const messages = corporateMessages(data, saved.id, config);
+    const messages = await corporateMessages(data, saved.id, config);
     const jobs = await tx.insert(crmEmailJob).values([
       { corporateInquiryId: saved.id, kind: CrmEmailKind.CorporateAcknowledgment, payload: messages.acknowledgment },
       { corporateInquiryId: saved.id, kind: CrmEmailKind.CorporateNotification, payload: messages.notification }

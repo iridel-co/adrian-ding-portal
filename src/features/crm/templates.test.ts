@@ -10,24 +10,24 @@ const config = { EMAIL_FROM: "Team <team@example.invalid>", EMAIL_REPLY_TO: "sal
   CORPORATE_INQUIRY_RECIPIENTS: ["primary@example.invalid", "secondary@example.invalid"],
   CORPORATE_PORTAL_URL: "https://portal.test", CORPORATE_TEAM_PHONE: "[TEAM_PHONE]", CORPORATE_CREDIBILITY_LINE: "[APPROVED_CREDIBILITY_LINE]" };
 
-describe("Corporate E3 and N3 email content", () => {
-  it("blocks old placeholder snapshots but permits ordinary brackets in submitted text", () => {
-    expect(corporateMessageHasPlaceholders(corporateMessages(data, "id", config).notification)).toBe(true);
+describe("Corporate E3 and N3 email content", async () => {
+  it("blocks old placeholder snapshots but permits ordinary brackets in submitted text", async () => {
+    expect(corporateMessageHasPlaceholders((await corporateMessages(data, "id", config)).notification)).toBe(true);
     const message = { from: "team@company.test", to: ["lead@company.test"], replyTo: "sales@company.test",
       subject: "Inquiry", text: "Context: training [team A]", html: "training [team A]" };
     expect(corporateMessageHasPlaceholders(message)).toBe(false);
     expect(corporateMessageHasPlaceholders({ ...message, text: "Call [TEAM_PHONE]" })).toBe(true);
   });
-  it("acknowledges the programme, attendees, date range and venue with the response promise and placeholders", () => {
-    const { acknowledgment } = corporateMessages(data, "inquiry-id", config);
+  it("acknowledges the programme, attendees, date range and venue with the response promise and placeholders", async () => {
+    const { acknowledgment } = await corporateMessages(data, "inquiry-id", config);
     for (const text of ["two business days", "Manila time", "Leadership", "16 to 30", "2027-01-12 to 2027-01-14",
       "Our office", "[TEAM_PHONE]", "[APPROVED_CREDIBILITY_LINE]"]) expect(acknowledgment.text).toContain(text);
     expect(acknowledgment.to).toEqual([data.email]);
     expect(acknowledgment.replyTo).toBe("sales@example.invalid");
     expect(acknowledgment.html).toContain("Test &lt;Lead&gt;");
   });
-  it("notifies both staff recipients with all answers, a staff link and escaped HTML", () => {
-    const { notification } = corporateMessages(data, "inquiry-id", config);
+  it("notifies both staff recipients with all answers, a staff link and escaped HTML", async () => {
+    const { notification } = await corporateMessages(data, "inquiry-id", config);
     expect(notification.to).toEqual(config.CORPORATE_INQUIRY_RECIPIENTS);
     for (const text of [data.fullName, data.email, data.phone, data.company, data.role, data.program,
       data.attendees, data.venue, data.context!, "Communication", "https://portal.test/inquiries/inquiry-id"])
@@ -35,22 +35,39 @@ describe("Corporate E3 and N3 email content", () => {
     expect(notification.html).not.toContain("<script>");
     expect(notification.html).toContain("&lt;script&gt;");
   });
-  it("preserves a rough date description instead of inventing a date", () => {
-    const { acknowledgment } = corporateMessages({ ...data, targetDateFrom: null, targetDateTo: null,
+  it("preserves a rough date description instead of inventing a date", async () => {
+    const { acknowledgment } = await corporateMessages({ ...data, targetDateFrom: null, targetDateTo: null,
       targetDateText: "Not fixed yet; next quarter" }, "id", config);
     expect(acknowledgment.text).toContain("Not fixed yet; next quarter");
     expect(acknowledgment.text).not.toContain("2027-01-12");
   });
 });
 
-it("sends N4 only to both staff with an escaped inquiry summary and Manila deadline", () => {
+it("sends N4 only to both staff with an escaped inquiry summary and Manila deadline", async () => {
   const inquiry = { id: "inquiry-id", fullName: data.fullName, company: data.company, program: data.program,
     slaDueAt: new Date("2026-10-20T02:00:00Z") };
-  const message = corporateOverdueMessage(inquiry, config);
+  const message = await corporateOverdueMessage(inquiry, config);
   expect(message.to).toEqual(config.CORPORATE_INQUIRY_RECIPIENTS);
   expect(message.to).not.toContain(data.email);
   expect(message.text).toContain("Manila time");
   expect(message.text).toContain("https://portal.test/inquiries/inquiry-id");
   expect(message.html).toContain("Test &lt;Lead&gt;");
   expect(message.subject).toContain("overdue");
+});
+
+it("uses the website theme for customers and the portal theme for internal mail", async () => {
+  const { acknowledgment, notification } = await corporateMessages(data, "theme-inquiry", config);
+  expect(acknowledgment.html).toContain("#980f09");
+  expect(acknowledgment.html).toContain("We received your inquiry.");
+  expect(acknowledgment.html).not.toContain("PORTAL / CRM");
+  expect(notification.html).toContain("PORTAL / CRM");
+  expect(notification.html).toContain("#1a1715");
+  expect(notification.html).toContain('href="https://portal.test/inquiries/theme-inquiry"');
+  for (const value of [data.company.replace("&", "&amp;"), data.program, data.attendees, data.venue, "theme-inquiry"])
+    expect(notification.html).toContain(value);
+  const reminder = await corporateOverdueMessage({ id: "theme-inquiry", fullName: data.fullName,
+    company: data.company, program: data.program, slaDueAt: new Date("2026-10-20T02:00:00Z") }, config);
+  expect(reminder.html).toContain("PORTAL / CRM");
+  expect(reminder.html).toContain("Manila time");
+  expect(reminder.html).toContain("Review overdue inquiry");
 });

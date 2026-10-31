@@ -151,7 +151,7 @@ export async function changeRegistration(db: Db, actor: PortalActor, input: z.ou
       if (existing) {
         if ([CrmEmailState.Pending, CrmEmailState.Failed, CrmEmailState.Sending].some(state => state === existing.state)) jobs.push(existing.id);
       } else {
-        const payload = registrationAcknowledgmentMessage(config,
+        const payload = await registrationAcknowledgmentMessage(config,
           { ...after, paidAmountCentavos: input.paidAmountCentavos }, course, session);
         if (config.REGISTRATION_EMAIL_ENABLED && registrationMessageHasPlaceholders(payload)) {
           throw new IntakeError(503, IntakeErrorCode.EmailUnavailable);

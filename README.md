@@ -88,6 +88,17 @@ and locally verified. See the [integration handoff](docs/crm/REGISTRATION-HANDOF
 for the website developer and staging rollout. See [the step 1 review](docs/crm/STEP-1-REVIEW.md)
 and [implementation plan](docs/crm/WORKSHOP-REGISTRATION-PLAN.md).
 
+## Email previews
+
+```bash
+pnpm emails:dev
+```
+
+Open [localhost:3001](http://localhost:3001) to preview all five CRM emails with
+sample data. Changes to the actual templates and shared email layout refresh
+automatically. This preview does not need the database or email credentials and
+does not send emails. The QR image is a preview placeholder.
+
 ## Corporate inquiries
 
 `POST /api/corporate-inquiries` accepts a JSON inquiry, a UUID v4
