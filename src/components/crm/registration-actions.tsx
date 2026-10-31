@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, type Dispatch, type SetStateAction } from "react";
 import { toast } from "sonner";
-import { MoneyField } from "@/components/cms/money-field";
+import { RegistrationPaymentFields } from "./registration-payment-fields";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,23 +11,13 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { paymentMethod } from "@/db/schema/payments";
 import { IntakeErrorCode } from "@/features/crm/errors";
 import { $changeRegistration, type $getRegistration } from "@/features/crm/functions";
 import { formatCrmTime, isCrmAccessError } from "@/features/crm/presentation";
 import {
   emptyRegistrationDraft,
-  paymentMethodLabels,
   registrationErrorMessage,
   type RegistrationDraft
 } from "@/features/crm/registration-presentation";
@@ -36,7 +26,6 @@ import {
   RegistrationAction,
   registrationActionSchema
 } from "@/features/crm/registration-staff-schemas";
-import { formatPesos } from "@/features/shared/money";
 
 const actionMessages: Record<
   RegistrationAction,
@@ -219,64 +208,7 @@ export function RegistrationActions({
             <fieldset disabled={change.isPending} className="space-y-4">
               {markPaid ? (
                 <>
-                  <p className="text-sm">
-                    Saved registration price: {formatPesos(registration.priceCentavos)}
-                  </p>
-                  <div className="space-y-2">
-                    <Label htmlFor="registration-payment-method">Payment method</Label>
-                    <Select
-                      required
-                      value={draft.paymentMethod}
-                      onValueChange={(value) => {
-                        const method = paymentMethod.enumValues.find((method) => method === value);
-                        if (method) updateDraft({ paymentMethod: method });
-                      }}
-                    >
-                      <SelectTrigger id="registration-payment-method">
-                        <SelectValue placeholder="Select payment method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {paymentMethod.enumValues.map((method) => (
-                          <SelectItem key={method} value={method}>
-                            {paymentMethodLabels[method]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="registration-paid-amount">Verified amount in pesos</Label>
-                    <MoneyField
-                      key={`${registration.id}-${draft.expectedUpdatedAt}`}
-                      id="registration-paid-amount"
-                      value={draft.amount}
-                      onChange={(amount) => updateDraft({ amount })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="registration-payer-name">Payer name</Label>
-                    <Input
-                      id="registration-payer-name"
-                      value={draft.payerName}
-                      required
-                      maxLength={200}
-                      onChange={(event) => updateDraft({ payerName: event.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="registration-transaction-reference">
-                      Provider transaction reference
-                    </Label>
-                    <Input
-                      id="registration-transaction-reference"
-                      value={draft.transactionReference}
-                      required
-                      maxLength={200}
-                      onChange={(event) =>
-                        updateDraft({ transactionReference: event.target.value })
-                      }
-                    />
-                  </div>
+                  <RegistrationPaymentFields registration={registration} draft={draft} updateDraft={updateDraft} />
                 </>
               ) : (
                 <div className="space-y-2">

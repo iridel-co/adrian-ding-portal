@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
+    "emails:dev": "email dev --dir emails --port 3001",
     "build": "vite build",
     "build:cf": "NITRO_PRESET=cloudflare_module vite build",
     "preview": "vite preview",
@@ -41,11 +42,13 @@
     "radix-ui": "1.6.7",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "react-email": "6.11.6",
     "shadcn": "^4.21.0",
     "sonner": "2.0.8",
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@react-email/ui": "6.11.6",
     "@readme/openapi-parser": "9.0.0",
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "26.6.1",

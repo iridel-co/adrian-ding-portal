@@ -167,6 +167,69 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     }
   });
 
+  it("sorts every CRM column before pagination, with stable ties and active filters", async () => {
+    const assertPages = async <T extends { id: string }>(
+      read: (extra: Record<string, unknown>) => Promise<{ items: T[]; hasMore: boolean }>,
+      sorts: string[], value: (row: T, key: string) => string | number
+    ) => {
+      const all = await read({ limit: 100 });
+      expect(all.hasMore).toBe(false);
+      for (const sort of sorts) for (const direction of ["asc", "desc"]) {
+        const expected = [...all.items].sort((a, b) => {
+          const left = value(a, sort), right = value(b, sort);
+          const comparison = left < right ? -1 : left > right ? 1 : 0;
+          return (direction === "asc" ? comparison : -comparison) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0);
+        });
+        const pages: T[] = [];
+        for (let offset = 0; offset < expected.length; offset += 2) {
+          const page = await read({ sort, direction, limit: 2, offset });
+          expect(page.hasMore).toBe(offset + 2 < expected.length);
+          pages.push(...page.items);
+        }
+        expect(pages.map(row => row.id)).toEqual(expected.map(row => row.id));
+      }
+    };
+    const marker = `Sorting-${suffix}`;
+    for (const [index, name] of ["Zulu", "alpha", "Mike", "alpha"].entries()) {
+      const saved = await savedInquiry({ ...input(), company: `${marker} ${name}`, program: name });
+      await sql`update corporate_inquiry set created_at = now() - ${index}::int * interval '1 day',
+        sla_due_at = now() + ${index + 1}::int * interval '1 day' where id = ${saved.id}`;
+      if (index === 1) await changeInquiry(db, saved.id, actor, transition("NEW", "CONTACTED"));
+      if (index === 2) await changeInquiry(db, saved.id, actor, transition("NEW", "SPAM"));
+    }
+    await assertPages(extra => listInquiries(db, inquiryListSchema.parse({ search: marker, status: "non-spam", ...extra })),
+      ["company", "program", "status", "createdAt", "slaDueAt"], (row, key) =>
+        ({ company: row.company.toLowerCase(), program: row.program.toLowerCase(), status: row.status.toLowerCase(),
+          createdAt: row.createdAt.getTime(), slaDueAt: row.slaDueAt.getTime() } as Record<string, string | number>)[key]!);
+
+    const fixture = await workshopFixture();
+    for (const [index, name] of ["Zulu", "alpha", "Mike", "alpha"].entries()) {
+      const row = await saveRegistration(fixture.sessions[0], fixture.courseCode, { fullName: name,
+        priceCentavos: [10000, 20000, 3000, 20000][index], createdAt: new Date(now.getTime() + index * 60000) });
+      if (index === 1) await changeRegistration(db, actor, staffInput({ ...row, updated_at: row.updatedAt }, RegistrationAction.MarkPaid));
+      if (index === 2) await changeRegistration(db, actor, staffInput({ ...row, updated_at: row.updatedAt }, RegistrationAction.Cancel));
+    }
+    await assertPages(extra => listRegistrations(db, registrationListSchema.parse({ workshopSessionId: fixture.sessions[0], filter: "all", ...extra })),
+      ["fullName", "status", "priceCentavos", "createdAt"], (row, key) => key === "status"
+        ? row.cancelledAt ? "Cancelled" : row.isPaid ? "Paid" : "Unpaid"
+        : key === "createdAt" ? row.createdAt.getTime() : key === "fullName" ? row.fullName.toLowerCase() : row.priceCentavos);
+    const active = await listRegistrations(db, registrationListSchema.parse({ workshopSessionId: fixture.sessions[0], sort: "fullName", direction: "asc" }));
+    expect(active.items.map(row => row.fullName)).toEqual(["alpha", "alpha", "Zulu"]);
+
+    for (const [index, name] of ["Zulu", "alpha"].entries()) {
+      const other = await workshopFixture();
+      await sql`update workshop set title = ${name} where id = ${other.courseId}`;
+      await sql`update workshop_session set venue_name = ${name} where workshop_id = ${other.courseId}`;
+      for (let count = 0; count < (index ? 10 : 2); count++) {
+        const row = await saveRegistration(other.sessions[0], other.courseCode);
+        if (count < index + 1) await changeRegistration(db, actor, staffInput({ ...row, updated_at: row.updatedAt }, RegistrationAction.MarkPaid));
+      }
+    }
+    await assertPages(extra => listRegistrationSessions(db, registrationSessionListSchema.parse({ when: "all", ...extra })),
+      ["workshopTitle", "date", "venueName", "reserved", "paid"], (row, key) => ({ reserved: row.counts.reserved, paid: row.counts.paid, workshopTitle: row.workshopTitle.toLowerCase(),
+          date: row.date, venueName: (row.venueName || "Venue not set").toLowerCase() } as Record<string, string | number>)[key]!);
+  });
+
   it("extends mail kinds and still requires exactly one matching owner", async () => {
     const kinds = await sql`select enumlabel from pg_enum where enumtypid = 'crm_email_kind'::regtype order by enumsortorder`;
     expect(kinds.map(row => row.enumlabel)).toEqual(["corporate_acknowledgment", "corporate_notification", "corporate_overdue",

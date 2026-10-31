@@ -22,9 +22,10 @@ export async function queueOverdueInquiries(db: DbOrTx, config: CorporateMailCon
         eq(crmEmailJob.corporateInquiryId, corporateInquiry.id), eq(crmEmailJob.kind, CrmEmailKind.CorporateOverdue))))
     )).orderBy(asc(corporateInquiry.slaDueAt), asc(corporateInquiry.id)).limit(QUEUE_LIMIT).for("update", { skipLocked: true });
     if (!inquiries.length) return 0;
-    const queued = await tx.insert(crmEmailJob).values(inquiries.map(inquiry => ({
-      corporateInquiryId: inquiry.id, kind: CrmEmailKind.CorporateOverdue, payload: corporateOverdueMessage(inquiry, config)
-    }))).onConflictDoNothing().returning({ id: crmEmailJob.id });
+    const snapshots = await Promise.all(inquiries.map(async inquiry => ({
+      corporateInquiryId: inquiry.id, kind: CrmEmailKind.CorporateOverdue, payload: await corporateOverdueMessage(inquiry, config)
+    })));
+    const queued = await tx.insert(crmEmailJob).values(snapshots).onConflictDoNothing().returning({ id: crmEmailJob.id });
     return queued.length;
   });
 }

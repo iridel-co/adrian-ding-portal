@@ -1,3 +1,4 @@
+import { inquirySort, sortDirection } from "./sorting";
 import { corporateInquiryStatus } from "@/db/schema";
 import { z } from "zod";
 
@@ -64,6 +65,7 @@ export const inquiryPageSchema = z.strictObject({
 });
 
 export const inquiryListSchema = inquiryPageSchema.extend({
+  sort: inquirySort, direction: sortDirection,
   status: z.enum(["all", "non-spam", ...corporateInquiryStatus.enumValues]).default("all"),
   search: z.string().trim().max(200).default("")
 });

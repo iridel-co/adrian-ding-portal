@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { z } from "zod";
 
 const harness = vi.hoisted(() => ({
-  search: { tab: "overview", filter: "paid", search: "Alice", offset: 50, runWhen: "past", runOffset: 100 },
+  headers: [] as Record<string, unknown>[],
+  search: { tab: "overview", filter: "paid", search: "Alice", offset: 50, limit: 50, runLimit: 50, runWhen: "past", runOffset: 100 },
   summary: {} as Record<string, unknown>, list: {} as Record<string, unknown>,
   navigate: vi.fn(), summaryRefresh: vi.fn(), listRefresh: vi.fn(), query: vi.fn(), get: vi.fn(), registrations: vi.fn()
 }));
@@ -18,15 +19,22 @@ vi.mock("@tanstack/react-query", async original => ({
     return options.queryKey[1] === "session" ? harness.summary : harness.list;
   }
 }));
+vi.mock("@/components/crm/sortable-table-head", async original => {
+  const actual = await original<typeof import("@/components/crm/sortable-table-head")>();
+  return { SortableTableHead: (props: Parameters<typeof actual.SortableTableHead>[0]) => {
+    harness.headers.push(props);
+    return actual.SortableTableHead(props);
+  } };
+});
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: object) => ({ options, useParams: () => ({ sessionId: "12345678-abcd-4000-8000-123456789abc" }),
     useSearch: () => harness.search, useNavigate: () => harness.navigate }),
   Link: ({ children, to }: { children: ReactNode; to: string }) => createElement("a", { href: to }, children)
 }));
 import { Route } from "@/routes/_app/registrations/sessions/$sessionId";
+import { CrmTablePagination } from "@/components/crm/table-pagination";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/tabs";
-import { FilterSelect } from "@/components/cms/content-list-page";
 import { registrationSessionQueryOptions, registrationsQueryOptions } from "./registration-queries";
 
 const sessionId = "12345678-abcd-4000-8000-123456789abc";
@@ -51,29 +59,66 @@ function tree() {
 function find(node: ReactNode, type: unknown, label?: string): ReactElement<Record<string, unknown>> | undefined {
   for (const child of Children.toArray(node)) {
     if (!isValidElement<Record<string, unknown>>(child)) continue;
-    if (child.type === type && (!label || child.props.children === label)) return child;
+    if (child.type === type && (!label || child.props.children === label || child.props["aria-label"] === `${label} page`)) return child;
+    if (child.type === CrmTablePagination) {
+      const found = find(CrmTablePagination(child.props as Parameters<typeof CrmTablePagination>[0]), type, label);
+      if (found) return found;
+    }
     const result = find(child.props.children as ReactNode, type, label);
     if (result) return result;
   }
 }
 beforeEach(() => {
   vi.clearAllMocks();
-  harness.search = { tab: "overview", filter: "paid", search: "Alice", offset: 50, runWhen: "past", runOffset: 100 };
+  harness.search = { tab: "overview", filter: "paid", search: "Alice", offset: 50, limit: 50, runLimit: 50, runWhen: "past", runOffset: 100 };
   harness.summary = { data: structuredClone(run), isError: false, isPending: false, isFetching: false, error: null, refetch: harness.summaryRefresh };
   harness.list = { data: { items: [item], hasMore: true }, isError: false, isPending: false, isFetching: false, error: null, refetch: harness.listRefresh };
 });
 
-describe("Workshop run workspace", () => {
+describe("Workshop workspace", () => {
+  it("sorts from column headers, toggles direction and resets pagination while keeping filters", () => {
+    harness.search.tab = "registrations";
+    for (const direction of ["desc", "asc"]) {
+      Object.assign(harness.search, { sort: "fullName", direction });
+      harness.headers = [];
+      render();
+      const header = harness.headers.find(header => header.children === "Registrant")!;
+      expect(header.active).toBe(true);
+      (header.onClick as () => void)();
+      expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search,
+        sort: "fullName", direction: direction === "asc" ? "desc" : "asc", offset: 0 } });
+    }
+    expect(harness.headers.map(header => header.children)).not.toContain("Actions");
+  });
+
+  it("offers row and bulk actions for unpaid registrations only", () => {
+    harness.search.tab = "registrations";
+    harness.list.data = { items: [
+      { ...item, cancelledAt: null },
+      { ...item, id: "paid", reference: "AD-PSW-0002", cancelledAt: null, isPaid: true },
+      { ...item, id: "cancelled", reference: "AD-PSW-0003" }
+    ], hasMore: false };
+    const html = render();
+    expect(html).toContain("Select all unpaid registrations on this page");
+    expect(html).toContain("Mark selected Paid");
+    expect(html).toContain("Cancel selected");
+    expect(html).toContain('aria-label="Mark AD-PSW-0001 Paid"');
+    expect(html).toContain('aria-label="Cancel AD-PSW-0001"');
+    expect(html).not.toContain('aria-label="Mark AD-PSW-0002 Paid"');
+    expect(html).not.toContain('aria-label="Cancel AD-PSW-0003"');
+  });
   it("loads a bounded unfiltered preview, shows summary totals and gives cancellation precedence", () => {
     const html = render();
     expect(harness.query.mock.calls[1][0]).toMatchObject({ enabled: true,
       queryKey: ["workshop-registrations", "list", { workshopSessionId: sessionId, filter: "all", search: "", offset: 0, limit: 5 }] });
     for (const value of ["Practical Selling", "Training Room", "Cebu", "Manila time", "Recent registrations", "18 / 20",
-      "Reserved capacity", "AD-PSW-0001", "Cancelled", "₱6,500", "alice@example.invalid"])
+      "Reserved capacity", "Cancelled", "₱6,500", "alice@example.invalid"])
       expect(html).toContain(value);
     expect(html).toContain("aria-valuenow=\"90\"");
     expect(html).toContain("&lt;script&gt;unsafe&lt;/script&gt;");
     expect(html).toContain("/registrations/$id");
+    expect(html).not.toContain(">Reference</th>");
+    expect(html).not.toContain(">AD-PSW-0001</td>");
     expect(html).not.toContain("Page 2");
   });
   it("clamps empty, full and over-capacity bars while retaining actual counts", () => {
@@ -89,12 +134,12 @@ describe("Workshop run workspace", () => {
     harness.list.isError = true; harness.list.error = new Error("crm_unavailable");
     let html = render();
     expect(html).toContain("18 / 20"); expect(html).toContain("Try again");
-    expect(html).not.toContain("alice@example.invalid"); expect(html).not.toContain("No registrations for this run yet");
+    expect(html).not.toContain("alice@example.invalid"); expect(html).not.toContain("No registrations for this scheduled workshop yet");
     harness.list.isError = false; harness.list.error = null; harness.list.data = { items: [], hasMore: false };
-    expect(render()).toContain("No registrations for this run yet");
+    expect(render()).toContain("No registrations for this scheduled workshop yet");
     harness.summary.isError = true; harness.summary.error = new Error("registration_session_not_found");
     html = render();
-    expect(html).toContain("This workshop run could not be found"); expect(html).not.toContain("Practical Selling");
+    expect(html).toContain("This scheduled workshop could not be found"); expect(html).not.toContain("Practical Selling");
   });
   it("suppresses the entire workspace on access failure from either request", () => {
     for (const result of [harness.summary, harness.list]) {
@@ -105,7 +150,7 @@ describe("Workshop run workspace", () => {
       result.isError = false; result.error = null;
     }
     harness.summary.data = undefined; harness.summary.isPending = true;
-    expect(render()).toContain("Loading workshop run");
+    expect(render()).toContain("Loading scheduled workshop");
     expect(harness.query.mock.calls.at(-1)?.[0].enabled).toBe(false);
   });
   it("preserves scroll and tab/list/back state, and refreshes both visible reads", () => {
@@ -121,15 +166,15 @@ describe("Workshop run workspace", () => {
     expect(harness.summaryRefresh).toHaveBeenCalledOnce(); expect(harness.listRefresh).toHaveBeenCalledOnce();
     const top = Children.toArray(page.props.children as ReactNode)[0] as ReactElement<{ children: ReactNode }>;
     const back = Children.toArray(top.props.children)[0] as ReactElement<{ search: unknown }>;
-    expect(back.props.search).toEqual({ when: "past", offset: 100 });
+    expect(back.props.search).toEqual({ when: "past", offset: 100, limit: 50 });
   });
   it("uses the scoped full-list query and resets page on search and filter changes", () => {
     harness.search.tab = "registrations";
     const page = tree();
     expect(harness.query.mock.calls[1][0].queryKey[2]).toEqual({ workshopSessionId: sessionId, filter: "paid", search: "Alice", offset: 50, limit: 50 });
     expect(render()).toContain("Page 2");
-    expect(render()).toContain("Search covers registrations for this workshop run only");
-    (find(page, FilterSelect)!.props.onChange as (filter: string) => void)("cancelled");
+    expect(render()).toContain("Search covers registrations for this scheduled workshop only");
+    (find(page, Button, "Cancelled")!.props.onClick as () => void)();
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, filter: "cancelled", offset: 0 } });
     const formData = class { get() { return "  Bob  "; } };
     vi.stubGlobal("FormData", formData);
@@ -143,6 +188,34 @@ describe("Workshop run workspace", () => {
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, offset: 100 } });
     (find(page, Button, "Previous")!.props.onClick as () => void)();
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, offset: 0 } });
+  });
+  it("toggles status chips and leaves none selected when showing all registrants", () => {
+    harness.search.tab = "registrations";
+    harness.search.filter = "active";
+    let page = tree();
+    expect(find(page, Button, "Active")!.props["aria-pressed"]).toBe(true);
+    (find(page, Button, "Active")!.props.onClick as () => void)();
+    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, filter: "all", offset: 0 } });
+    harness.search.filter = "all";
+    page = tree();
+    expect(harness.query.mock.calls.at(-1)?.[0].queryKey[2].filter).toBe("all");
+    for (const label of ["Active", "Unpaid", "Paid", "Cancelled"])
+      expect(find(page, Button, label)!.props["aria-pressed"]).toBe(false);
+    expect(render()).not.toContain('role="combobox" aria-label="Registration status"');
+    (find(page, Button, "Unpaid")!.props.onClick as () => void)();
+    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, filter: "unpaid", offset: 0 } });
+  });
+  it("queries the selected page size and keeps filters when the pagination changes", () => {
+    harness.search.tab = "registrations";
+    harness.search.limit = 10;
+    harness.search.offset = 20;
+    const page = tree();
+    expect(harness.query.mock.calls[1][0].queryKey[2]).toEqual({
+      workshopSessionId: sessionId, filter: "paid", search: "Alice", offset: 20, limit: 10
+    });
+    const controls = find(page, CrmTablePagination)!;
+    (controls.props.onChange as (value: object) => void)({ limit: 25, offset: 0 });
+    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, limit: 25, offset: 0 } });
   });
   it("handles empty full lists and disables paging at boundaries and while fetching", () => {
     harness.search.tab = "registrations"; harness.search.offset = 0;
@@ -159,9 +232,9 @@ describe("Workshop run workspace", () => {
   });
   it("validates direct-link defaults and URL state without arbitrary tabs or filters", () => {
     const schema = Route.options.validateSearch as z.ZodType;
-    expect(schema.parse({})).toEqual({ tab: "overview", filter: "active", search: "", offset: 0, runWhen: "upcoming", runOffset: 0 });
+    expect(schema.parse({})).toEqual({ tab: "overview", filter: "active", search: "", offset: 0, limit: 25, runLimit: 25, runWhen: "upcoming", runOffset: 0, sort: "createdAt", direction: "desc", runSort: "date", runDirection: "desc" });
     expect(schema.parse({ tab: "registrations", search: " Alice ", offset: "79", runWhen: "past", runOffset: "129" }))
-      .toMatchObject({ search: "Alice", offset: 50, runWhen: "past", runOffset: 100 });
+      .toMatchObject({ search: "Alice", offset: 75, limit: 25, runLimit: 25, runWhen: "past", runOffset: 125 });
     for (const offset of [-1, "bad", 100001]) expect(schema.parse({ offset })).toMatchObject({ offset: 0 });
     for (const invalid of [{ tab: "bad" }, { filter: "bad" }, { search: "x".repeat(201) }]) expect(schema.safeParse(invalid).success).toBe(false);
   });

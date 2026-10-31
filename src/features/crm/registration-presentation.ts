@@ -11,7 +11,7 @@ const messages: Record<string, string> = {
   ...commonErrorMessages,
   [AccessErrorCode.StaffAccessRequired]: "Your account does not have registration access. Contact your portal administrator.",
   [AccessErrorCode.AccessUnavailable]: "Unable to check registration access. Try again.",
-  [IntakeErrorCode.RegistrationSessionNotFound]: "This workshop run could not be found. Return to the workshop run list.",
+  [IntakeErrorCode.RegistrationSessionNotFound]: "This scheduled workshop could not be found. Return to the scheduled workshops.",
   [IntakeErrorCode.RegistrationNotFound]: "This registration could not be found.",
   [IntakeErrorCode.RegistrationStatusChanged]: "This registration changed. Your input has been kept. Close the dialog, review the latest record and reopen the action.",
   [IntakeErrorCode.RegistrationCancelled]: "This registration has been cancelled. No further changes are available.",

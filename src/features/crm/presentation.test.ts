@@ -42,7 +42,7 @@ describe("CRM error messages", () => {
       expect(inquiryErrorMessage(new Error(code))).toContain("inquiry");
       expect(registrationErrorMessage(new Error(code))).toContain("registration");
     }
-    expect(registrationErrorMessage(new Error("registration_session_not_found"))).toContain("workshop run could not be found");
+    expect(registrationErrorMessage(new Error("registration_session_not_found"))).toContain("scheduled workshop could not be found");
     const error = new Error("email_unavailable");
     expect(inquiryErrorMessage(error)).toContain("Email sending is disabled");
     expect(registrationErrorMessage(error)).toContain("Payment could not be recorded");

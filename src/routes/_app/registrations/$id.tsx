@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
+import { BackLink } from "@/components/cms/editor-shell";
 import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { CrmReadState } from "@/components/crm/read-state";
 import { RegistrationActions } from "@/components/crm/registration-actions";
@@ -49,21 +50,20 @@ function RegistrationDetail({ id }: { id: string }) {
   const showRegistration = !result.isError && !error && !!registration;
   return <div className="mx-auto flex max-w-5xl flex-col gap-6">
     <div className="flex items-center justify-between gap-3">
-      <Link to="/registrations" search={{ when: search.runWhen, offset: search.runOffset }} className="text-sm underline underline-offset-4">Workshop runs</Link>
-      <Button variant="outline" disabled={result.isFetching} onClick={refresh}>Refresh</Button>
+      {showRegistration && <Link to="/registrations/sessions/$sessionId" params={{ sessionId: registration.workshopSessionId }}
+        search={{ ...search, tab: "overview" }}><BackLink>Back to workshop overview</BackLink></Link>}
+      <Button className="ml-auto" variant="outline" disabled={result.isFetching} onClick={refresh}>Refresh</Button>
     </div>
     <CrmReadState pending={result.isPending && !actionAccessError} error={error}
       retry={() => { setActionAccessError(null); refresh(); }} loadingMessage="Loading registration…"
       accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />
     {showRegistration && <>
-      <Link to="/registrations/sessions/$sessionId" params={{ sessionId: registration.workshopSessionId }} search={search}
-        className="text-sm underline underline-offset-4">Back to {search.tab === "overview" ? "run overview" : "run registrations"}</Link>
       <header className="space-y-3">
         <p className="text-sm text-muted-foreground">{registration.reference}</p>
         <h1 className="font-display text-3xl sm:text-4xl">{registration.fullName}</h1>
         <RegistrationStatus isPaid={registration.isPaid} cancelledAt={registration.cancelledAt} />
       </header>
-      <section className="space-y-3 rounded-lg border p-5" aria-label="Workshop run">
+      <section className="space-y-3 rounded-lg border p-5" aria-label="Scheduled workshop">
         <h2 className="text-xl font-medium">{registration.session.workshopTitle}</h2>
         <p className="text-sm text-muted-foreground">{registration.session.courseCode || "No course code"}</p>
         <StatusBadge display={SESSION_STATUS_DISPLAY[registration.session.status]} />
