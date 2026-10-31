@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { z } from "zod";
+import { BackLink } from "@/components/cms/editor-shell";
 import { CrmTablePagination } from "@/components/crm/table-pagination";
 import { EmptyState, FilterSelect } from "@/components/cms/content-list-page";
 import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
@@ -30,7 +31,7 @@ const filterOptions: { value: z.output<typeof searchSchema>["filter"]; label: st
 
 export const Route = createFileRoute("/_app/registrations/sessions/$sessionId")({
   validateSearch: searchSchema,
-  head: () => ({ meta: [{ title: "Workshop run management" }] }),
+  head: () => ({ meta: [{ title: "Workshop overview" }] }),
   component: RegistrationWorkspace
 });
 
@@ -58,16 +59,16 @@ function RegistrationWorkspace() {
     accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />;
   const rows = !registrations.isError && registrations.data && (registrations.data.items.length
     ? <RegistrationRows key={`${sessionId}-${search.tab}-${search.filter}-${search.search}-${search.offset}-${search.limit}`} items={registrations.data.items} search={search} />
-    : <EmptyState>{overview ? "No registrations for this workshop run yet." : "No registrations match these filters."}</EmptyState>);
+    : <EmptyState>{overview ? "No registrations for this scheduled workshop yet." : "No registrations match these filters."}</EmptyState>);
   // Prevent the loading state from shrinking the page and clamping its scroll position.
   return <div ref={workspace} style={{ minHeight: !error && registrations.isPending ? transitionHeight : undefined }}
     className="mx-auto flex max-w-6xl flex-col gap-6">
     <div className="flex items-center justify-between gap-3">
-      <Link to="/registrations" search={{ when: search.runWhen, offset: search.runOffset, limit: search.runLimit }} className="text-sm underline underline-offset-4">Back to workshop runs</Link>
+      <Link to="/registrations" search={{ when: search.runWhen, offset: search.runOffset, limit: search.runLimit }}><BackLink>Scheduled workshops</BackLink></Link>
       <Button variant="outline" disabled={summary.isFetching || registrations.isFetching} onClick={refresh}>Refresh</Button>
     </div>
     <CrmReadState pending={summary.isPending && !accessError} error={error} retry={refresh}
-      loadingMessage="Loading workshop run…" accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />
+      loadingMessage="Loading scheduled workshop…" accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />
     {!error && !summary.isError && run && <>
       <header className="space-y-3">
         <p className="text-sm text-muted-foreground">{run.courseCode || "No course code"}</p>
@@ -77,14 +78,14 @@ function RegistrationWorkspace() {
         <p className="text-sm text-muted-foreground">{run.venueName || "Venue not set"}{run.city && ` · ${run.city}`}</p>
       </header>
       <Tabs value={search.tab} onValueChange={tab => { if (tab === "overview" || tab === "registrations") changeTab(tab); }}>
-        <TabsList aria-label="Workshop run workspace"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="registrations">Registrations</TabsTrigger></TabsList>
+        <TabsList aria-label="Workshop workspace"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="registrations">Registrations</TabsTrigger></TabsList>
         {overview ? <TabsContent value="overview" className="space-y-8 pt-4">
           <section aria-labelledby="reserved-heading" className="space-y-4 rounded-lg border p-5">
             <h2 id="reserved-heading" className="text-lg font-semibold">Reserved seats</h2>
             <p className="text-2xl font-medium tabular-nums">{run.counts.reserved} / {run.capacity} <span className="text-sm font-normal text-muted-foreground">reserved</span></p>
             <Progress aria-label="Reserved capacity" value={Math.min(100, Math.max(0, run.counts.reserved / run.capacity * 100))}
               aria-valuetext={`${run.counts.reserved} reserved out of ${run.capacity} seats`} />
-            {run.counts.reserved > run.capacity && <p className="text-sm text-destructive">Reservations exceed the current capacity. Review this workshop run before accepting more registrations.</p>}
+            {run.counts.reserved > run.capacity && <p className="text-sm text-destructive">Reservations exceed the current capacity. Review this scheduled workshop before accepting more registrations.</p>}
             <dl className="grid grid-cols-2 gap-5 sm:grid-cols-4">
               <div><dt className="text-muted-foreground">Remaining</dt><dd className="mt-1 text-xl tabular-nums">{run.counts.remaining}</dd></div>
               <div><dt className="text-muted-foreground">Paid</dt><dd className="mt-1 text-xl tabular-nums">{run.counts.paid}</dd></div>
@@ -109,13 +110,13 @@ function RegistrationWorkspace() {
               void navigate({ search: { ...search, search: text.trim(), offset: 0 } });
             }}>
               <Input key={search.search} name="search" defaultValue={search.search} maxLength={200}
-                aria-label="Search this workshop run by reference, name or email" placeholder="Reference, name or email" />
+                aria-label="Search this scheduled workshop by reference, name or email" placeholder="Reference, name or email" />
               <Button variant="outline" type="submit">Search</Button>
             </form>
             <FilterSelect label="Registration status" options={filterOptions} value={search.filter}
               onChange={filter => void navigate({ search: { ...search, filter, offset: 0 } })} />
           </div>
-          <p className="text-sm text-muted-foreground">Search covers registrations for this workshop run only.</p>
+          <p className="text-sm text-muted-foreground">Search covers registrations for this scheduled workshop only.</p>
           {listState}{rows}
           {!registrations.isError && registrations.data && <CrmTablePagination
             limit={search.limit} offset={search.offset} count={registrations.data.items.length}

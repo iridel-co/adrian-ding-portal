@@ -64,8 +64,8 @@ describe("Workshop run list", () => {
 
   it("shows run context, independent seat/payment counts and safely escaped titles", () => {
     const html = render();
-    for (const value of ["Workshop registrations", "PSW", "Jan 12, 2027", "Jan 13, 2027", "Training Room", "Cebu",
-      "Open", "Upcoming workshop runs", "18 / 20", "2 remaining", "10 paid", "8 unpaid", "Manila", "Page 1"])
+    for (const value of ["Scheduled workshops", "PSW", "Jan 12, 2027", "Jan 13, 2027", "Training Room", "Cebu",
+      "Open", "Upcoming workshops", "18 / 20", "2 remaining", "10 paid", "8 unpaid", "Manila", "Page 1"])
       expect(html).toContain(value);
     expect(html).toContain("&lt;script&gt;unsafe&lt;/script&gt;");
     expect(html).not.toContain("<script>unsafe</script>");
@@ -73,9 +73,9 @@ describe("Workshop run list", () => {
   });
   it("shows registration-specific loading, empty and safe errors and suppresses cached rows on failure", () => {
     harness.result.isPending = true; harness.result.data = undefined;
-    expect(render()).toContain("Loading workshop runs");
+    expect(render()).toContain("Loading scheduled workshops");
     harness.result.isPending = false; harness.result.data = { items: [], hasMore: false };
-    expect(render()).toContain("No workshop runs match these dates");
+    expect(render()).toContain("No scheduled workshops match these dates");
     harness.result.data = { items: [run], hasMore: true }; harness.result.isError = true;
     for (const [code, message] of [["staff_access_required", "Registration access unavailable"],
       ["crm_unavailable", "Unable to load workshop registrations"], ["Unauthorized", "Sign in again"],
@@ -107,13 +107,13 @@ describe("Workshop run list", () => {
   });
   it("makes date filters visible and labels past runs independently of run status", () => {
     harness.search = { when: "past", offset: 0, limit: 50 };
-    expect(render()).toContain("Past workshop runs");
+    expect(render()).toContain("Past workshops");
     expect(findButton(tree().props.filters as ReactNode, "Past")!.props["aria-pressed"]).toBe(true);
     expect(findButton(tree().props.filters as ReactNode, "Upcoming")!.props["aria-pressed"]).toBe(false);
     harness.search.when = "all";
     harness.result.data = { items: [{ ...run, date: "2000-01-01", endDate: "2000-01-01" }], hasMore: false };
     const html = render();
-    expect(html).toContain("All workshop runs");
+    expect(html).toContain("All scheduled workshops");
     expect(html).toContain(">Past</span>");
     expect(html).toContain(">Open</span>");
     harness.result.data = { items: [{ ...run, date: "2099-01-01", endDate: "2099-01-01" }], hasMore: false };

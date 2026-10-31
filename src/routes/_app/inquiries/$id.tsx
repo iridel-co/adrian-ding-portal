@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
+import { BackLink } from "@/components/cms/editor-shell";
 import { CrmReadState } from "@/components/crm/read-state";
 import { InquiryActions, type InquiryDraft } from "@/components/crm/inquiry-actions";
 import { InquiryEmails } from "@/components/crm/inquiry-emails";
@@ -32,7 +33,7 @@ function InquiryDetail({ id }: { id: string }) {
   const result = useQuery(inquiryQueryOptions(id, offset));
   const inquiry = result.data;
   return <div className="mx-auto flex max-w-5xl flex-col gap-6">
-    <div className="flex items-center justify-between gap-3"><Link to="/inquiries" search={search} className="text-sm underline underline-offset-4">Back to inquiries</Link><Button variant="outline" disabled={result.isFetching} onClick={() => void result.refetch()}>Refresh</Button></div>
+    <div className="flex items-center justify-between gap-3"><Link to="/inquiries" search={search}><BackLink>Back to inquiries</BackLink></Link><Button variant="outline" disabled={result.isFetching} onClick={() => void result.refetch()}>Refresh</Button></div>
     <CrmReadState pending={result.isPending} error={result.error} retry={() => void result.refetch()} />
     {!result.isError && inquiry && <>
       <header><h1 className="font-display text-4xl break-words">{inquiry.company}</h1><p className="mt-2">{inquiry.program}</p><div className="mt-3 flex flex-wrap gap-2"><Badge variant="secondary">{inquiryStatusLabels[inquiry.status]}</Badge>{isInquiryOverdue(inquiry) && <Badge variant="destructive">First reply overdue</Badge>}</div><p className="mt-2 text-xs text-muted-foreground break-all">Inquiry ID: {inquiry.id}</p></header>

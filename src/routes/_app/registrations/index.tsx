@@ -22,7 +22,7 @@ const whenOptions: { value: z.output<typeof searchSchema>["when"]; label: string
 
 export const Route = createFileRoute("/_app/registrations/")({
   validateSearch: searchSchema,
-  head: () => ({ meta: [{ title: "Workshop registrations" }] }),
+  head: () => ({ meta: [{ title: "Scheduled workshops" }] }),
   component: RegistrationRunsPage
 });
 
@@ -30,20 +30,20 @@ function RegistrationRunsPage() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const runs = useQuery(registrationSessionsQueryOptions(search));
-  return <ContentListPage title="Workshop registrations" description="Reserved seats and payment counts for each workshop run. All dates and times are in Manila."
+  return <ContentListPage title="Scheduled workshops" description="Reserved seats and payment counts for each scheduled workshop. All dates and times are in Manila."
     action={<Button variant="outline" disabled={runs.isFetching} onClick={() => void runs.refetch()}>Refresh</Button>}
-    filters={<div role="group" aria-label="Workshop run dates" className="flex flex-wrap gap-2">
+    filters={<div role="group" aria-label="Workshop dates" className="flex flex-wrap gap-2">
       {whenOptions.map(option => <Button key={option.value} variant={search.when === option.value ? "default" : "outline"}
         aria-pressed={search.when === option.value}
         onClick={() => void navigate({ search: { ...search, when: option.value, offset: 0 } })}>{option.label}</Button>)}
     </div>}>
     <CrmReadState pending={runs.isPending} error={runs.error} retry={() => void runs.refetch()}
-      loadingMessage="Loading workshop runs…" accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />
+      loadingMessage="Loading scheduled workshops…" accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />
     {!runs.isError && runs.data && <>
-      {runs.data.items.length === 0 ? <EmptyState>No workshop runs match these dates.</EmptyState> : <>
+      {runs.data.items.length === 0 ? <EmptyState>No scheduled workshops match these dates.</EmptyState> : <>
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold">{search.when === "past" ? "Past workshop runs" : search.when === "all" ? "All workshop runs" : "Upcoming workshop runs"}</h2>
-          <p className="text-sm text-muted-foreground">{search.when === "past" ? "Runs that have ended in Manila time." : "Reserved seats include Paid and Unpaid registrations until staff cancel them."}</p>
+          <h2 className="text-lg font-semibold">{search.when === "past" ? "Past workshops" : search.when === "all" ? "All scheduled workshops" : "Upcoming workshops"}</h2>
+          <p className="text-sm text-muted-foreground">{search.when === "past" ? "Workshops that have ended in Manila time." : "Reserved seats include Paid and Unpaid registrations until staff cancel them."}</p>
         </div>
         <Table>
           <TableHeader><TableRow><TableHead>Workshop</TableHead><TableHead>Schedule</TableHead><TableHead>Venue</TableHead><TableHead>Seats</TableHead><TableHead>Payment</TableHead></TableRow></TableHeader>

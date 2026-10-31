@@ -69,7 +69,7 @@ beforeEach(() => {
   harness.list = { data: { items: [item], hasMore: true }, isError: false, isPending: false, isFetching: false, error: null, refetch: harness.listRefresh };
 });
 
-describe("Workshop run workspace", () => {
+describe("Workshop workspace", () => {
 
   it("offers row and bulk actions for unpaid registrations only", () => {
     harness.search.tab = "registrations";
@@ -114,12 +114,12 @@ describe("Workshop run workspace", () => {
     harness.list.isError = true; harness.list.error = new Error("crm_unavailable");
     let html = render();
     expect(html).toContain("18 / 20"); expect(html).toContain("Try again");
-    expect(html).not.toContain("alice@example.invalid"); expect(html).not.toContain("No registrations for this workshop run yet");
+    expect(html).not.toContain("alice@example.invalid"); expect(html).not.toContain("No registrations for this scheduled workshop yet");
     harness.list.isError = false; harness.list.error = null; harness.list.data = { items: [], hasMore: false };
-    expect(render()).toContain("No registrations for this workshop run yet");
+    expect(render()).toContain("No registrations for this scheduled workshop yet");
     harness.summary.isError = true; harness.summary.error = new Error("registration_session_not_found");
     html = render();
-    expect(html).toContain("This workshop run could not be found"); expect(html).not.toContain("Practical Selling");
+    expect(html).toContain("This scheduled workshop could not be found"); expect(html).not.toContain("Practical Selling");
   });
   it("suppresses the entire workspace on access failure from either request", () => {
     for (const result of [harness.summary, harness.list]) {
@@ -130,7 +130,7 @@ describe("Workshop run workspace", () => {
       result.isError = false; result.error = null;
     }
     harness.summary.data = undefined; harness.summary.isPending = true;
-    expect(render()).toContain("Loading workshop run");
+    expect(render()).toContain("Loading scheduled workshop");
     expect(harness.query.mock.calls.at(-1)?.[0].enabled).toBe(false);
   });
   it("preserves scroll and tab/list/back state, and refreshes both visible reads", () => {
@@ -153,7 +153,7 @@ describe("Workshop run workspace", () => {
     const page = tree();
     expect(harness.query.mock.calls[1][0].queryKey[2]).toEqual({ workshopSessionId: sessionId, filter: "paid", search: "Alice", offset: 50, limit: 50 });
     expect(render()).toContain("Page 2");
-    expect(render()).toContain("Search covers registrations for this workshop run only");
+    expect(render()).toContain("Search covers registrations for this scheduled workshop only");
     (find(page, FilterSelect)!.props.onChange as (filter: string) => void)("cancelled");
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, filter: "cancelled", offset: 0 } });
     const formData = class { get() { return "  Bob  "; } };

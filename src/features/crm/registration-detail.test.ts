@@ -100,7 +100,10 @@ describe("Registration detail", () => {
     expect(html).not.toContain("<script>unsafe</script>");
     expect(html).toContain("Retry payment information");
     expect(html).toContain('href="/registrations/sessions/$sessionId"');
-    expect(html).toContain("&quot;tab&quot;:&quot;registrations&quot;");
+    expect(html).toContain("&quot;tab&quot;:&quot;overview&quot;");
+    expect(html.match(/href="\/registrations\/sessions\/\$sessionId"/g)).toHaveLength(1);
+    expect(html).not.toContain('href="/registrations"');
+    expect(html).toContain("Back to workshop overview");
     expect(html).toContain("&quot;offset&quot;:50");
     expect(html).toContain("&quot;runOffset&quot;:100");
   });
