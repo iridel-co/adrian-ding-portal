@@ -27,7 +27,6 @@ vi.mock("@tanstack/react-router", () => ({
 import { Route } from "@/routes/_app/registrations/sessions/$sessionId";
 import { CrmTablePagination } from "@/components/crm/table-pagination";
 import { Button } from "@/components/ui/button";
-import { FilterSelect } from "@/components/cms/content-list-page";
 import { Tabs } from "@/components/ui/tabs";
 import { registrationSessionQueryOptions, registrationsQueryOptions } from "./registration-queries";
 
@@ -154,7 +153,7 @@ describe("Workshop workspace", () => {
     expect(harness.query.mock.calls[1][0].queryKey[2]).toEqual({ workshopSessionId: sessionId, filter: "paid", search: "Alice", offset: 50, limit: 50 });
     expect(render()).toContain("Page 2");
     expect(render()).toContain("Search covers registrations for this scheduled workshop only");
-    (find(page, FilterSelect)!.props.onChange as (filter: string) => void)("cancelled");
+    (find(page, Button, "Cancelled")!.props.onClick as () => void)();
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, filter: "cancelled", offset: 0 } });
     const formData = class { get() { return "  Bob  "; } };
     vi.stubGlobal("FormData", formData);
@@ -169,7 +168,22 @@ describe("Workshop workspace", () => {
     (find(page, Button, "Previous")!.props.onClick as () => void)();
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, offset: 0 } });
   });
-
+  it("toggles status chips and leaves none selected when showing all registrants", () => {
+    harness.search.tab = "registrations";
+    harness.search.filter = "active";
+    let page = tree();
+    expect(find(page, Button, "Active")!.props["aria-pressed"]).toBe(true);
+    (find(page, Button, "Active")!.props.onClick as () => void)();
+    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, filter: "all", offset: 0 } });
+    harness.search.filter = "all";
+    page = tree();
+    expect(harness.query.mock.calls.at(-1)?.[0].queryKey[2].filter).toBe("all");
+    for (const label of ["Active", "Unpaid", "Paid", "Cancelled"])
+      expect(find(page, Button, label)!.props["aria-pressed"]).toBe(false);
+    expect(render()).not.toContain('role="combobox" aria-label="Registration status"');
+    (find(page, Button, "Unpaid")!.props.onClick as () => void)();
+    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, filter: "unpaid", offset: 0 } });
+  });
   it("queries the selected page size and keeps filters when the pagination changes", () => {
     harness.search.tab = "registrations";
     harness.search.limit = 10;

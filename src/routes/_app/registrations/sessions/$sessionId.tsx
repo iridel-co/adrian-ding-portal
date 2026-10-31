@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { z } from "zod";
 import { BackLink } from "@/components/cms/editor-shell";
 import { CrmTablePagination } from "@/components/crm/table-pagination";
-import { EmptyState, FilterSelect } from "@/components/cms/content-list-page";
+import { EmptyState } from "@/components/cms/content-list-page";
 import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { CrmReadState } from "@/components/crm/read-state";
 import { RegistrationBatchDialog, type BatchAction } from "@/components/crm/registration-batch-dialog";
@@ -26,7 +26,7 @@ import { formatPesos } from "@/features/shared/money";
 
 const filterOptions: { value: z.output<typeof searchSchema>["filter"]; label: string }[] = [
   { value: "active", label: "Active" }, { value: "unpaid", label: "Unpaid" }, { value: "paid", label: "Paid" },
-  { value: "cancelled", label: "Cancelled" }, { value: "all", label: "All registrations" }
+  { value: "cancelled", label: "Cancelled" }
 ];
 
 export const Route = createFileRoute("/_app/registrations/sessions/$sessionId")({
@@ -113,8 +113,15 @@ function RegistrationWorkspace() {
                 aria-label="Search this scheduled workshop by reference, name or email" placeholder="Reference, name or email" />
               <Button variant="outline" type="submit">Search</Button>
             </form>
-            <FilterSelect label="Registration status" options={filterOptions} value={search.filter}
-              onChange={filter => void navigate({ search: { ...search, filter, offset: 0 } })} />
+            <div role="group" aria-label="Registration status" className="flex flex-wrap gap-2">
+              {filterOptions.map(option => <Button key={option.value} size="sm" className="rounded-full"
+                variant={search.filter === option.value ? "default" : "outline"}
+                aria-pressed={search.filter === option.value}
+                onClick={() => void navigate({ search: { ...search,
+                  filter: search.filter === option.value ? "all" : option.value, offset: 0 } })}>
+                {option.label}
+              </Button>)}
+            </div>
           </div>
           <p className="text-sm text-muted-foreground">Search covers registrations for this scheduled workshop only.</p>
           {listState}{rows}
