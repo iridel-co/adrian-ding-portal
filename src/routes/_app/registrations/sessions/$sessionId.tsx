@@ -1,3 +1,6 @@
+import { RegistrationBatchDialog, type BatchAction } from "@/components/crm/registration-batch-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RegistrationAction } from "@/features/crm/registration-staff-schemas";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
@@ -53,7 +56,7 @@ function RegistrationWorkspace() {
     retry={() => void registrations.refetch()} loadingMessage="Loading registrations…"
     accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />;
   const rows = !registrations.isError && registrations.data && (registrations.data.items.length
-    ? <RegistrationRows items={registrations.data.items} search={search} />
+    ? <RegistrationRows key={`${sessionId}-${search.tab}-${search.filter}-${search.search}-${search.offset}`} items={registrations.data.items} search={search} />
     : <EmptyState>{overview ? "No registrations for this run yet." : "No registrations match these filters."}</EmptyState>);
   // Prevent the loading state from shrinking the page and clamping its scroll position.
   return <div ref={workspace} style={{ minHeight: !error && registrations.isPending ? transitionHeight : undefined }}
@@ -128,13 +131,40 @@ function RegistrationWorkspace() {
 
 type RegistrationRow = Awaited<ReturnType<typeof $listRegistrations>>["items"][number];
 function RegistrationRows({ items, search }: { items: RegistrationRow[]; search: z.output<typeof searchSchema> }) {
-  return <Table>
-    <TableHeader><TableRow><TableHead>Registrant</TableHead><TableHead>Reference</TableHead><TableHead>Status</TableHead><TableHead>Saved price</TableHead><TableHead>Submitted</TableHead></TableRow></TableHeader>
+  const table = useRef<HTMLDivElement>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [batch, setBatch] = useState<{ items: RegistrationRow[]; action: BatchAction } | null>(null);
+  const eligible = items.filter(item => !item.isPaid && !item.cancelledAt);
+  const chosen = eligible.filter(item => selected.includes(item.id));
+  const toggle = (id: string, checked: boolean) => setSelected(current => checked ? [...current, id] : current.filter(value => value !== id));
+  return <div ref={table} tabIndex={-1} className="space-y-3">
+    <div className="flex flex-wrap items-center gap-2">
+      <p className="mr-auto text-sm text-muted-foreground" aria-live="polite">{chosen.length} selected. Select unpaid registrations on this page.</p>
+      <Button variant="outline" disabled={!chosen.length} onClick={() => setBatch({ items: chosen, action: RegistrationAction.MarkPaid })}>Mark selected Paid</Button>
+      <Button variant="destructive" disabled={!chosen.length} onClick={() => setBatch({ items: chosen, action: RegistrationAction.Cancel })}>Cancel selected</Button>
+    </div>
+    <Table>
+    <TableHeader><TableRow>
+      <TableHead><Checkbox aria-label="Select all unpaid registrations on this page" disabled={!eligible.length}
+        checked={chosen.length > 0 && chosen.length === eligible.length ? true : chosen.length ? "indeterminate" : false}
+        onCheckedChange={checked => setSelected(checked === true ? eligible.map(item => item.id) : [])} /></TableHead>
+      <TableHead>Registrant</TableHead><TableHead>Reference</TableHead><TableHead>Status</TableHead><TableHead>Saved price</TableHead><TableHead>Submitted</TableHead><TableHead>Actions</TableHead>
+    </TableRow></TableHeader>
     <TableBody>{items.map(item => <TableRow key={item.id}>
+      <TableCell><Checkbox aria-label={`Select ${item.reference}`} disabled={item.isPaid || !!item.cancelledAt}
+        checked={chosen.some(row => row.id === item.id)} onCheckedChange={checked => toggle(item.id, checked === true)} /></TableCell>
       <TableCell className="whitespace-normal py-4"><Link to="/registrations/$id" params={{ id: item.id }} search={search} className="font-medium underline underline-offset-4">{item.fullName}</Link><p className="mt-1 break-all text-xs text-muted-foreground">{item.email}</p><p className="mt-1 text-xs text-muted-foreground">{item.phone}</p></TableCell>
       <TableCell>{item.reference}</TableCell>
       <TableCell><RegistrationStatus isPaid={item.isPaid} cancelledAt={item.cancelledAt} /></TableCell>
       <TableCell>{formatPesos(item.priceCentavos)}</TableCell><TableCell>{formatCrmTime(item.createdAt)}</TableCell>
+      <TableCell>{!item.isPaid && !item.cancelledAt && <div className="flex gap-2">
+        <Button size="sm" variant="outline" aria-label={`Mark ${item.reference} Paid`}
+          onClick={() => setBatch({ items: [item], action: RegistrationAction.MarkPaid })}>Mark Paid</Button>
+        <Button size="sm" variant="outline" aria-label={`Cancel ${item.reference}`}
+          onClick={() => setBatch({ items: [item], action: RegistrationAction.Cancel })}>Cancel</Button>
+      </div>}</TableCell>
     </TableRow>)}</TableBody>
-  </Table>;
+  </Table>
+  {batch && <RegistrationBatchDialog items={batch.items} action={batch.action} onCloseFocus={() => table.current?.focus()} onClose={() => { setBatch(null); setSelected([]); }} />}
+  </div>;
 }

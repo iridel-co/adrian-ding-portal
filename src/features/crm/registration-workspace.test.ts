@@ -64,6 +64,22 @@ beforeEach(() => {
 });
 
 describe("Workshop run workspace", () => {
+  it("offers row and bulk actions for unpaid registrations only", () => {
+    harness.search.tab = "registrations";
+    harness.list.data = { items: [
+      { ...item, cancelledAt: null },
+      { ...item, id: "paid", reference: "AD-PSW-0002", cancelledAt: null, isPaid: true },
+      { ...item, id: "cancelled", reference: "AD-PSW-0003" }
+    ], hasMore: false };
+    const html = render();
+    expect(html).toContain("Select all unpaid registrations on this page");
+    expect(html).toContain("Mark selected Paid");
+    expect(html).toContain("Cancel selected");
+    expect(html).toContain('aria-label="Mark AD-PSW-0001 Paid"');
+    expect(html).toContain('aria-label="Cancel AD-PSW-0001"');
+    expect(html).not.toContain('aria-label="Mark AD-PSW-0002 Paid"');
+    expect(html).not.toContain('aria-label="Cancel AD-PSW-0003"');
+  });
   it("loads a bounded unfiltered preview, shows summary totals and gives cancellation precedence", () => {
     const html = render();
     expect(harness.query.mock.calls[1][0]).toMatchObject({ enabled: true,
