@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const harness = vi.hoisted(() => ({
- result: {} as Record<string, unknown>, query: vi.fn(), search: { status: "all", search: "", offset: 0, limit: 50 }, access: vi.fn(), navigate: vi.fn(), mutate: vi.fn(), invalidate: vi.fn(), mutationError: null as Error | null }));
+  headers: [] as Record<string, unknown>[], result: {} as Record<string, unknown>, query: vi.fn(), search: { status: "all", search: "", offset: 0, limit: 50 }, access: vi.fn(), navigate: vi.fn(), mutate: vi.fn(), invalidate: vi.fn(), mutationError: null as Error | null }));
 vi.mock("./functions", () => ({ $crmAccess: harness.access, $listInquiries: vi.fn(), $getInquiry: vi.fn(), $changeInquiry: vi.fn(), $retryInquiryEmail: vi.fn() }));
 vi.mock("@tanstack/react-query", async original => ({
   ...await original<typeof import("@tanstack/react-query")>(),
@@ -11,6 +11,13 @@ vi.mock("@tanstack/react-query", async original => ({
   useQueryClient: () => ({ invalidateQueries: harness.invalidate }),
   useMutation: () => ({ isPending: false, error: harness.mutationError, reset: vi.fn(), mutate: harness.mutate })
 }));
+vi.mock("@/components/crm/sortable-table-head", async original => {
+  const actual = await original<typeof import("@/components/crm/sortable-table-head")>();
+  return { SortableTableHead: (props: Parameters<typeof actual.SortableTableHead>[0]) => {
+    harness.headers.push(props);
+    return actual.SortableTableHead(props);
+  } };
+});
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: object) => ({ options, useParams: () => ({ id: "12345678-abcd-4000-8000-123456789abc" }),
     useSearch: () => harness.search, useNavigate: () => harness.navigate }),
@@ -40,6 +47,20 @@ const render = (route: typeof ListRoute | typeof DetailRoute) => renderToStaticM
 beforeEach(() => { harness.search = { status: "all", search: "", offset: 0, limit: 50 }; harness.query.mockClear(); harness.result = { isPending: false, isError: false, isFetching: false, error: null }; harness.access.mockReset(); harness.mutate.mockReset(); harness.mutationError = null; });
 
 describe("Staff inquiry screens", () => {
+  it("sorts from column headers, toggles direction and resets pagination while keeping filters", () => {
+    harness.result.data = { items: [inquiry], hasMore: true };
+    for (const direction of ["desc", "asc"]) {
+      Object.assign(harness.search, { sort: "company", direction });
+      harness.headers = [];
+      render(ListRoute);
+      const header = harness.headers.find(header => header.children === "Company / contact")!;
+      expect(header.active).toBe(true);
+      (header.onClick as () => void)();
+      expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search,
+        sort: "company", direction: direction === "asc" ? "desc" : "asc", offset: 0 } });
+    }
+    expect(harness.headers.map(header => header.children)).not.toContain("Actions");
+  });
 
   it("uses the chosen page size and offset for inquiry queries", () => {
     harness.search = { status: "WON", search: "Company", offset: 20, limit: 10 };

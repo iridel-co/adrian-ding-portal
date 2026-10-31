@@ -1,13 +1,16 @@
+import { workshopSort, registrantSort, sortDirection } from "./sorting";
 import { z } from "zod";
 import { paymentMethod } from "@/db/schema";
 import { inquiryPageSchema as pageSchema } from "./schemas";
 
 export const registrationSessionListSchema = pageSchema.extend({
+  sort: workshopSort, direction: sortDirection,
   when: z.enum(["upcoming", "past", "all"]).default("upcoming"),
   workshopId: z.uuid().optional()
 });
 
 export const registrationListSchema = pageSchema.extend({
+  sort: registrantSort, direction: sortDirection,
   workshopSessionId: z.uuid(),
   filter: z.enum(["active", "unpaid", "paid", "cancelled", "all"]).default("active"),
   search: z.string().trim().max(200).default("")

@@ -1,3 +1,4 @@
+import { SortableTableHead } from "@/components/crm/sortable-table-head";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
@@ -49,6 +50,7 @@ function RegistrationWorkspace() {
   const overview = search.tab === "overview";
   const registrations = useQuery({ ...registrationsQueryOptions({ workshopSessionId: sessionId,
     filter: overview ? "all" : search.filter, search: overview ? "" : search.search,
+    sort: overview ? "createdAt" : search.sort, direction: overview ? "desc" : search.direction,
     offset: overview ? 0 : search.offset, limit: overview ? 5 : search.limit }), enabled: !!summary.data && !summary.isError });
   const refresh = () => { void summary.refetch(); void registrations.refetch(); };
   const run = summary.data;
@@ -58,13 +60,13 @@ function RegistrationWorkspace() {
     retry={() => void registrations.refetch()} loadingMessage="Loading registrations…"
     accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />;
   const rows = !registrations.isError && registrations.data && (registrations.data.items.length
-    ? <RegistrationRows key={`${sessionId}-${search.tab}-${search.filter}-${search.search}-${search.offset}-${search.limit}`} items={registrations.data.items} search={search} />
+    ? <RegistrationRows key={`${sessionId}-${search.tab}-${search.filter}-${search.search}-${search.offset}-${search.limit}-${search.sort}-${search.direction}`} items={registrations.data.items} search={search} />
     : <EmptyState>{overview ? "No registrations for this scheduled workshop yet." : "No registrations match these filters."}</EmptyState>);
   // Prevent the loading state from shrinking the page and clamping its scroll position.
   return <div ref={workspace} style={{ minHeight: !error && registrations.isPending ? transitionHeight : undefined }}
     className="mx-auto flex max-w-6xl flex-col gap-6">
     <div className="flex items-center justify-between gap-3">
-      <Link to="/registrations" search={{ when: search.runWhen, offset: search.runOffset, limit: search.runLimit }}><BackLink>Scheduled workshops</BackLink></Link>
+      <Link to="/registrations" search={{ when: search.runWhen, offset: search.runOffset, limit: search.runLimit, sort: search.runSort, direction: search.runDirection }}><BackLink>Scheduled workshops</BackLink></Link>
       <Button variant="outline" disabled={summary.isFetching || registrations.isFetching} onClick={refresh}>Refresh</Button>
     </div>
     <CrmReadState pending={summary.isPending && !accessError} error={error} retry={refresh}
@@ -137,6 +139,9 @@ function RegistrationWorkspace() {
 
 type RegistrationRow = Awaited<ReturnType<typeof $listRegistrations>>["items"][number];
 function RegistrationRows({ items, search }: { items: RegistrationRow[]; search: z.output<typeof searchSchema> }) {
+  const navigate = Route.useNavigate();
+  const sort = search.tab === "overview" ? "createdAt" : search.sort;
+  const direction = search.tab === "overview" ? "desc" : search.direction;
   const table = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [batch, setBatch] = useState<{ items: RegistrationRow[]; action: BatchAction } | null>(null);
@@ -154,7 +159,11 @@ function RegistrationRows({ items, search }: { items: RegistrationRow[]; search:
       <TableHead><Checkbox aria-label="Select all unpaid registrations on this page" disabled={!eligible.length}
         checked={chosen.length > 0 && chosen.length === eligible.length ? true : chosen.length ? "indeterminate" : false}
         onCheckedChange={checked => setSelected(checked === true ? eligible.map(item => item.id) : [])} /></TableHead>
-      <TableHead>Registrant</TableHead><TableHead>Status</TableHead><TableHead>Saved price</TableHead><TableHead>Submitted</TableHead><TableHead>Actions</TableHead>
+      {([["fullName", "Registrant"], ["status", "Status"], ["priceCentavos", "Saved price"], ["createdAt", "Submitted"]] as const).map(([key, label]) =>
+        <SortableTableHead key={key} active={sort === key} direction={direction}
+          onClick={() => void navigate({ search: { ...search, tab: "registrations", sort: key,
+            direction: sort === key && direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>
+      )}<TableHead>Actions</TableHead>
     </TableRow></TableHeader>
     <TableBody>{items.map(item => <TableRow key={item.id}>
       <TableCell><Checkbox aria-label={`Select ${item.reference}`} disabled={item.isPaid || !!item.cancelledAt}

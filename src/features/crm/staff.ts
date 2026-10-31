@@ -1,5 +1,5 @@
 import "@tanstack/react-start/server-only";
-import { and, desc, eq, getTableColumns, ilike, inArray, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db";
 import { CrmEmailKind, CrmEmailState, activityLog, corporateInquiry, corporateInquiryStatus, crmEmailJob } from "@/db/schema";
@@ -29,6 +29,9 @@ const historyChangesSchema = z.object({
 export async function listInquiries(db: Db, input: z.output<typeof inquiryListSchema>) {
   // Escape SQL wildcard characters so searches match the text the user typed.
   const pattern = `%${input.search.replace(/[\\%_]/g, "\\$&")}%`;
+  const order = input.direction === "asc" ? asc : desc;
+  const columns = { company: sql`lower(${corporateInquiry.company})`, program: sql`lower(${corporateInquiry.program})`,
+    status: sql`${corporateInquiry.status}::text`, createdAt: corporateInquiry.createdAt, slaDueAt: corporateInquiry.slaDueAt };
   const rows = await db.select({
     id: corporateInquiry.id, company: corporateInquiry.company,
     fullName: corporateInquiry.fullName, email: corporateInquiry.email, program: corporateInquiry.program,
@@ -37,7 +40,7 @@ export async function listInquiries(db: Db, input: z.output<typeof inquiryListSc
     .from(corporateInquiry).where(and(
       input.status === "all" ? undefined : input.status === "non-spam" ? ne(corporateInquiry.status, "SPAM") : eq(corporateInquiry.status, input.status),
       input.search ? or(ilike(corporateInquiry.fullName, pattern), ilike(corporateInquiry.company, pattern), ilike(corporateInquiry.email, pattern)) : undefined
-    )).orderBy(desc(corporateInquiry.createdAt), desc(corporateInquiry.id)).limit(input.limit + 1).offset(input.offset);
+    )).orderBy(order(columns[input.sort]), desc(corporateInquiry.id)).limit(input.limit + 1).offset(input.offset);
   return { items: rows.slice(0, input.limit), hasMore: rows.length > input.limit };
 }
 

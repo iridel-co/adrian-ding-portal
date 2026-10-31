@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { z } from "zod";
 
 const harness = vi.hoisted(() => ({
-
+  headers: [] as Record<string, unknown>[],
   result: {} as Record<string, unknown>, search: { when: "upcoming", offset: 0, limit: 50 },
   query: vi.fn(), access: vi.fn(), list: vi.fn(), navigate: vi.fn(), refetch: vi.fn()
 }));
@@ -16,6 +16,13 @@ vi.mock("@tanstack/react-query", async original => ({
   useQuery: (options: unknown) => { harness.query(options); return harness.result; },
   useQueryClient: () => ({ clear: vi.fn() })
 }));
+vi.mock("@/components/crm/sortable-table-head", async original => {
+  const actual = await original<typeof import("@/components/crm/sortable-table-head")>();
+  return { SortableTableHead: (props: Parameters<typeof actual.SortableTableHead>[0]) => {
+    harness.headers.push(props);
+    return actual.SortableTableHead(props);
+  } };
+});
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: object) => ({ options, useSearch: () => harness.search, useNavigate: () => harness.navigate }),
   Link: ({ children, to }: { children: ReactNode; to: string }) => createElement("a", { href: to }, children),
@@ -61,6 +68,19 @@ beforeEach(() => {
 });
 
 describe("Workshop run list", () => {
+  it("sorts from column headers, toggles direction and resets pagination while keeping filters", () => {
+    for (const direction of ["desc", "asc"]) {
+      Object.assign(harness.search, { sort: "workshopTitle", direction });
+      harness.headers = [];
+      render();
+      const header = harness.headers.find(header => header.children === "Workshop")!;
+      expect(header.active).toBe(true);
+      (header.onClick as () => void)();
+      expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search,
+        sort: "workshopTitle", direction: direction === "asc" ? "desc" : "asc", offset: 0 } });
+    }
+    expect(harness.headers.map(header => header.children)).not.toContain("Actions");
+  });
 
   it("shows run context, independent seat/payment counts and safely escaped titles", () => {
     const html = render();
@@ -133,9 +153,9 @@ describe("Workshop run list", () => {
   });
   it("normalizes URL page offsets and defaults to Upcoming without accepting arbitrary date filters", () => {
     const schema = ListRoute.options.validateSearch as z.ZodType;
-    expect(schema.parse({})).toEqual({ when: "upcoming", offset: 0, limit: 25 });
-    expect(schema.parse({ when: "all", offset: "79", limit: 50 })).toEqual({ when: "all", offset: 50, limit: 50 });
-    for (const offset of [-1, "bad", 100001]) expect(schema.parse({ when: "past", offset })).toEqual({ when: "past", offset: 0, limit: 25 });
+    expect(schema.parse({})).toEqual({ when: "upcoming", offset: 0, limit: 25, sort: "date", direction: "desc" });
+    expect(schema.parse({ when: "all", offset: "79", limit: 50 })).toEqual({ when: "all", offset: 50, limit: 50, sort: "date", direction: "desc" });
+    for (const offset of [-1, "bad", 100001]) expect(schema.parse({ when: "past", offset })).toEqual({ when: "past", offset: 0, limit: 25, sort: "date", direction: "desc" });
     expect(schema.safeParse({ when: "arbitrary" }).success).toBe(false);
   });
 });

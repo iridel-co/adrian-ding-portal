@@ -1,3 +1,4 @@
+import { SortableTableHead } from "@/components/crm/sortable-table-head";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -7,7 +8,7 @@ import { CrmReadState } from "@/components/crm/read-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { inquiriesQueryOptions } from "@/features/crm/queries";
 import { inquirySearchSchema as searchSchema } from "@/features/crm/inquiry-navigation";
 import { formatCrmTime, inquiryStatusLabels, inquiryStatusOptions, isInquiryOverdue } from "@/features/crm/presentation";
@@ -37,7 +38,11 @@ function InquiriesPage() {
     <CrmReadState pending={inquiries.isPending} error={inquiries.error} retry={() => void inquiries.refetch()} />
     {!inquiries.isError && inquiries.data && <>
       {inquiries.data.items.length === 0 ? <EmptyState>No inquiries match these filters.</EmptyState> : <Table>
-        <TableHeader><TableRow><TableHead>Company / contact</TableHead><TableHead>Programme</TableHead><TableHead>Status</TableHead><TableHead>Received</TableHead><TableHead>First reply due</TableHead></TableRow></TableHeader>
+        <TableHeader><TableRow>{([["company", "Company / contact"], ["program", "Programme"], ["status", "Status"], ["createdAt", "Received"], ["slaDueAt", "First reply due"]] as const).map(([key, label]) =>
+            <SortableTableHead key={key} active={search.sort === key} direction={search.direction}
+              onClick={() => void navigate({ search: { ...search, sort: key,
+                direction: search.sort === key && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>
+          )}</TableRow></TableHeader>
         <TableBody>{inquiries.data.items.map(item => <TableRow key={item.id}>
           <TableCell className="whitespace-normal"><Link to="/inquiries/$id" params={{ id: item.id }} search={search} className="font-medium underline underline-offset-4">{item.company}</Link><p>{item.fullName}</p><p className="text-xs text-muted-foreground break-all">{item.email}</p></TableCell>
           <TableCell className="max-w-64 whitespace-normal">{item.program}</TableCell>

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { z } from "zod";
 
 const harness = vi.hoisted(() => ({
-
+  headers: [] as Record<string, unknown>[],
   search: { tab: "overview", filter: "paid", search: "Alice", offset: 50, limit: 50, runLimit: 50, runWhen: "past", runOffset: 100 },
   summary: {} as Record<string, unknown>, list: {} as Record<string, unknown>,
   navigate: vi.fn(), summaryRefresh: vi.fn(), listRefresh: vi.fn(), query: vi.fn(), get: vi.fn(), registrations: vi.fn()
@@ -19,6 +19,13 @@ vi.mock("@tanstack/react-query", async original => ({
     return options.queryKey[1] === "session" ? harness.summary : harness.list;
   }
 }));
+vi.mock("@/components/crm/sortable-table-head", async original => {
+  const actual = await original<typeof import("@/components/crm/sortable-table-head")>();
+  return { SortableTableHead: (props: Parameters<typeof actual.SortableTableHead>[0]) => {
+    harness.headers.push(props);
+    return actual.SortableTableHead(props);
+  } };
+});
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: object) => ({ options, useParams: () => ({ sessionId: "12345678-abcd-4000-8000-123456789abc" }),
     useSearch: () => harness.search, useNavigate: () => harness.navigate }),
@@ -69,6 +76,20 @@ beforeEach(() => {
 });
 
 describe("Workshop workspace", () => {
+  it("sorts from column headers, toggles direction and resets pagination while keeping filters", () => {
+    harness.search.tab = "registrations";
+    for (const direction of ["desc", "asc"]) {
+      Object.assign(harness.search, { sort: "fullName", direction });
+      harness.headers = [];
+      render();
+      const header = harness.headers.find(header => header.children === "Registrant")!;
+      expect(header.active).toBe(true);
+      (header.onClick as () => void)();
+      expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search,
+        sort: "fullName", direction: direction === "asc" ? "desc" : "asc", offset: 0 } });
+    }
+    expect(harness.headers.map(header => header.children)).not.toContain("Actions");
+  });
 
   it("offers row and bulk actions for unpaid registrations only", () => {
     harness.search.tab = "registrations";
@@ -211,7 +232,7 @@ describe("Workshop workspace", () => {
   });
   it("validates direct-link defaults and URL state without arbitrary tabs or filters", () => {
     const schema = Route.options.validateSearch as z.ZodType;
-    expect(schema.parse({})).toEqual({ tab: "overview", filter: "active", search: "", offset: 0, limit: 25, runLimit: 25, runWhen: "upcoming", runOffset: 0 });
+    expect(schema.parse({})).toEqual({ tab: "overview", filter: "active", search: "", offset: 0, limit: 25, runLimit: 25, runWhen: "upcoming", runOffset: 0, sort: "createdAt", direction: "desc", runSort: "date", runDirection: "desc" });
     expect(schema.parse({ tab: "registrations", search: " Alice ", offset: "79", runWhen: "past", runOffset: "129" }))
       .toMatchObject({ search: "Alice", offset: 75, limit: 25, runLimit: 25, runWhen: "past", runOffset: 125 });
     for (const offset of [-1, "bad", 100001]) expect(schema.parse({ offset })).toMatchObject({ offset: 0 });

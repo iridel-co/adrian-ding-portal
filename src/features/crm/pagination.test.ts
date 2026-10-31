@@ -30,7 +30,7 @@ it("retains the list sizes and offsets carried through detail links", () => {
   expect(registrationWorkspaceSearchSchema.parse({ limit: "10", offset: "79", runLimit: "25", runOffset: "79" }))
     .toMatchObject({ limit: 10, offset: 70, runLimit: 25, runOffset: 75 });
   expect(inquirySearchSchema.parse({ status: "WON", search: "Company", limit: "25", offset: "79" }))
-    .toEqual({ status: "WON", search: "Company", limit: 25, offset: 75 });
+    .toEqual({ status: "WON", search: "Company", limit: 25, offset: 75, sort: "createdAt", direction: "desc" });
 });
 it("groups the range and controls, changes size from page one and pages by the chosen size", () => {
   const onChange = vi.fn();

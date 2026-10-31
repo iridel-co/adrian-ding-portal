@@ -1,3 +1,4 @@
+import { SortableTableHead } from "@/components/crm/sortable-table-head";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
@@ -7,7 +8,7 @@ import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-bad
 import { CrmReadState } from "@/components/crm/read-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { crmPaginationSearchSchema } from "@/features/crm/pagination";
 import { registrationErrorMessage } from "@/features/crm/registration-presentation";
 import { registrationSessionsQueryOptions } from "@/features/crm/registration-queries";
@@ -15,7 +16,7 @@ import { registrationSessionListSchema } from "@/features/crm/registration-staff
 import { formatDateRange, formatTimeRange } from "@/features/shared/format";
 import { hasSessionEnded } from "@/features/shared/time";
 
-const searchSchema = registrationSessionListSchema.pick({ when: true }).and(crmPaginationSearchSchema);
+const searchSchema = registrationSessionListSchema.pick({ when: true, sort: true, direction: true }).and(crmPaginationSearchSchema);
 const whenOptions: { value: z.output<typeof searchSchema>["when"]; label: string }[] = [
   { value: "upcoming", label: "Upcoming" }, { value: "past", label: "Past" }, { value: "all", label: "All dates" }
 ];
@@ -46,11 +47,15 @@ function RegistrationRunsPage() {
           <p className="text-sm text-muted-foreground">{search.when === "past" ? "Workshops that have ended in Manila time." : "Reserved seats include Paid and Unpaid registrations until staff cancel them."}</p>
         </div>
         <Table>
-          <TableHeader><TableRow><TableHead>Workshop</TableHead><TableHead>Schedule</TableHead><TableHead>Venue</TableHead><TableHead>Seats</TableHead><TableHead>Payment</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow>{([["workshopTitle", "Workshop"], ["date", "Schedule"], ["venueName", "Venue"], ["reserved", "Seats"], ["paid", "Payment"]] as const).map(([key, label]) =>
+            <SortableTableHead key={key} active={search.sort === key} direction={search.direction}
+              onClick={() => void navigate({ search: { ...search, sort: key,
+                direction: search.sort === key && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>
+          )}</TableRow></TableHeader>
           <TableBody>{runs.data.items.map(run => <TableRow key={run.id}>
             <TableCell className="whitespace-normal py-5">
               <Link to="/registrations/sessions/$sessionId" params={{ sessionId: run.id }}
-                search={{ tab: "overview", filter: "active", search: "", offset: 0, runWhen: search.when, runOffset: search.offset, runLimit: search.limit }}
+                search={{ tab: "overview", filter: "active", search: "", offset: 0, runWhen: search.when, runOffset: search.offset, runLimit: search.limit, runSort: search.sort, runDirection: search.direction }}
                 className="font-medium underline underline-offset-4">{run.workshopTitle}</Link>
               <p className="mt-1 text-xs text-muted-foreground">{run.courseCode || "No course code"}</p>
               <div className="mt-2 flex flex-wrap gap-2">

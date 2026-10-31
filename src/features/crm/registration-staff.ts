@@ -29,13 +29,7 @@ const historyChangesSchema = z.object({
   emailRetry: change(z.object({ jobId: z.uuid(), state: z.string(), attemptCount: z.number() }))
 });
 
-function sessionQuery(db: Db) {
-  return db.select({
-    id: workshopSession.id, workshopId: workshop.id, workshopTitle: workshop.title, courseCode: workshop.courseCode,
-    workshopStatus: workshop.status, date: workshopSession.date, endDate: workshopSession.endDate,
-    startTime: workshopSession.startTime, endTime: workshopSession.endTime, venueName: workshopSession.venueName,
-    city: workshopSession.city, status: workshopSession.status, capacity: workshopSession.capacity, priceCentavos: workshopSession.priceCentavos,
-    counts: sql<{ reserved: number; remaining: number; paid: number; unpaid: number; cancelled: number }>`(
+const sessionCounts = sql<{ reserved: number; remaining: number; paid: number; unpaid: number; cancelled: number }>`(
       select jsonb_build_object(
         'reserved', count(*) filter (where ${registration.cancelledAt} is null),
         'remaining', greatest(${workshopSession.capacity} - count(*) filter (where ${registration.cancelledAt} is null), 0),
@@ -43,7 +37,15 @@ function sessionQuery(db: Db) {
         'unpaid', count(*) filter (where ${registration.cancelledAt} is null and not ${registration.isPaid}),
         'cancelled', count(*) filter (where ${registration.cancelledAt} is not null)
       ) from ${registration} where ${registration.workshopSessionId} = ${workshopSession.id}
-    )`
+    )`;
+
+function sessionQuery(db: Db) {
+  return db.select({
+    id: workshopSession.id, workshopId: workshop.id, workshopTitle: workshop.title, courseCode: workshop.courseCode,
+    workshopStatus: workshop.status, date: workshopSession.date, endDate: workshopSession.endDate,
+    startTime: workshopSession.startTime, endTime: workshopSession.endTime, venueName: workshopSession.venueName,
+    city: workshopSession.city, status: workshopSession.status, capacity: workshopSession.capacity, priceCentavos: workshopSession.priceCentavos,
+    counts: sessionCounts
   }).from(workshopSession).innerJoin(workshop, eq(workshop.id, workshopSession.workshopId));
 }
 
@@ -51,10 +53,14 @@ export async function listRegistrationSessions(db: Db, input: z.output<typeof re
   const clock = manilaWallClock();
   const past = sql<boolean>`(${workshopSession.endDate} < ${clock.date}
     or (${workshopSession.endDate} = ${clock.date} and ${workshopSession.endTime} <= ${clock.time}))`;
+  const order = input.direction === "asc" ? asc : desc;
+  const columns = { workshopTitle: sql`lower(${workshop.title})`, date: workshopSession.date,
+    venueName: sql`lower(coalesce(nullif(${workshopSession.venueName}, ''), 'Venue not set'))`,
+    reserved: sql`(${sessionCounts}->>'reserved')::int`, paid: sql`(${sessionCounts}->>'paid')::int` };
   const rows = await sessionQuery(db).where(and(
     input.when === "all" ? undefined : input.when === "past" ? past : sql`not ${past}`,
     input.workshopId ? eq(workshopSession.workshopId, input.workshopId) : undefined
-  )).orderBy(desc(workshopSession.date), desc(workshopSession.id)).limit(input.limit + 1).offset(input.offset);
+  )).orderBy(order(columns[input.sort]), ...(input.sort === "date" ? [order(workshopSession.startTime)] : []), desc(workshopSession.id)).limit(input.limit + 1).offset(input.offset);
   return { items: rows.slice(0, input.limit), hasMore: rows.length > input.limit, timeZone: "Asia/Manila" };
 }
 
@@ -66,6 +72,10 @@ export async function registrationSessionDetail(db: Db, id: string) {
 
 export async function listRegistrations(db: Db, input: z.output<typeof registrationListSchema>) {
   const pattern = `%${input.search.replace(/[\\%_]/g, "\\$&")}%`;
+  const order = input.direction === "asc" ? asc : desc;
+  const columns = { fullName: sql`lower(${registration.fullName})`,
+    status: sql`case when ${registration.cancelledAt} is not null then 'Cancelled' when ${registration.isPaid} then 'Paid' else 'Unpaid' end`,
+    priceCentavos: registration.priceCentavos, createdAt: registration.createdAt };
   const rows = await db.select({
     id: registration.id, reference: registration.reference, fullName: registration.fullName, email: registration.email,
     phone: registration.phone, priceCentavos: registration.priceCentavos, isPaid: registration.isPaid,
@@ -75,7 +85,7 @@ export async function listRegistrations(db: Db, input: z.output<typeof registrat
     input.filter === "all" ? undefined : input.filter === "cancelled" ? isNotNull(registration.cancelledAt) : isNull(registration.cancelledAt),
     input.filter === "paid" || input.filter === "unpaid" ? eq(registration.isPaid, input.filter === "paid") : undefined,
     input.search ? or(ilike(registration.reference, pattern), ilike(registration.fullName, pattern), ilike(registration.email, pattern)) : undefined
-  )).orderBy(desc(registration.createdAt), desc(registration.id)).limit(input.limit + 1).offset(input.offset);
+  )).orderBy(order(columns[input.sort]), desc(registration.id)).limit(input.limit + 1).offset(input.offset);
   return { items: rows.slice(0, input.limit), hasMore: rows.length > input.limit };
 }
 
