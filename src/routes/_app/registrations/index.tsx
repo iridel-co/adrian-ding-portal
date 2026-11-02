@@ -85,7 +85,7 @@ function RegistrationRunsPage() {
             </TableCell>
             <TableCell className="whitespace-normal py-5">{formatDateRange(run.date, run.endDate)}<p className="mt-1 text-xs text-muted-foreground">{formatTimeRange(run.startTime, run.endTime)}</p></TableCell>
             <TableCell className="whitespace-normal py-5">{run.venueName || "Venue not set"}<p className="mt-1 text-xs text-muted-foreground">{run.city}</p></TableCell>
-            <TableCell className="py-5"><p><span className="font-medium tabular-nums">{run.counts.reserved} / {run.capacity}</span> reserved</p><p className="mt-1 text-xs text-muted-foreground">{run.counts.remaining} remaining</p></TableCell>
+            <TableCell className="py-5 font-medium tabular-nums">{run.counts.reserved} / {run.capacity}</TableCell>
             <TableCell className="py-5"><p className="tabular-nums">{run.counts.paid} paid</p><p className="mt-1 text-xs text-muted-foreground tabular-nums">{run.counts.unpaid} unpaid</p></TableCell>
           </TableRow>)}</TableBody>
         </Table>
