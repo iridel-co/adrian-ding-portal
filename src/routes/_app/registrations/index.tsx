@@ -62,7 +62,7 @@ function RegistrationRunsPage() {
       {runs.data.items.length === 0 ? <EmptyState>No scheduled workshops match these filters.</EmptyState> : <>
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">{search.when === "past" ? "Past workshops" : search.when === "all" ? "All scheduled workshops" : "Upcoming workshops"}</h2>
-          <p className="text-sm text-muted-foreground">{search.when === "past" ? "Workshops that have ended in Manila time." : "Reserved seats include Paid and Unpaid registrations until staff cancel them."}</p>
+          {search.when !== "past" && <p className="text-sm text-muted-foreground">Reserved seats include Paid and Unpaid registrations until staff cancel them.</p>}
         </div>
         <Table>
           <TableHeader><TableRow>{([["workshopTitle", "Workshop"], ["status", "Status"], ["date", "Schedule"], ["venueName", "Venue"], ["reserved", "Seats"], ["paid", "Payment"]] as const).map(([key, label]) =>
