@@ -58,6 +58,7 @@ export async function listRegistrationSessions(db: Db, input: z.output<typeof re
     venueName: sql`lower(coalesce(nullif(${workshopSession.venueName}, ''), 'Venue not set'))`,
     reserved: sql`(${sessionCounts}->>'reserved')::int`, paid: sql`(${sessionCounts}->>'paid')::int` };
   const rows = await sessionQuery(db).where(and(
+    input.status === "all" ? undefined : eq(workshopSession.status, input.status),
     input.when === "all" ? undefined : input.when === "past" ? past : sql`not ${past}`,
     input.workshopId ? eq(workshopSession.workshopId, input.workshopId) : undefined
   )).orderBy(order(columns[input.sort]), ...(input.sort === "date" ? [order(workshopSession.startTime)] : []), desc(workshopSession.id)).limit(input.limit + 1).offset(input.offset);

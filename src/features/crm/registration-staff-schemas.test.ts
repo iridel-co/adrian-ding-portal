@@ -27,7 +27,10 @@ it("bounds list filters and pagination", () => {
   expect(registrationListSchema.parse({ workshopSessionId: base.id })).toMatchObject({ filter: "active", limit: 50, offset: 0 });
   expect(registrationListSchema.safeParse({ workshopSessionId: base.id, filter: "waitlist" }).success).toBe(false);
   expect(registrationListSchema.safeParse({ workshopSessionId: base.id, limit: 101 }).success).toBe(false);
-  expect(registrationSessionListSchema.parse({})).toMatchObject({ when: "upcoming" });
+  expect(registrationSessionListSchema.parse({})).toMatchObject({ when: "upcoming", status: "all" });
+  for (const status of ["draft", "open", "closed", "cancelled", "all"])
+    expect(registrationSessionListSchema.parse({ status })).toMatchObject({ status });
+  expect(registrationSessionListSchema.safeParse({ status: "paid" }).success).toBe(false);
   expect(registrationSessionListSchema.safeParse({ when: "future" }).success).toBe(false);
 });
 

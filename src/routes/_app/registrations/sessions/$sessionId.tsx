@@ -66,7 +66,7 @@ function RegistrationWorkspace() {
   return <div ref={workspace} style={{ minHeight: !error && registrations.isPending ? transitionHeight : undefined }}
     className="mx-auto flex max-w-6xl flex-col gap-6">
     <div className="flex items-center justify-between gap-3">
-      <Link to="/registrations" search={{ when: search.runWhen, offset: search.runOffset, limit: search.runLimit, sort: search.runSort, direction: search.runDirection }}><BackLink>Scheduled workshops</BackLink></Link>
+      <Link to="/registrations" search={{ when: search.runWhen, status: search.runStatus, offset: search.runOffset, limit: search.runLimit, sort: search.runSort, direction: search.runDirection }}><BackLink>Scheduled workshops</BackLink></Link>
       <Button variant="outline" disabled={summary.isFetching || registrations.isFetching} onClick={refresh}>Refresh</Button>
     </div>
     <CrmReadState pending={summary.isPending && !accessError} error={error} retry={refresh}

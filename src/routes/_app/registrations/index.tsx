@@ -8,6 +8,8 @@ import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-bad
 import { CrmReadState } from "@/components/crm/read-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { crmPaginationSearchSchema } from "@/features/crm/pagination";
 import { registrationErrorMessage } from "@/features/crm/registration-presentation";
@@ -16,10 +18,11 @@ import { registrationSessionListSchema } from "@/features/crm/registration-staff
 import { formatDateRange, formatTimeRange } from "@/features/shared/format";
 import { hasSessionEnded } from "@/features/shared/time";
 
-const searchSchema = registrationSessionListSchema.pick({ when: true, sort: true, direction: true }).and(crmPaginationSearchSchema);
+const searchSchema = registrationSessionListSchema.pick({ when: true, status: true, sort: true, direction: true }).and(crmPaginationSearchSchema);
 const whenOptions: { value: z.output<typeof searchSchema>["when"]; label: string }[] = [
   { value: "upcoming", label: "Upcoming" }, { value: "past", label: "Past" }, { value: "all", label: "All dates" }
 ];
+const statusOptions = ["draft", "open", "closed", "cancelled"] as const;
 
 export const Route = createFileRoute("/_app/registrations/")({
   validateSearch: searchSchema,
@@ -33,15 +36,30 @@ function RegistrationRunsPage() {
   const runs = useQuery(registrationSessionsQueryOptions(search));
   return <ContentListPage title="Scheduled workshops" description="Reserved seats and payment counts for each scheduled workshop. All dates and times are in Manila."
     action={<Button variant="outline" disabled={runs.isFetching} onClick={() => void runs.refetch()}>Refresh</Button>}
-    filters={<div role="group" aria-label="Workshop dates" className="flex flex-wrap gap-2">
-      {whenOptions.map(option => <Button key={option.value} variant={search.when === option.value ? "default" : "outline"}
-        aria-pressed={search.when === option.value}
-        onClick={() => void navigate({ search: { ...search, when: option.value, offset: 0 } })}>{option.label}</Button>)}
+    filters={<div className="space-y-2">
+      <Tabs value={search.status} onValueChange={value => {
+        const status = registrationSessionListSchema.shape.status.parse(value);
+        void navigate({ search: { ...search, status, offset: 0 } });
+      }}>
+        <TabsList aria-label="Workshop status">
+          <TabsTrigger value="all">All</TabsTrigger>
+          {statusOptions.map(status => <TabsTrigger key={status} value={status}>
+            {SESSION_STATUS_DISPLAY[status].label}
+          </TabsTrigger>)}
+        </TabsList>
+      </Tabs>
+      <Select value={search.when} onValueChange={value => {
+        const option = whenOptions.find(option => option.value === value);
+        if (option) void navigate({ search: { ...search, when: option.value, offset: 0 } });
+      }}>
+        <SelectTrigger aria-label="Workshop dates" className="w-40"><SelectValue /></SelectTrigger>
+        <SelectContent>{whenOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+      </Select>
     </div>}>
     <CrmReadState pending={runs.isPending} error={runs.error} retry={() => void runs.refetch()}
       loadingMessage="Loading scheduled workshops…" accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />
     {!runs.isError && runs.data && <>
-      {runs.data.items.length === 0 ? <EmptyState>No scheduled workshops match these dates.</EmptyState> : <>
+      {runs.data.items.length === 0 ? <EmptyState>No scheduled workshops match these filters.</EmptyState> : <>
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">{search.when === "past" ? "Past workshops" : search.when === "all" ? "All scheduled workshops" : "Upcoming workshops"}</h2>
           <p className="text-sm text-muted-foreground">{search.when === "past" ? "Workshops that have ended in Manila time." : "Reserved seats include Paid and Unpaid registrations until staff cancel them."}</p>
@@ -55,7 +73,7 @@ function RegistrationRunsPage() {
           <TableBody>{runs.data.items.map(run => <TableRow key={run.id}>
             <TableCell className="whitespace-normal py-5">
               <Link to="/registrations/sessions/$sessionId" params={{ sessionId: run.id }}
-                search={{ tab: "overview", filter: "active", search: "", offset: 0, runWhen: search.when, runOffset: search.offset, runLimit: search.limit, runSort: search.sort, runDirection: search.direction }}
+                search={{ tab: "overview", filter: "active", search: "", offset: 0, runWhen: search.when, runStatus: search.status, runOffset: search.offset, runLimit: search.limit, runSort: search.sort, runDirection: search.direction }}
                 className="font-medium underline underline-offset-4">{run.workshopTitle}</Link>
               <p className="mt-1 text-xs text-muted-foreground">{run.courseCode || "No course code"}</p>
               <div className="mt-2 flex flex-wrap gap-2">

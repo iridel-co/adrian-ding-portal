@@ -1,11 +1,12 @@
 import { workshopSort, registrantSort, sortDirection } from "./sorting";
 import { z } from "zod";
-import { paymentMethod } from "@/db/schema";
+import { paymentMethod, sessionStatus } from "@/db/schema";
 import { inquiryPageSchema as pageSchema } from "./schemas";
 
 export const registrationSessionListSchema = pageSchema.extend({
   sort: workshopSort, direction: sortDirection,
   when: z.enum(["upcoming", "past", "all"]).default("upcoming"),
+  status: z.enum([...sessionStatus.enumValues, "all"]).default("all"),
   workshopId: z.uuid().optional()
 });
 

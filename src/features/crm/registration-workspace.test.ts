@@ -232,9 +232,9 @@ describe("Workshop workspace", () => {
   });
   it("validates direct-link defaults and URL state without arbitrary tabs or filters", () => {
     const schema = Route.options.validateSearch as z.ZodType;
-    expect(schema.parse({})).toEqual({ tab: "overview", filter: "active", search: "", offset: 0, limit: 25, runLimit: 25, runWhen: "upcoming", runOffset: 0, sort: "createdAt", direction: "desc", runSort: "date", runDirection: "desc" });
-    expect(schema.parse({ tab: "registrations", search: " Alice ", offset: "79", runWhen: "past", runOffset: "129" }))
-      .toMatchObject({ search: "Alice", offset: 75, limit: 25, runLimit: 25, runWhen: "past", runOffset: 125 });
+    expect(schema.parse({})).toEqual({ tab: "overview", filter: "active", search: "", offset: 0, limit: 25, runLimit: 25, runWhen: "upcoming", runStatus: "all", runOffset: 0, sort: "createdAt", direction: "desc", runSort: "date", runDirection: "desc" });
+    expect(schema.parse({ tab: "registrations", search: " Alice ", offset: "79", runWhen: "past", runStatus: "closed", runOffset: "129" }))
+      .toMatchObject({ search: "Alice", offset: 75, limit: 25, runLimit: 25, runWhen: "past", runStatus: "closed", runOffset: 125 });
     for (const offset of [-1, "bad", 100001]) expect(schema.parse({ offset })).toMatchObject({ offset: 0 });
     for (const invalid of [{ tab: "bad" }, { filter: "bad" }, { search: "x".repeat(201) }]) expect(schema.safeParse(invalid).success).toBe(false);
   });

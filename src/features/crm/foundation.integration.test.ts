@@ -1100,6 +1100,10 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     expect([...first.items, ...second.items].map(row => row.id).sort()).toEqual([...fixture.sessions].sort());
     expect((await listRegistrationSessions(db, page({ when: "past" }))).items.map(row => row.id)).toEqual([fixture.sessions[1]]);
     expect((await listRegistrationSessions(db, page({ when: "upcoming" }))).items.map(row => row.id)).toEqual([fixture.sessions[0]]);
+    await sql`update workshop_session set status = 'closed' where id = ${fixture.sessions[1]}`;
+    expect((await listRegistrationSessions(db, page({ status: "closed", limit: 1 }))).items.map(row => row.id)).toEqual([fixture.sessions[1]]);
+    expect((await listRegistrationSessions(db, page({ status: "closed", when: "upcoming" }))).items).toEqual([]);
+    expect((await listRegistrationSessions(db, page({ status: "closed", when: "past" }))).items.map(row => row.id)).toEqual([fixture.sessions[1]]);
     expect((await registrationSessionDetail(db, fixture.sessions[0])).counts).toEqual({ reserved: 1, remaining: 19, paid: 0, unpaid: 1, cancelled: 0 });
     await expect(registrationSessionDetail(db, randomUUID())).rejects.toMatchObject({ status: 404, code: "registration_session_not_found" });
   });

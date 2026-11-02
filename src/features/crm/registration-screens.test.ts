@@ -36,6 +36,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { CrmTablePagination } from "@/components/crm/table-pagination";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
+import { Tabs } from "@/components/ui/tabs";
 import { registrationSessionsQueryOptions } from "./registration-queries";
 
 const run = {
@@ -47,6 +49,16 @@ const run = {
 const Component = ListRoute.options.component as ComponentType;
 const render = () => renderToStaticMarkup(createElement(Component));
 const tree = () => (Component as () => ReactElement<Record<string, unknown>>)();
+function findControl(node: ReactNode, type: typeof Select | typeof Tabs): ReactElement<Record<string, unknown>> | undefined {
+  for (const child of Children.toArray(node)) {
+    if (!isValidElement<Record<string, unknown>>(child)) continue;
+    if (child.type === type) return child;
+    const found = findControl(child.props.children as ReactNode, type);
+    if (found) return found;
+  }
+}
+const selectDates = (node: ReactNode, value: string) =>
+  (findControl(node, Select)!.props.onValueChange as (value: string) => void)(value);
 function findButton(node: ReactNode, label: string): ReactElement<Record<string, unknown>> | undefined {
   for (const child of Children.toArray(node)) {
     if (!isValidElement<Record<string, unknown>>(child)) continue;
@@ -68,6 +80,25 @@ beforeEach(() => {
 });
 
 describe("Workshop run list", () => {
+  it("combines status tabs with dates and resets pagination while preserving sort", () => {
+    Object.assign(harness.search, { when: "past", status: "all", offset: 50, sort: "date", direction: "asc" });
+    const filters = tree().props.filters as ReactNode;
+    const tabs = findControl(filters, Tabs)!;
+    expect(tabs.props.value).toBe("all");
+    for (const status of ["draft", "open", "closed", "cancelled", "all"]) {
+      (tabs.props.onValueChange as (value: string) => void)(status);
+      expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, status, offset: 0 } });
+    }
+    Object.assign(harness.search, { status: "closed" });
+    expect(findControl(tree().props.filters as ReactNode, Tabs)!.props.value).toBe("closed");
+    selectDates(tree().props.filters as ReactNode, "upcoming");
+    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, when: "upcoming", offset: 0 } });
+    expect(harness.query.mock.calls.at(-1)![0].queryKey[2]).toMatchObject({ when: "past", status: "closed" });
+    const html = render();
+    expect(html).toContain('role="tablist"');
+    expect(html).toContain(">All</button>");
+    expect(html.indexOf('role="tablist"')).toBeLessThan(html.indexOf('aria-label="Workshop dates"'));
+  });
   it("sorts from column headers, toggles direction and resets pagination while keeping filters", () => {
     for (const direction of ["desc", "asc"]) {
       Object.assign(harness.search, { sort: "workshopTitle", direction });
@@ -95,7 +126,7 @@ describe("Workshop run list", () => {
     harness.result.isPending = true; harness.result.data = undefined;
     expect(render()).toContain("Loading scheduled workshops");
     harness.result.isPending = false; harness.result.data = { items: [], hasMore: false };
-    expect(render()).toContain("No scheduled workshops match these dates");
+    expect(render()).toContain("No scheduled workshops match these filters");
     harness.result.data = { items: [run], hasMore: true }; harness.result.isError = true;
     for (const [code, message] of [["staff_access_required", "Registration access unavailable"],
       ["crm_unavailable", "Unable to load workshop registrations"], ["Unauthorized", "Sign in again"],
@@ -109,7 +140,7 @@ describe("Workshop run list", () => {
   it("keeps filters/page in navigation state and resets pagination when dates change", () => {
     harness.search = { when: "past", offset: 100, limit: 50 };
     const page = tree();
-    click(findButton(page.props.filters as ReactNode, "All dates")!);
+    selectDates(page.props.filters as ReactNode, "all");
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { when: "all", offset: 0, limit: 50 } });
     click(findButton(page, "Next")!);
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { when: "past", offset: 150, limit: 50 } });
@@ -128,8 +159,9 @@ describe("Workshop run list", () => {
   it("makes date filters visible and labels past runs independently of run status", () => {
     harness.search = { when: "past", offset: 0, limit: 50 };
     expect(render()).toContain("Past workshops");
-    expect(findButton(tree().props.filters as ReactNode, "Past")!.props["aria-pressed"]).toBe(true);
-    expect(findButton(tree().props.filters as ReactNode, "Upcoming")!.props["aria-pressed"]).toBe(false);
+    expect(findControl(tree().props.filters as ReactNode, Select)!.props.value).toBe("past");
+    expect(render()).toContain('aria-label="Workshop dates"');
+    expect(findButton(tree().props.filters as ReactNode, "Upcoming")).toBeUndefined();
     harness.search.when = "all";
     harness.result.data = { items: [{ ...run, date: "2000-01-01", endDate: "2000-01-01" }], hasMore: false };
     const html = render();
@@ -153,9 +185,9 @@ describe("Workshop run list", () => {
   });
   it("normalizes URL page offsets and defaults to Upcoming without accepting arbitrary date filters", () => {
     const schema = ListRoute.options.validateSearch as z.ZodType;
-    expect(schema.parse({})).toEqual({ when: "upcoming", offset: 0, limit: 25, sort: "date", direction: "desc" });
-    expect(schema.parse({ when: "all", offset: "79", limit: 50 })).toEqual({ when: "all", offset: 50, limit: 50, sort: "date", direction: "desc" });
-    for (const offset of [-1, "bad", 100001]) expect(schema.parse({ when: "past", offset })).toEqual({ when: "past", offset: 0, limit: 25, sort: "date", direction: "desc" });
+    expect(schema.parse({})).toEqual({ when: "upcoming", status: "all", offset: 0, limit: 25, sort: "date", direction: "desc" });
+    expect(schema.parse({ when: "all", offset: "79", limit: 50 })).toEqual({ when: "all", status: "all", offset: 50, limit: 50, sort: "date", direction: "desc" });
+    for (const offset of [-1, "bad", 100001]) expect(schema.parse({ when: "past", offset })).toEqual({ when: "past", status: "all", offset: 0, limit: 25, sort: "date", direction: "desc" });
     expect(schema.safeParse({ when: "arbitrary" }).success).toBe(false);
   });
 });
