@@ -215,6 +215,7 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
         : key === "createdAt" ? row.createdAt.getTime() : key === "fullName" ? row.fullName.toLowerCase() : row.priceCentavos);
     const active = await listRegistrations(db, registrationListSchema.parse({ workshopSessionId: fixture.sessions[0], sort: "fullName", direction: "asc" }));
     expect(active.items.map(row => row.fullName)).toEqual(["alpha", "alpha", "Zulu"]);
+    await sql`update workshop_session set status = 'open' where id = ${fixture.sessions[0]}`;
 
     for (const [index, name] of ["Zulu", "alpha"].entries()) {
       const other = await workshopFixture();
@@ -224,10 +225,16 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
         const row = await saveRegistration(other.sessions[0], other.courseCode);
         if (count < index + 1) await changeRegistration(db, actor, staffInput({ ...row, updated_at: row.updatedAt }, RegistrationAction.MarkPaid));
       }
+      await sql`update workshop_session set status = ${index ? "cancelled" : "draft"} where id = ${other.sessions[0]}`;
+      await sql`update workshop_session set status = 'closed' where id = ${other.sessions[1]}`;
     }
     await assertPages(extra => listRegistrationSessions(db, registrationSessionListSchema.parse({ when: "all", ...extra })),
-      ["workshopTitle", "status", "date", "venueName", "reserved", "paid"], (row, key) => ({ status: row.status, reserved: row.counts.reserved, paid: row.counts.paid, workshopTitle: row.workshopTitle.toLowerCase(),
+      ["workshopTitle", "status", "date", "venueName", "reserved", "paid"], (row, key) => ({ status: ["open", "draft", "cancelled", "closed"].indexOf(row.status), reserved: row.counts.reserved, paid: row.counts.paid, workshopTitle: row.workshopTitle.toLowerCase(),
           date: row.date, venueName: (row.venueName || "Venue not set").toLowerCase() } as Record<string, string | number>)[key]!);
+    const defaultPage = await listRegistrationSessions(db, registrationSessionListSchema.parse({ when: "all", limit: 100 }));
+    const ranks = defaultPage.items.map(row => ["open", "draft", "cancelled", "closed"].indexOf(row.status));
+    expect(new Set(ranks).size).toBe(4);
+    expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
   });
 
   it("extends mail kinds and still requires exactly one matching owner", async () => {

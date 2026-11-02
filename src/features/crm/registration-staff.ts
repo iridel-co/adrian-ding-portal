@@ -54,7 +54,8 @@ export async function listRegistrationSessions(db: Db, input: z.output<typeof re
   const past = sql<boolean>`(${workshopSession.endDate} < ${clock.date}
     or (${workshopSession.endDate} = ${clock.date} and ${workshopSession.endTime} <= ${clock.time}))`;
   const order = input.direction === "asc" ? asc : desc;
-  const columns = { workshopTitle: sql`lower(${workshop.title})`, status: sql`${workshopSession.status}::text`, date: workshopSession.date,
+  const columns = { workshopTitle: sql`lower(${workshop.title})`,
+    status: sql`case ${workshopSession.status} when 'open' then 0 when 'draft' then 1 when 'cancelled' then 2 when 'closed' then 3 end`, date: workshopSession.date,
     venueName: sql`lower(coalesce(nullif(${workshopSession.venueName}, ''), 'Venue not set'))`,
     reserved: sql`(${sessionCounts}->>'reserved')::int`, paid: sql`(${sessionCounts}->>'paid')::int` };
   const rows = await sessionQuery(db).where(and(

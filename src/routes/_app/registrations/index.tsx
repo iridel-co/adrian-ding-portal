@@ -39,7 +39,7 @@ function RegistrationRunsPage() {
     filters={<div className="flex flex-wrap items-center gap-3">
       <Tabs value={search.status} onValueChange={value => {
         const status = registrationSessionListSchema.shape.status.parse(value);
-        void navigate({ search: { ...search, status, offset: 0 } });
+        void navigate({ search: { ...search, status, ...(status === "all" ? { sort: "status", direction: "asc" } as const : {}), offset: 0 } });
       }}>
         <TabsList aria-label="Workshop status" className="p-0">
           <TabsTrigger value="all" className="h-9 px-3 py-2">All</TabsTrigger>

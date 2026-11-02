@@ -1,4 +1,3 @@
-import { workshopSort, sortDirection } from "./sorting";
 import { z } from "zod";
 import { registrationListSchema, registrationSessionListSchema } from "./registration-staff-schemas";
 import { crmPageOffset, crmPageSize, crmPaginationSearchSchema } from "./pagination";
@@ -9,8 +8,8 @@ export const registrationWorkspaceSearchSchema = registrationListSchema.pick({ f
   runWhen: z.enum(["upcoming", "past", "all"]).catch("upcoming"),
   runStatus: registrationSessionListSchema.shape.status,
   runOffset: crmPageOffset,
-  runSort: workshopSort,
-  runDirection: sortDirection,
+  runSort: registrationSessionListSchema.shape.sort,
+  runDirection: registrationSessionListSchema.shape.direction,
   runLimit: crmPageSize
 }).and(crmPaginationSearchSchema).transform(search => ({
   ...search, runOffset: Math.floor(search.runOffset / search.runLimit) * search.runLimit

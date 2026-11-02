@@ -87,7 +87,7 @@ describe("Workshop run list", () => {
     expect(tabs.props.value).toBe("all");
     for (const status of ["draft", "open", "closed", "cancelled", "all"]) {
       (tabs.props.onValueChange as (value: string) => void)(status);
-      expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, status, offset: 0 } });
+      expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, status, ...(status === "all" ? { sort: "status", direction: "asc" } : {}), offset: 0 } });
     }
     Object.assign(harness.search, { status: "closed" });
     expect(findControl(tree().props.filters as ReactNode, Tabs)!.props.value).toBe("closed");
@@ -188,9 +188,9 @@ describe("Workshop run list", () => {
   });
   it("normalizes URL page offsets and defaults to Upcoming without accepting arbitrary date filters", () => {
     const schema = ListRoute.options.validateSearch as z.ZodType;
-    expect(schema.parse({})).toEqual({ when: "upcoming", status: "all", offset: 0, limit: 25, sort: "date", direction: "desc" });
-    expect(schema.parse({ when: "all", offset: "79", limit: 50 })).toEqual({ when: "all", status: "all", offset: 50, limit: 50, sort: "date", direction: "desc" });
-    for (const offset of [-1, "bad", 100001]) expect(schema.parse({ when: "past", offset })).toEqual({ when: "past", status: "all", offset: 0, limit: 25, sort: "date", direction: "desc" });
+    expect(schema.parse({})).toEqual({ when: "upcoming", status: "all", offset: 0, limit: 25, sort: "status", direction: "asc" });
+    expect(schema.parse({ when: "all", offset: "79", limit: 50 })).toEqual({ when: "all", status: "all", offset: 50, limit: 50, sort: "status", direction: "asc" });
+    for (const offset of [-1, "bad", 100001]) expect(schema.parse({ when: "past", offset })).toEqual({ when: "past", status: "all", offset: 0, limit: 25, sort: "status", direction: "asc" });
     expect(schema.safeParse({ when: "arbitrary" }).success).toBe(false);
   });
 });
