@@ -120,6 +120,7 @@ describe("Workshop run list", () => {
       expect(html).toContain(value);
     expect(html).not.toContain("2 remaining");
     expect(html).not.toContain("</span> reserved");
+    expect(html).toMatch(/class="[^"]*text-destructive[^"]*">8 unpaid<\/p>/);
     expect(html).toContain("&lt;script&gt;unsafe&lt;/script&gt;");
     expect(html).not.toContain("<script>unsafe</script>");
     expect(html).toContain("/registrations/sessions/$sessionId");
