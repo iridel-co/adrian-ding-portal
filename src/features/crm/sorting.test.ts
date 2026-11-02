@@ -9,7 +9,7 @@ import { registrationWorkspaceSearchSchema } from "./registration-navigation";
 it("only accepts known sort columns and directions at the server boundary", () => {
   for (const [schema, input, columns] of [
     [inquiryListSchema, {}, ["company", "program", "status", "createdAt", "slaDueAt"]],
-    [registrationSessionListSchema, {}, ["workshopTitle", "date", "venueName", "reserved", "paid"]],
+    [registrationSessionListSchema, {}, ["workshopTitle", "status", "date", "venueName", "reserved", "paid"]],
     [registrationListSchema, { workshopSessionId: "12345678-abcd-4000-8000-123456789abc" }, ["fullName", "status", "priceCentavos", "createdAt"]]
   ] as const) {
     for (const sort of columns) for (const direction of ["asc", "desc"])

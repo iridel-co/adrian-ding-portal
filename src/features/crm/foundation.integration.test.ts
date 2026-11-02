@@ -226,7 +226,7 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
       }
     }
     await assertPages(extra => listRegistrationSessions(db, registrationSessionListSchema.parse({ when: "all", ...extra })),
-      ["workshopTitle", "date", "venueName", "reserved", "paid"], (row, key) => ({ reserved: row.counts.reserved, paid: row.counts.paid, workshopTitle: row.workshopTitle.toLowerCase(),
+      ["workshopTitle", "status", "date", "venueName", "reserved", "paid"], (row, key) => ({ status: row.status, reserved: row.counts.reserved, paid: row.counts.paid, workshopTitle: row.workshopTitle.toLowerCase(),
           date: row.date, venueName: (row.venueName || "Venue not set").toLowerCase() } as Record<string, string | number>)[key]!);
   });
 

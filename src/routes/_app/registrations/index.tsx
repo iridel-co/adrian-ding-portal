@@ -65,7 +65,7 @@ function RegistrationRunsPage() {
           <p className="text-sm text-muted-foreground">{search.when === "past" ? "Workshops that have ended in Manila time." : "Reserved seats include Paid and Unpaid registrations until staff cancel them."}</p>
         </div>
         <Table>
-          <TableHeader><TableRow>{([["workshopTitle", "Workshop"], ["date", "Schedule"], ["venueName", "Venue"], ["reserved", "Seats"], ["paid", "Payment"]] as const).map(([key, label]) =>
+          <TableHeader><TableRow>{([["workshopTitle", "Workshop"], ["status", "Status"], ["date", "Schedule"], ["venueName", "Venue"], ["reserved", "Seats"], ["paid", "Payment"]] as const).map(([key, label]) =>
             <SortableTableHead key={key} active={search.sort === key} direction={search.direction}
               onClick={() => void navigate({ search: { ...search, sort: key,
                 direction: search.sort === key && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>
@@ -76,7 +76,9 @@ function RegistrationRunsPage() {
                 search={{ tab: "overview", filter: "active", search: "", offset: 0, runWhen: search.when, runStatus: search.status, runOffset: search.offset, runLimit: search.limit, runSort: search.sort, runDirection: search.direction }}
                 className="font-medium underline underline-offset-4">{run.workshopTitle}</Link>
               <p className="mt-1 text-xs text-muted-foreground">{run.courseCode || "No course code"}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
+            </TableCell>
+            <TableCell className="py-5">
+              <div className="flex items-center gap-2">
                 <StatusBadge display={SESSION_STATUS_DISPLAY[run.status]} />
                 {search.when === "all" && <Badge variant="outline">{hasSessionEnded(run) ? "Past" : "Upcoming"}</Badge>}
               </div>
