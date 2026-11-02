@@ -36,14 +36,14 @@ function RegistrationRunsPage() {
   const runs = useQuery(registrationSessionsQueryOptions(search));
   return <ContentListPage title="Scheduled workshops" description="Reserved seats and payment counts for each scheduled workshop. All dates and times are in Manila."
     action={<Button variant="outline" disabled={runs.isFetching} onClick={() => void runs.refetch()}>Refresh</Button>}
-    filters={<div className="space-y-2">
+    filters={<div className="flex flex-wrap items-center gap-3">
       <Tabs value={search.status} onValueChange={value => {
         const status = registrationSessionListSchema.shape.status.parse(value);
         void navigate({ search: { ...search, status, offset: 0 } });
       }}>
-        <TabsList aria-label="Workshop status">
-          <TabsTrigger value="all">All</TabsTrigger>
-          {statusOptions.map(status => <TabsTrigger key={status} value={status}>
+        <TabsList aria-label="Workshop status" className="p-0">
+          <TabsTrigger value="all" className="h-9 px-3 py-2">All</TabsTrigger>
+          {statusOptions.map(status => <TabsTrigger key={status} value={status} className="h-9 px-3 py-2">
             {SESSION_STATUS_DISPLAY[status].label}
           </TabsTrigger>)}
         </TabsList>
@@ -52,7 +52,7 @@ function RegistrationRunsPage() {
         const option = whenOptions.find(option => option.value === value);
         if (option) void navigate({ search: { ...search, when: option.value, offset: 0 } });
       }}>
-        <SelectTrigger aria-label="Workshop dates" className="w-40"><SelectValue /></SelectTrigger>
+        <SelectTrigger aria-label="Workshop dates" className="w-32 px-3 py-2"><SelectValue /></SelectTrigger>
         <SelectContent>{whenOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
       </Select>
     </div>}>
