@@ -1,5 +1,5 @@
 import { cn } from "cn";
-import { ArrowLeft, CircleDot, Save, type LucideIcon } from "lucide-react";
+import { ArrowLeft, CircleDot, Save, TriangleAlert, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { FormErrorList } from "@/components/cms/form-section";
@@ -87,9 +87,10 @@ export function EditorShell({
           </>}
         />
         {isLive && (
-          <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
-            {liveNote}
-          </p>
+          <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-100 px-3.5 py-2.5 text-sm font-medium text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/15 dark:text-amber-200">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <p>{liveNote}</p>
+          </div>
         )}
         <FormErrorList messages={errors} />
       </div>
