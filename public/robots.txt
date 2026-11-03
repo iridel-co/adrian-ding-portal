@@ -1,0 +1,15 @@
+# This is a private admin portal. Search engines must not crawl or index it.
+#
+# Link preview bots are let in so a shared link still shows a title and image
+# in chat apps. Every page also says noindex, so they won't index it either.
+User-agent: Slackbot-LinkExpanding
+User-agent: Twitterbot
+User-agent: facebookexternalhit
+User-agent: LinkedInBot
+User-agent: Discordbot
+User-agent: WhatsApp
+User-agent: TelegramBot
+Allow: /
+
+User-agent: *
+Disallow: /
