@@ -1,5 +1,6 @@
 import { IntakeErrorCode } from "@/features/crm/errors";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Ban, CircleX, FileText, MailCheck, Trophy, type LucideIcon } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 import { MoneyField } from "@/components/cms/money-field";
@@ -14,6 +15,8 @@ import { inquiryQueryKey } from "@/features/crm/queries";
 import { inquiryTransitionSchema } from "@/features/crm/schemas";
 
 type ActionStatus = Exclude<InquiryStatus, "NEW">;
+const ACTION_ICONS: Record<ActionStatus, LucideIcon> = { CONTACTED: MailCheck, PROPOSAL_SENT: FileText, WON: Trophy, LOST: CircleX, SPAM: Ban };
+const isClosingAction = (status: InquiryStatus) => status === "LOST" || status === "SPAM";
 export type InquiryDraft = {
   selected: ActionStatus | null; expectedStatus: InquiryStatus; value: number | null; reason: string; validation: string;
 };
@@ -35,13 +38,18 @@ export function InquiryActions({ inquiry, draft, setDraft }: {
   const allowed = inquiryTransitions[inquiry.status];
   const stale = expectedStatus !== inquiry.status;
   const actionAvailable = selected && allowed.includes(selected);
-  return <section className="space-y-3" aria-label="Inquiry actions">
-    <h2 className="text-xl font-medium">Record progress</h2>
-    <p className="text-sm text-muted-foreground">Send replies and proposals outside the portal, then record the completed action here.</p>
-    <div className="flex flex-wrap gap-2">{allowed.map(status => <Button key={status} variant={status === "LOST" || status === "SPAM" ? "outline" : "default"} onClick={() => {
-      updateDraft({ selected: status as ActionStatus, expectedStatus: inquiry.status, value: null, reason: "", validation: "" }); change.reset();
-    }}>{inquiryActionLabels[status]}</Button>)}</div>
-    {allowed.length === 0 && <p className="text-sm text-muted-foreground">This inquiry is closed. No further status changes are available.</p>}
+  /* The next step forward is the brand-red call to action; closing it as lost or spam stays quiet. */
+  const nextStep = allowed.find(status => !isClosingAction(status));
+  return <div role="group" aria-label="Record progress" className="flex flex-col gap-2 lg:items-end">
+    <div className="flex flex-wrap gap-2 lg:justify-end">{allowed.map(status => {
+      const Icon = ACTION_ICONS[status as ActionStatus];
+      return <Button key={status} variant={status === nextStep ? "brand" : "outline"} onClick={() => {
+        updateDraft({ selected: status as ActionStatus, expectedStatus: inquiry.status, value: null, reason: "", validation: "" }); change.reset();
+      }}><Icon data-icon="inline-start" />{inquiryActionLabels[status]}</Button>;
+    })}</div>
+    <p className="text-xs text-muted-foreground lg:text-right">{allowed.length === 0
+      ? "This inquiry is closed. No further status changes are available."
+      : "Send replies and proposals outside the portal, then record them here."}</p>
     <Dialog open={selected !== null} onOpenChange={open => { if (!open && !change.isPending) updateDraft({ selected: null }); }}>
       <DialogContent><form className="space-y-5" onSubmit={event => {
         event.preventDefault();
@@ -62,5 +70,5 @@ export function InquiryActions({ inquiry, draft, setDraft }: {
         <DialogFooter><Button type="button" variant="outline" disabled={change.isPending} onClick={() => updateDraft({ selected: null })}>Cancel</Button><Button type="submit" disabled={change.isPending || stale || !actionAvailable}>{change.isPending ? "Saving…" : "Confirm change"}</Button></DialogFooter>
       </form></DialogContent>
     </Dialog>
-  </section>;
+  </div>;
 }

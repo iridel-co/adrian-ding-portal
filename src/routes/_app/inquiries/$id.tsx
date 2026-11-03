@@ -1,16 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { HistoryIcon } from "lucide-react";
-import { useState, type ReactNode } from "react";
-import { EmptyState } from "@/components/cms/content-list-page";
-import { BackLink } from "@/components/cms/editor-shell";
+import {
+  ArrowRight, Ban, BriefcaseBusiness, CalendarClock, CalendarDays, ChevronRight, CircleDot, CircleX, ClipboardList, Contact,
+  FileText, Flag, GraduationCap, HistoryIcon, Inbox, Mail, MailCheck, MapPin, MessageSquareText, Phone, Presentation,
+  RefreshCw, RotateCw, Sparkles, Trophy, UserRound, Users, Wallet, type LucideIcon
+} from "lucide-react";
+import { useState } from "react";
 import { CrmReadState } from "@/components/crm/read-state";
 import { DetailSkeleton } from "@/components/table/detail-skeleton";
+import { DetailHeader, Fact, InfoCard, InfoList, InfoRow, TimelineItem, type TimelineTone } from "@/components/crm/detail-parts";
 import { InquiryActions, type InquiryDraft } from "@/components/crm/inquiry-actions";
 import { InquiryEmails } from "@/components/crm/inquiry-emails";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { inquirySearchSchema } from "@/features/crm/inquiry-navigation";
+import type { InquiryStatus } from "@/features/crm/lifecycle";
 import { inquiryQueryOptions } from "@/features/crm/queries";
 import { formatCrmTime, inquiryStatusLabels, inquiryStatusVariants, isInquiryOverdue } from "@/features/crm/presentation";
 import { formatDate, formatDateRange } from "@/features/shared/format";
@@ -22,6 +27,9 @@ export const Route = createFileRoute("/_app/inquiries/$id")({
   head: () => ({ meta: [{ title: "Corporate inquiry" }] }),
   component: InquiryPage
 });
+
+/* Both tabs stay in the page so nothing is lost on a refresh; the closed one is hidden. */
+const TAB_PANEL = "data-[state=inactive]:hidden";
 
 function InquiryPage() {
   const { id } = Route.useParams();
@@ -35,50 +43,135 @@ function InquiryDetail({ id }: { id: string }) {
   const [draft, setDraft] = useState<InquiryDraft>({ selected: null, expectedStatus: "NEW", value: null, reason: "", validation: "" });
   const result = useQuery(inquiryQueryOptions(id, offset));
   const inquiry = result.data;
-  return <div className="mx-auto flex max-w-5xl flex-col gap-6">
-    <div className="flex items-center justify-between gap-3"><Link to="/inquiries" search={search}><BackLink>Back to inquiries</BackLink></Link><Button variant="outline" disabled={result.isFetching} onClick={() => void result.refetch()}>Refresh</Button></div>
+  const crumb = <Link to="/inquiries" search={search} className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+    Corporate inquiries<ChevronRight className="size-4" />
+  </Link>;
+
+  if (result.isError || !inquiry) return <div className="mx-auto flex max-w-6xl flex-col gap-6">
+    {crumb}
     <CrmReadState pending={result.isPending} error={result.error} retry={() => void result.refetch()}
       loadingMessage="Loading inquiry…" skeleton={<DetailSkeleton />} />
-    {!result.isError && inquiry && <>
-      <header><h1 className="font-display text-4xl break-words">{inquiry.company}</h1><p className="mt-2">{inquiry.program}</p><div className="mt-3 flex flex-wrap gap-2"><Badge variant={inquiryStatusVariants[inquiry.status]}>{inquiryStatusLabels[inquiry.status]}</Badge>{isInquiryOverdue(inquiry) && <Badge variant="destructive">First reply overdue</Badge>}</div><p className="mt-2 text-xs text-muted-foreground break-all">Inquiry ID: {inquiry.id}</p></header>
-      <section className="rounded-lg border bg-card shadow-xs p-5"><h2 className="mb-4 text-xl font-medium">Submitted requirements</h2><dl className="grid gap-4 sm:grid-cols-2">
-        <Field label="Contact">{inquiry.fullName}</Field><Field label="Role">{inquiry.role}</Field>
-        <Field label="Email"><a className="underline break-all" href={`mailto:${inquiry.email}`}>{inquiry.email}</a></Field><Field label="Phone">{inquiry.phone}</Field>
-        <Field label="Programme">{inquiry.program}</Field><Field label="Attendees">{inquiry.attendees}</Field>
-        <Field label="Target dates">{inquiry.targetDateFrom ? inquiry.targetDateTo ? formatDateRange(inquiry.targetDateFrom, inquiry.targetDateTo) : formatDate(inquiry.targetDateFrom) : inquiry.targetDateText}</Field>
-        <Field label="Venue">{inquiry.venue}</Field><Field label="Also interested in">{inquiry.alsoInterested.length ? inquiry.alsoInterested.join(", ") : "None specified"}</Field>
-        <Field label="Context">{inquiry.context || "None provided"}</Field>
-      </dl></section>
-      <section className="rounded-lg border bg-card shadow-xs p-5"><h2 className="mb-4 text-xl font-medium">Progress and response deadline</h2><p className="mb-4 text-sm text-muted-foreground">All times are in Manila. The first reply deadline is two weekdays after submission.</p><dl className="grid gap-4 sm:grid-cols-2">
-        <Field label="Received">{formatCrmTime(inquiry.createdAt)}</Field><Field label="First reply due">{formatCrmTime(inquiry.slaDueAt)}</Field>
-        <Field label="First reply recorded">{formatCrmTime(inquiry.contactedAt)}</Field><Field label="Proposal recorded">{formatCrmTime(inquiry.proposalSentAt)}</Field>
-        <Field label="Proposal value">{inquiry.estimatedValueCentavos === null ? "Not recorded" : formatPesos(inquiry.estimatedValueCentavos)}</Field><Field label="Closed">{formatCrmTime(inquiry.closedAt)}</Field>
-        {inquiry.lostReason && <Field label="Loss reason">{inquiry.lostReason}</Field>}
-      </dl></section>
-      <InquiryActions inquiry={inquiry} draft={draft} setDraft={setDraft} />
-      <InquiryEmails inquiryId={inquiry.id} jobs={inquiry.emailJobs} />
-      <section className="space-y-4"><h2 className="text-xl font-medium">History</h2>
-        {inquiry.history.length === 0 ? <EmptyState icon={HistoryIcon} className="py-6">No staff actions recorded yet.</EmptyState> : <ol className="space-y-3">{inquiry.history.map(entry => <HistoryEntry key={entry.id} entry={entry} />)}</ol>}
-        <div className="flex items-center justify-between gap-3"><Button variant="outline" disabled={offset === 0 || result.isFetching} onClick={() => setOffset(Math.max(0, offset - 20))}>Newer history</Button><p className="text-sm">Page {Math.floor(offset / 20) + 1}</p><Button variant="outline" disabled={!inquiry.historyHasMore || result.isFetching || offset >= 100000} onClick={() => setOffset(offset + 20)}>Older history</Button></div>
-      </section>
-    </>}
+  </div>;
+
+  const overdue = isInquiryOverdue(inquiry);
+  const targetDates = inquiry.targetDateFrom
+    ? inquiry.targetDateTo ? formatDateRange(inquiry.targetDateFrom, inquiry.targetDateTo) : formatDate(inquiry.targetDateFrom)
+    : inquiry.targetDateText || "Not specified";
+
+  return <div className="mx-auto flex max-w-6xl flex-col gap-6">
+    <DetailHeader
+      crumb={crumb}
+      title={inquiry.company}
+      subtitle={<><UserRound />{inquiry.fullName}{inquiry.role && <><span aria-hidden="true">·</span>{inquiry.role}</>}</>}
+      facts={<>
+        <Fact icon={CircleDot} label="Status">
+          <Badge variant={inquiryStatusVariants[inquiry.status]}>{inquiryStatusLabels[inquiry.status]}</Badge>
+          {overdue && <Badge variant="destructive">First reply overdue</Badge>}
+        </Fact>
+        <Fact icon={Presentation} label="Programme">{inquiry.program}</Fact>
+        <Fact icon={Inbox} label="Received">{formatCrmTime(inquiry.createdAt)}</Fact>
+        {inquiry.contactedAt
+          ? <Fact icon={MailCheck} label="First reply">{formatCrmTime(inquiry.contactedAt)}</Fact>
+          : <Fact icon={CalendarClock} label="First reply due"><span className={overdue ? "text-destructive" : undefined}>{formatCrmTime(inquiry.slaDueAt)}</span></Fact>}
+        {inquiry.estimatedValueCentavos !== null && <Fact icon={Wallet} label="Proposal value">
+          <span className="text-emerald-700 dark:text-emerald-400">{formatPesos(inquiry.estimatedValueCentavos)}</span>
+          {inquiry.proposalSentAt && <span className="font-normal text-muted-foreground">sent {formatCrmTime(inquiry.proposalSentAt)}</span>}
+        </Fact>}
+        {inquiry.closedAt && <Fact icon={Flag} label="Closed">{formatCrmTime(inquiry.closedAt)}</Fact>}
+        {inquiry.lostReason && <Fact icon={CircleX} label="Loss reason"><span className="font-normal whitespace-pre-wrap break-words">{inquiry.lostReason}</span></Fact>}
+      </>}
+      actions={<div className="flex items-start gap-2">
+        <InquiryActions inquiry={inquiry} draft={draft} setDraft={setDraft} />
+        <Button variant="ghost" size="icon" aria-label="Refresh" title="Refresh" disabled={result.isFetching} onClick={() => void result.refetch()}><RefreshCw /></Button>
+      </div>}
+    />
+
+    <Tabs defaultValue="details" className="gap-3">
+      <TabsList aria-label="Inquiry sections">
+        <TabsTrigger value="details"><ClipboardList />Details</TabsTrigger>
+        <TabsTrigger value="history">
+          <HistoryIcon />History & emails
+          <span className="rounded-full bg-current/15 px-1.5 text-xs tabular-nums">{inquiry.history.length + inquiry.emailJobs.length}{inquiry.historyHasMore ? "+" : ""}</span>
+        </TabsTrigger>
+      </TabsList>
+      <p className="text-xs text-muted-foreground">All times are in Manila. The first reply is due two weekdays after the inquiry arrives.</p>
+
+      <TabsContent value="details" forceMount className={TAB_PANEL}>
+        <div className="mt-3 grid items-start gap-6 lg:grid-cols-2">
+          <InfoCard icon={Contact} title="Contact">
+            <InfoList>
+              <InfoRow icon={UserRound} label="Name">{inquiry.fullName}</InfoRow>
+              <InfoRow icon={BriefcaseBusiness} label="Role">{inquiry.role}</InfoRow>
+              <InfoRow icon={Mail} label="Email"><a className="break-all text-brand underline-offset-4 hover:underline" href={`mailto:${inquiry.email}`}>{inquiry.email}</a></InfoRow>
+              <InfoRow icon={Phone} label="Phone"><a className="text-brand underline-offset-4 hover:underline" href={`tel:${inquiry.phone}`}>{inquiry.phone}</a></InfoRow>
+            </InfoList>
+          </InfoCard>
+          <InfoCard icon={GraduationCap} title="Training request">
+            <InfoList>
+              <InfoRow icon={Presentation} label="Programme">{inquiry.program}</InfoRow>
+              <InfoRow icon={Users} label="Attendees">{inquiry.attendees}</InfoRow>
+              <InfoRow icon={CalendarDays} label="Target dates">{targetDates}</InfoRow>
+              <InfoRow icon={MapPin} label="Venue">{inquiry.venue}</InfoRow>
+              <InfoRow icon={Sparkles} label="Also interested in">{inquiry.alsoInterested.length
+                ? <span className="flex flex-wrap gap-1.5">{inquiry.alsoInterested.map(item => <Badge key={item} variant="neutral">{item}</Badge>)}</span>
+                : <span className="font-normal text-muted-foreground">None specified</span>}</InfoRow>
+            </InfoList>
+          </InfoCard>
+          <InfoCard icon={MessageSquareText} title="Context" className="lg:col-span-2">
+            {inquiry.context
+              ? <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{inquiry.context}</p>
+              : <p className="text-sm text-muted-foreground">None provided</p>}
+          </InfoCard>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="history" forceMount className={TAB_PANEL}>
+        <div className="mt-3 grid items-start gap-6 lg:grid-cols-[1fr_24rem]">
+          <InfoCard icon={HistoryIcon} title="Activity">
+            {inquiry.history.length === 0 && offset === 0 && <p className="mb-5 text-sm text-muted-foreground">No staff actions yet. Use the buttons at the top to record progress.</p>}
+            <ol>
+              {inquiry.history.map(entry => <HistoryEntry key={entry.id} entry={entry} />)}
+              {!inquiry.historyHasMore && <TimelineItem icon={Inbox} title="Inquiry received" meta={<>Sent from the website · {formatCrmTime(inquiry.createdAt)}</>} />}
+            </ol>
+            {(offset > 0 || inquiry.historyHasMore) && <div className="mt-6 flex items-center justify-between gap-3 border-t pt-4">
+              <Button size="sm" variant="outline" disabled={offset === 0 || result.isFetching} onClick={() => setOffset(Math.max(0, offset - 20))}>Newer history</Button>
+              <p className="text-xs text-muted-foreground">Page {Math.floor(offset / 20) + 1}</p>
+              <Button size="sm" variant="outline" disabled={!inquiry.historyHasMore || result.isFetching || offset >= 100000} onClick={() => setOffset(offset + 20)}>Older history</Button>
+            </div>}
+          </InfoCard>
+          <InquiryEmails inquiryId={inquiry.id} jobs={inquiry.emailJobs} />
+        </div>
+      </TabsContent>
+    </Tabs>
   </div>;
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return <div><dt className="text-sm text-muted-foreground">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words">{children}</dd></div>;
-}
+/* What each recorded status change looks like in the activity trail. */
+const STATUS_EVENTS: Partial<Record<InquiryStatus, { title: string; icon: LucideIcon; tone: TimelineTone }>> = {
+  CONTACTED: { title: "First reply recorded", icon: MailCheck, tone: "info" },
+  PROPOSAL_SENT: { title: "Proposal sent", icon: FileText, tone: "info" },
+  WON: { title: "Marked won", icon: Trophy, tone: "success" },
+  LOST: { title: "Marked lost", icon: CircleX, tone: "neutral" },
+  SPAM: { title: "Marked spam", icon: Ban, tone: "neutral" }
+};
 
 type History = Awaited<ReturnType<typeof $getInquiry>>["history"][number];
 function HistoryEntry({ entry }: { entry: History }) {
   const { changes } = entry;
   const actor = changes.actor?.to;
-  return <li className="space-y-2 rounded-lg border bg-card shadow-xs p-4">
-    <p className="font-medium">{changes.emailRetry ? "Email retry attempted" : "Status changed"}</p>
-    <p className="text-sm text-muted-foreground">{formatCrmTime(entry.createdAt)} · {actor ? `${actor.name} (${actor.email})` : "Staff"}</p>
-    {changes.status && <p>{changes.status.from ? inquiryStatusLabels[changes.status.from] : "Not recorded"} → {changes.status.to ? inquiryStatusLabels[changes.status.to] : "Not recorded"}</p>}
-    {changes.estimatedValueCentavos && <p>Proposal value: {changes.estimatedValueCentavos.from === null ? "Not recorded" : formatPesos(changes.estimatedValueCentavos.from)} → {changes.estimatedValueCentavos.to === null ? "Not recorded" : formatPesos(changes.estimatedValueCentavos.to)}</p>}
-    {changes.lostReason?.to && <p className="whitespace-pre-wrap break-words">Loss reason: {changes.lostReason.to}</p>}
-    {changes.emailRetry?.to && <p className="text-sm">Attempt {changes.emailRetry.to.attemptCount} recorded. Check Email delivery for the current result.</p>}
-  </li>;
+  const event = changes.emailRetry
+    ? { title: "Email retry attempted", icon: RotateCw, tone: "warning" as const }
+    : (changes.status?.to && STATUS_EVENTS[changes.status.to]) || { title: "Status changed", icon: CircleDot, tone: "neutral" as const };
+  const status = (value: InquiryStatus | null) => value
+    ? <Badge variant={inquiryStatusVariants[value]}>{inquiryStatusLabels[value]}</Badge>
+    : <span className="text-muted-foreground">Not recorded</span>;
+  const pesos = (value: number | null) => value === null ? "Not recorded" : formatPesos(value);
+
+  return <TimelineItem icon={event.icon} tone={event.tone} title={event.title}
+    meta={<>{actor ? <><span className="font-medium text-foreground">{actor.name}</span> ({actor.email})</> : "Staff"} · {formatCrmTime(entry.createdAt)}</>}>
+    {changes.status && <p className="flex flex-wrap items-center gap-1.5">{status(changes.status.from)}<ArrowRight className="size-3.5 text-muted-foreground" />{status(changes.status.to)}</p>}
+    {changes.estimatedValueCentavos && <p className="text-muted-foreground">Proposal value <span className="font-medium text-foreground">{pesos(changes.estimatedValueCentavos.from)}</span> → <span className="font-medium text-foreground">{pesos(changes.estimatedValueCentavos.to)}</span></p>}
+    {changes.lostReason?.to && <blockquote className="border-l-2 pl-3 whitespace-pre-wrap break-words text-muted-foreground">{changes.lostReason.to}</blockquote>}
+    {changes.emailRetry?.to && <p className="text-muted-foreground">Attempt {changes.emailRetry.to.attemptCount} recorded. See Email delivery for the current result.</p>}
+  </TimelineItem>;
 }
