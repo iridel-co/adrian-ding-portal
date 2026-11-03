@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { CmsValidationError } from "@/features/shared/errors";
+import { errorMessage, formErrors } from "@/features/shared/error-message";
 import { assertPublishable, findMissingFields } from "@/features/shared/publish";
 
 const publishSchema = z.object({
@@ -39,8 +40,38 @@ describe("assertPublishable", () => {
     const item = { title: "", heroMediaId: null, outcomes: ["Lead"] };
 
     expect(() => assertPublishable(publishSchema, item, labels)).toThrow(CmsValidationError);
-    expect(() => assertPublishable(publishSchema, item, labels)).toThrow(
-      "Fill these before publishing: Title, Hero image."
-    );
+    expect(errorMessage(thrownBy(item))).toBe("Fill these before publishing: Title, Hero image.");
+  });
+
+  it("marks each missing field", () => {
+    const item = { title: "", heroMediaId: null, outcomes: ["Lead"] };
+
+    expect(formErrors(thrownBy(item), ["title", "heroMediaId", "outcomes"])).toEqual({
+      byField: {
+        title: ["Fill this before publishing."],
+        heroMediaId: ["Fill this before publishing."]
+      },
+      general: ["Fill these before publishing: Title, Hero image."]
+    });
+  });
+
+  it("does not throw for a complete item", () => {
+    const item = {
+      title: "Coaching",
+      heroMediaId: "6f1c1f4e-6f0a-4a4e-9a57-3c1d2b7c8e90",
+      outcomes: ["Lead"]
+    };
+
+    expect(() => assertPublishable(publishSchema, item, labels)).not.toThrow();
   });
 });
+
+function thrownBy(item: unknown) {
+  try {
+    assertPublishable(publishSchema, item, labels);
+  } catch (error) {
+    return error;
+  }
+
+  return null;
+}

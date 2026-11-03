@@ -15,6 +15,9 @@ export type FormErrors = {
   general: string[];
 };
 
+/* Maps a server field name to the form field that edits it, e.g. heroMediaId to heroMedia. */
+export type FieldAliases = Partial<Record<string, string>>;
+
 export const NO_FORM_ERRORS: FormErrors = {
   byField: {},
   general: []
@@ -61,7 +64,11 @@ export function errorMessage(error: unknown) {
 }
 
 /* Every message of an error, grouped by form field. Messages for unknown fields are general. */
-export function formErrors(error: unknown, fieldNames: readonly string[]): FormErrors {
+export function formErrors(
+  error: unknown,
+  fieldNames: readonly string[],
+  aliases: FieldAliases = {}
+): FormErrors {
   const issues = error instanceof Error ? parseIssues(error.message) : null;
   if (!issues || issues.length === 0) {
     return {
@@ -75,7 +82,10 @@ export function formErrors(error: unknown, fieldNames: readonly string[]): FormE
     general: []
   };
 
-  for (const { field, message } of issues) {
+  for (const issue of issues) {
+    const field = issue.field && (aliases[issue.field] ?? issue.field);
+    const { message } = issue;
+
     if (field && fieldNames.includes(field)) {
       result.byField[field] = [...(result.byField[field] ?? []), message];
     } else {
