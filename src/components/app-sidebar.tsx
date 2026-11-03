@@ -6,6 +6,7 @@ import {
   Building2,
   CalendarDays,
   ChevronDown,
+  CreditCard,
   Ellipsis,
   Handshake,
   Images,
@@ -126,9 +127,10 @@ export function AppSidebar({ user, crmAccess, closedSections }: AppSidebarProps)
         <SidebarGroup>
           <SidebarMenu>
             {!access.isError && access.data && <>
-              <NavGroup label="CRM" icon={Handshake} paths={["/inquiries", "/registrations"]} closedSections={closedSections}>
+              <NavGroup label="CRM" icon={Handshake} paths={["/inquiries", "/registrations", "/payment-accounts"]} closedSections={closedSections}>
                 <NavItem title="Inquiries"><Link to="/inquiries" search={{ status: "all", search: "", offset: 0 }} activeProps={ACTIVE_PROPS}><MessagesSquare /><span>Inquiries</span></Link></NavItem>
                 <NavItem title="Registrations"><Link to="/registrations" search={{ when: "upcoming", offset: 0 }} activeProps={ACTIVE_PROPS}><Users /><span>Registrations</span></Link></NavItem>
+                <NavItem title="Payment accounts"><Link to="/payment-accounts" activeProps={ACTIVE_PROPS}><CreditCard /><span>Payment accounts</span></Link></NavItem>
               </NavGroup>
               {/* Between sections, only when the sidebar shows icons and section headers are hidden. */}
               <li aria-hidden="true" className="mx-4 my-1 hidden border-t border-dashed border-sidebar-border group-data-[collapsible=icon]:block" />

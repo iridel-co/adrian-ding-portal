@@ -81,7 +81,8 @@ export function getRegistrationConfig() {
 
 const registrationMailSchema = z.object({
   REGISTRATION_EMAIL_ENABLED: z.enum(["true", "false"]).default("false").transform(value => value === "true"),
-  REGISTRATION_PAYMENT_ACCOUNT_ID: z.uuid(),
+  // Kept as a migration fallback until an admin activates an account in the portal.
+  REGISTRATION_PAYMENT_ACCOUNT_ID: z.preprocess(value => value === "" ? undefined : value, z.uuid().optional()),
   REGISTRATION_EMAIL_FROM: z.string().trim().min(1).max(320).default("Adrian Ding Team <registrations@example.invalid>")
     .refine(value => !/[\r\n]/.test(value)
       && z.email().safeParse(value.match(/^[^<>]+<([^<>]+)>$/)?.[1] ?? value).success),
@@ -100,4 +101,9 @@ export function getRegistrationMailConfig() {
     if (fields.length) configurationError(fields, "email_delivery_not_configured", IntakeErrorCode.EmailUnavailable);
   }
   return { ...config, EMAIL_FROM: config.REGISTRATION_EMAIL_FROM, EMAIL_REPLY_TO: config.REGISTRATION_REPLY_TO };
+}
+
+export function getRegistrationPaymentAccountFallbackId() {
+  const result = z.preprocess(value => value === "" ? undefined : value, z.uuid().optional()).safeParse(process.env.REGISTRATION_PAYMENT_ACCOUNT_ID);
+  return result.success ? result.data : undefined;
 }

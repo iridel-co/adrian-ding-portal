@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppInquiriesRouteImport } from './routes/_app/inquiries'
+import { Route as AppPaymentAccountsRouteImport } from './routes/_app/payment-accounts'
 import { Route as AppRegistrationsRouteImport } from './routes/_app/registrations'
 import { Route as ApiCorporateInquiriesRouteImport } from './routes/api/corporate-inquiries'
 import { Route as ApiRegistrationsRouteImport } from './routes/api/registrations'
@@ -70,6 +71,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppInquiriesRoute = AppInquiriesRouteImport.update({
   id: '/inquiries',
   path: '/inquiries',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPaymentAccountsRoute = AppPaymentAccountsRouteImport.update({
+  id: '/payment-accounts',
+  path: '/payment-accounts',
   getParentRoute: () => AppRoute,
 } as any)
 const AppRegistrationsRoute = AppRegistrationsRouteImport.update({
@@ -248,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
   '/inquiries': typeof AppInquiriesRouteWithChildren
+  '/payment-accounts': typeof AppPaymentAccountsRoute
   '/registrations': typeof AppRegistrationsRouteWithChildren
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/api/registrations': typeof ApiRegistrationsRoute
@@ -285,6 +292,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
+  '/payment-accounts': typeof AppPaymentAccountsRoute
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/api/registrations': typeof ApiRegistrationsRoute
   '/preview/program': typeof PreviewProgramRoute
@@ -325,6 +333,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRouteWithChildren
   '/_app/inquiries': typeof AppInquiriesRouteWithChildren
+  '/_app/payment-accounts': typeof AppPaymentAccountsRoute
   '/_app/registrations': typeof AppRegistrationsRouteWithChildren
   '/api/corporate-inquiries': typeof ApiCorporateInquiriesRoute
   '/api/registrations': typeof ApiRegistrationsRoute
@@ -367,6 +376,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/preview'
     | '/inquiries'
+    | '/payment-accounts'
     | '/registrations'
     | '/api/corporate-inquiries'
     | '/api/registrations'
@@ -404,6 +414,7 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/preview'
+    | '/payment-accounts'
     | '/api/corporate-inquiries'
     | '/api/registrations'
     | '/preview/program'
@@ -443,6 +454,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/preview'
     | '/_app/inquiries'
+    | '/_app/payment-accounts'
     | '/_app/registrations'
     | '/api/corporate-inquiries'
     | '/api/registrations'
@@ -534,6 +546,13 @@ declare module '@tanstack/react-router' {
       path: '/inquiries'
       fullPath: '/inquiries'
       preLoaderRoute: typeof AppInquiriesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/payment-accounts': {
+      id: '/_app/payment-accounts'
+      path: '/payment-accounts'
+      fullPath: '/payment-accounts'
+      preLoaderRoute: typeof AppPaymentAccountsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/registrations': {
@@ -802,6 +821,7 @@ const AppRegistrationsRouteWithChildren =
 
 interface AppRouteChildren {
   AppInquiriesRoute: typeof AppInquiriesRouteWithChildren
+  AppPaymentAccountsRoute: typeof AppPaymentAccountsRoute
   AppRegistrationsRoute: typeof AppRegistrationsRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppContentIndustriesRoute: typeof AppContentIndustriesRoute
@@ -819,6 +839,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppInquiriesRoute: AppInquiriesRouteWithChildren,
+  AppPaymentAccountsRoute: AppPaymentAccountsRoute,
   AppRegistrationsRoute: AppRegistrationsRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppContentIndustriesRoute: AppContentIndustriesRoute,

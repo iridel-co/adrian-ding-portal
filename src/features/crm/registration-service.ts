@@ -1,6 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { z } from "zod";
-import { and, count, eq, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { CrmEmailKind, crmEmailJob, crmSubmissionKey, media, paymentAccount, registration, workshop, workshopSession } from "@/db/schema";
 import { publicMediaUrl, readPaymentQr } from "@/features/media/r2";
 import type { DbOrTx, Tx } from "@/features/shared/db-types";
@@ -92,9 +92,18 @@ async function checkRegistration(tx: Tx, data: RegistrationInput, key: string, h
   }
   const [seats] = await tx.select({ total: count() }).from(registration).where(active);
   if (seats.total >= session.capacity) throw new IntakeError(409, IntakeErrorCode.SoldOut);
+  const accountSelection = config.REGISTRATION_PAYMENT_ACCOUNT_ID
+    ? or(eq(paymentAccount.isActive, true), eq(paymentAccount.id, config.REGISTRATION_PAYMENT_ACCOUNT_ID))
+    : eq(paymentAccount.isActive, true);
   const [destination] = await tx.select({ account: paymentAccount, qr: media }).from(paymentAccount)
     .innerJoin(media, eq(media.id, paymentAccount.qrMediaId))
-    .where(and(eq(paymentAccount.id, config.REGISTRATION_PAYMENT_ACCOUNT_ID), isNull(paymentAccount.archivedAt), isNull(media.archivedAt)))
+    .where(and(
+      isNull(paymentAccount.archivedAt),
+      isNull(media.archivedAt),
+      accountSelection
+    ))
+    .orderBy(desc(paymentAccount.isActive))
+    .limit(1)
     .for("share");
   if (!destination) throw new IntakeError(503, IntakeErrorCode.IntakeUnavailable);
 
