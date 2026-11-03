@@ -102,8 +102,8 @@ export function SessionCalendar() {
                     {Number(date.slice(8))}
                   </div>
                   <div className="flex flex-col gap-1">
-                    {sessions.data
-                      ?.filter((session) => session.date <= date && date <= session.endDate)
+                    {sessions.data?.items
+                      .filter((session) => session.date <= date && date <= session.endDate)
                       .map((session) => (
                         <Link
                           key={session.id}

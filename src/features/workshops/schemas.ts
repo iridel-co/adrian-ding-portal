@@ -8,6 +8,7 @@ import {
   optionalHttpsUrl,
   stringListSchema
 } from "@/features/shared/field-schemas";
+import { listPageLimit, listPageOffset, sortDirection } from "@/features/shared/pagination";
 import type { FieldLabels } from "@/features/shared/publish";
 
 export const COURSE_CODE_PATTERN = /^[A-Z0-9]{2,8}$/;
@@ -83,9 +84,18 @@ export const WORKSHOP_FIELD_LABELS: FieldLabels = {
 
 export const statusFilterSchema = z.enum(["active", ...contentStatus.enumValues]);
 
+export const workshopListSort = z
+  .enum(["title", "courseCode", "status", "nextSessionDate", "updatedAt"])
+  .default("updatedAt");
+
+/* Without a limit the list returns every match, e.g. for pickers. */
 export const listInput = z.object({
   status: statusFilterSchema.default("active"),
-  search: z.string().trim().default("")
+  search: z.string().trim().default(""),
+  sort: workshopListSort,
+  direction: sortDirection,
+  limit: listPageLimit,
+  offset: listPageOffset
 });
 
 export const idInput = z.object({

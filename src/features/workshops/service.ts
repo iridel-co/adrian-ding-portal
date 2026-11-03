@@ -18,6 +18,7 @@ import {
 } from "@/features/shared/content-status";
 import type { DbOrTx } from "@/features/shared/db-types";
 import { CmsValidationError } from "@/features/shared/errors";
+import { escapeLike, fetchPage, sortOrder } from "@/features/shared/list-query";
 import { assertPublishable } from "@/features/shared/publish";
 import { assertSlugAvailable, makeUniqueSlug } from "@/features/shared/slug";
 import { manilaToday } from "@/features/shared/time";
@@ -101,7 +102,15 @@ export async function listWorkshops(db: DbOrTx, data: z.infer<typeof listInput>)
     .groupBy(workshopSession.workshopId)
     .as("next_session");
 
-  const rows = await db
+  const sortColumns = {
+    title: sql`lower(${workshop.title})`,
+    courseCode: workshop.courseCode,
+    status: sql`${workshop.status}::text`,
+    nextSessionDate: nextSessionDate.date,
+    updatedAt: workshop.updatedAt
+  };
+
+  const query = db
     .select({
       id: workshop.id,
       title: workshop.title,
@@ -115,10 +124,13 @@ export async function listWorkshops(db: DbOrTx, data: z.infer<typeof listInput>)
     .where(
       and(
         statusCondition(data.status),
-        data.search ? ilike(workshop.title, `%${data.search}%`) : undefined
+        data.search ? ilike(workshop.title, `%${escapeLike(data.search)}%`) : undefined
       )
     )
-    .orderBy(desc(workshop.updatedAt));
+    .orderBy(sortOrder(sortColumns[data.sort], data.direction), desc(workshop.id))
+    .$dynamic();
+
+  const { items: rows, hasMore } = await fetchPage(query, data);
 
   const tagRows = await db
     .select({ workshopId: workshopTag.workshopId, name: taxonomyTerm.name })
@@ -132,10 +144,12 @@ export async function listWorkshops(db: DbOrTx, data: z.infer<typeof listInput>)
     )
     .orderBy(asc(workshopTag.position));
 
-  return rows.map((row) => ({
+  const items = rows.map((row) => ({
     ...row,
     tags: tagRows.filter((tag) => tag.workshopId === row.id).map((tag) => tag.name)
   }));
+
+  return { items, hasMore };
 }
 
 export async function getWorkshop(db: DbOrTx, data: z.infer<typeof idInput>) {

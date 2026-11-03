@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sessionSaveSchema } from "@/features/sessions/schemas";
+import { listInput, sessionSaveSchema } from "@/features/sessions/schemas";
 
 const valid = {
   date: "2026-10-09",
@@ -65,5 +65,20 @@ describe("sessionSaveSchema", () => {
 
   it("rejects a map link that is not https", () => {
     expect(issuePaths({ ...valid, venueMapUrl: "http://maps.test" })).toEqual(["venueMapUrl"]);
+  });
+});
+
+describe("listInput", () => {
+  it("keeps the date order and returns every session by default", () => {
+    expect(listInput.parse({})).toEqual({
+      when: "upcoming",
+      status: "any",
+      direction: "desc",
+      offset: 0
+    });
+  });
+
+  it("rejects an unknown sort column", () => {
+    expect(listInput.safeParse({ sort: "createdBy" }).success).toBe(false);
   });
 });

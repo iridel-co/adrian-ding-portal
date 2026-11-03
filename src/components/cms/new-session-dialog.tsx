@@ -101,7 +101,7 @@ export function NewSessionDialog({
                 <SelectValue placeholder="Pick a workshop" />
               </SelectTrigger>
               <SelectContent>
-                {workshops.data?.map((item) => (
+                {workshops.data?.items.map((item) => (
                   <SelectItem key={item.id} value={item.id}>
                     {item.title}
                   </SelectItem>

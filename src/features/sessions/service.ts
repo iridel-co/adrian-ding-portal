@@ -23,6 +23,7 @@ import {
 } from "@/features/shared/audit";
 import type { DbOrTx } from "@/features/shared/db-types";
 import { CmsValidationError } from "@/features/shared/errors";
+import { fetchPage, sortOrder } from "@/features/shared/list-query";
 import { assertPublishable } from "@/features/shared/publish";
 import {
   dateToManilaLocal,
@@ -89,7 +90,25 @@ export async function listSessions(db: DbOrTx, data: z.infer<typeof listInput>) 
     all: undefined
   };
 
-  const rows = await db
+  const sortColumns = {
+    date: workshopSession.date,
+    workshopTitle: sql`lower(${workshop.title})`,
+    venueName: sql`lower(nullif(${workshopSession.venueName}, ''))`,
+    priceCentavos: workshopSession.priceCentavos,
+    capacity: workshopSession.capacity,
+    status: sql`${workshopSession.status}::text`
+  };
+
+  const defaultOrder = [
+    data.when === "past" ? desc(workshopSession.date) : asc(workshopSession.date),
+    asc(workshopSession.startTime)
+  ];
+
+  const sortedOrder = data.sort
+    ? [sortOrder(sortColumns[data.sort], data.direction), asc(workshopSession.date)]
+    : defaultOrder;
+
+  const query = db
     .select({
       id: workshopSession.id,
       date: workshopSession.date,
@@ -114,12 +133,15 @@ export async function listSessions(db: DbOrTx, data: z.infer<typeof listInput>) 
         data.month ? monthCondition(data.month) : undefined
       )
     )
-    .orderBy(
-      data.when === "past" ? desc(workshopSession.date) : asc(workshopSession.date),
-      asc(workshopSession.startTime)
-    );
+    .orderBy(...sortedOrder, desc(workshopSession.id))
+    .$dynamic();
 
-  return rows.map((row) => ({ ...row, isPast: hasSessionEnded(row) }));
+  const { items, hasMore } = await fetchPage(query, data);
+
+  return {
+    items: items.map((row) => ({ ...row, isPast: hasSessionEnded(row) })),
+    hasMore
+  };
 }
 
 export async function getSession(db: DbOrTx, data: z.infer<typeof idInput>) {

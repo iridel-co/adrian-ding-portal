@@ -44,7 +44,7 @@ export const $setWorkshopStatus = createServerFn({ method: "POST" })
   .validator(statusInput)
   .handler(({ data, context }) => setWorkshopStatus(getDb(), context.user, data));
 
-export type WorkshopListItem = Awaited<ReturnType<typeof $listWorkshops>>[number];
+export type WorkshopListItem = Awaited<ReturnType<typeof $listWorkshops>>["items"][number];
 
 export type WorkshopDetail = Awaited<ReturnType<typeof $getWorkshop>>;
 

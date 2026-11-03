@@ -51,7 +51,7 @@ export const $listVenueSuggestions = createServerFn({ method: "GET" })
   .validator(suggestionInput)
   .handler(({ data }) => listVenueSuggestions(getDb(), data));
 
-export type SessionListItem = Awaited<ReturnType<typeof $listSessions>>[number];
+export type SessionListItem = Awaited<ReturnType<typeof $listSessions>>["items"][number];
 
 export type SessionDetail = Awaited<ReturnType<typeof $getSession>>;
 

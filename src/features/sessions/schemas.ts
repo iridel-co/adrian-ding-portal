@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { sessionStatus } from "@/db/schema";
 import { capacitySchema, centavosSchema, optionalHttpsUrl } from "@/features/shared/field-schemas";
+import { listPageLimit, listPageOffset, sortDirection } from "@/features/shared/pagination";
 import { normalizeTime } from "@/features/shared/time";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -96,6 +97,19 @@ export const SESSION_FIELD_LABELS = {
   city: "City"
 };
 
+export const sessionListSort = z.enum([
+  "date",
+  "workshopTitle",
+  "venueName",
+  "priceCentavos",
+  "capacity",
+  "status"
+]);
+
+/*
+ * Without a sort, upcoming sessions run soonest first and past ones latest first.
+ * Without a limit the list returns every match.
+ */
 export const listInput = z.object({
   when: z.enum(["upcoming", "past", "all"]).default("upcoming"),
   status: z.enum(["any", ...sessionStatus.enumValues]).default("any"),
@@ -103,7 +117,11 @@ export const listInput = z.object({
   month: z
     .string()
     .regex(/^\d{4}-\d{2}$/)
-    .optional()
+    .optional(),
+  sort: sessionListSort.optional(),
+  direction: sortDirection,
+  limit: listPageLimit,
+  offset: listPageOffset
 });
 
 export const idInput = z.object({
