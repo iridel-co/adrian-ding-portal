@@ -34,13 +34,12 @@
   --brand-foreground: #fafafa;
 
   /*
-    Light mode: the page is a soft warm gray with a faint brand-red glow in the
-    top corners, and cards, inputs and the sidebar stay white so they stand out.
+    Light mode: the page and sidebar share one warm off-white, with a barely-there
+    brand-red warmth at the top. Cards and inputs stay white so they stand out.
   */
-  --background: oklch(0.973 0.006 30);
+  --background: oklch(0.978 0.0025 55);
   --canvas:
-    radial-gradient(70rem 40rem at 0% 0%, oklch(0.94 0.035 25 / 0.7), transparent 70%),
-    radial-gradient(50rem 35rem at 100% 0%, oklch(0.96 0.02 45 / 0.6), transparent 70%),
+    radial-gradient(60rem 28rem at 50% -8rem, oklch(0.965 0.014 25 / 0.5), transparent 70%),
     var(--background);
   --foreground: var(--base-800);
   --card: oklch(1 0 0);
@@ -49,28 +48,28 @@
   --popover-foreground: var(--base-800);
   --primary: var(--base-950);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.955 0.006 30);
+  --secondary: oklch(0.955 0.003 55);
   --secondary-foreground: var(--base-800);
-  --muted: oklch(0.965 0.005 30);
+  --muted: oklch(0.962 0.003 55);
   --muted-foreground: var(--base-600);
-  --accent: oklch(0.95 0.008 30);
+  --accent: oklch(0.95 0.004 55);
   --accent-foreground: var(--base-800);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.91 0.008 30);
-  --input: oklch(0.87 0.01 30);
+  --border: oklch(0.91 0.005 55);
+  --input: oklch(0.87 0.007 55);
   --ring: var(--base-950);
   --chart-1: var(--base-950);
   --chart-2: var(--base-500);
   --chart-3: var(--base-700);
   --chart-4: var(--base-400);
   --chart-5: var(--base-600);
-  --sidebar: oklch(1 0 0);
+  --sidebar: var(--background);
   --sidebar-foreground: var(--base-800);
   --sidebar-primary: var(--base-950);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.96 0.006 30);
+  --sidebar-accent: oklch(0.948 0.004 55);
   --sidebar-accent-foreground: var(--base-800);
-  --sidebar-border: oklch(0.92 0.008 30);
+  --sidebar-border: oklch(0.91 0.005 55);
   --sidebar-ring: var(--base-950);
 }
 

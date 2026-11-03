@@ -78,7 +78,7 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center gap-3 px-2 py-2">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border bg-background shadow-xs">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border bg-card shadow-xs">
             <img src={logoUrl} alt="Adrian Ding" className="size-8 dark:invert" />
           </div>
           <div className="grid leading-tight">
