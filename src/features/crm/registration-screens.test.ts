@@ -7,7 +7,7 @@ import type { z } from "zod";
 const harness = vi.hoisted(() => ({
   headers: [] as Record<string, unknown>[],
   result: {} as Record<string, unknown>, search: { when: "upcoming", offset: 0, limit: 50 },
-  query: vi.fn(), access: vi.fn(), list: vi.fn(), navigate: vi.fn(), refetch: vi.fn()
+  query: vi.fn(), access: vi.fn(), list: vi.fn(), navigate: vi.fn(), refetch: vi.fn(), pathname: "/"
 }));
 vi.mock("./functions", () => ({ $crmAccess: harness.access, $listRegistrationSessions: harness.list,
   $listInquiries: vi.fn(), $getInquiry: vi.fn() }));
@@ -29,7 +29,7 @@ vi.mock("@tanstack/react-router", () => ({
   Outlet: () => null,
   useRouter: () => ({ navigate: harness.navigate }),
   useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => unknown }) =>
-    select({ location: { pathname: "/" } })
+    select({ location: { pathname: harness.pathname } })
 }));
 vi.mock("@/lib/auth-client", () => ({ authClient: { signOut: vi.fn() } }));
 import { Route as GuardRoute } from "@/routes/_app/registrations";
@@ -210,12 +210,16 @@ describe("Registration access and reads", () => {
   it("shows the sidebar link only with CRM access and keeps existing navigation", () => {
     const sidebar = () => renderToStaticMarkup(createElement(SidebarProvider, {}, createElement(AppSidebar,
       { user: { name: "Test Staff", email: "staff@company.test" } })));
+    /* A section only shows its links while it's open, and it starts open when it holds the current page. */
     for (const role of ["staff", "admin"]) {
       harness.result.data = { role }; harness.result.isError = false;
+      harness.pathname = "/registrations";
       const html = sidebar();
       expect(html).toContain('href="/registrations"'); expect(html).toContain('href="/inquiries"');
-      expect(html).toContain('href="/content/sessions"');
+      harness.pathname = "/content/sessions";
+      expect(sidebar()).toContain('href="/content/sessions"');
     }
+    harness.pathname = "/registrations";
     harness.result.isError = true;
     expect(sidebar()).not.toContain('href="/registrations"');
     harness.result.isError = false; harness.result.data = undefined;
