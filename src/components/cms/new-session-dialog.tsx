@@ -98,7 +98,7 @@ export function NewSessionDialog({
               }}
             >
               <SelectTrigger id="new-session-workshop" className="w-full">
-                <SelectValue placeholder="Pick a workshop" />
+                <SelectValue placeholder={workshops.isPending ? "Loading workshops…" : "Pick a workshop"} />
               </SelectTrigger>
               <SelectContent>
                 {workshops.data?.items.map((item) => (

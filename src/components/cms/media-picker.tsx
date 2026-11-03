@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check } from "lucide-react";
+import { Check, Images } from "lucide-react";
 import { useState } from "react";
 
+import { EmptyState } from "@/components/cms/content-list-page";
 import { Field } from "@/components/cms/form-section";
 import { MediaGridSkeleton } from "@/components/cms/list-skeletons";
 import { MediaDropzone } from "@/components/cms/media-dropzone";
@@ -140,9 +141,9 @@ export function MediaPicker({ open, onOpenChange, onPick }: MediaPickerProps) {
                   );
                 })}
                 {library.data?.length === 0 && (
-                  <p className="col-span-full py-8 text-center text-sm text-muted-foreground">
+                  <EmptyState icon={Images} className="col-span-full py-8 shadow-none">
                     No images found.
-                  </p>
+                  </EmptyState>
                 )}
               </div>
             )}

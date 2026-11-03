@@ -1,6 +1,7 @@
 import { SortableTableHead } from "@/components/table/sortable-table-head";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Users } from "lucide-react";
 import { useRef, useState } from "react";
 import { z } from "zod";
 import { BackLink } from "@/components/cms/editor-shell";
@@ -66,7 +67,7 @@ function RegistrationWorkspace() {
     skeleton={<TableSkeleton columns={[{ label: "" }, ...registrantColumns.map(([, label]) => ({ label })), { label: "Actions" }]} />} />;
   const rows = !registrations.isError && registrations.data && (registrations.data.items.length
     ? <RegistrationRows key={`${sessionId}-${search.tab}-${search.filter}-${search.search}-${search.offset}-${search.limit}-${search.sort}-${search.direction}`} items={registrations.data.items} search={search} />
-    : <EmptyState>{overview ? "No registrations for this scheduled workshop yet." : "No registrations match these filters."}</EmptyState>);
+    : <EmptyState icon={Users}>{overview ? "No registrations for this scheduled workshop yet." : "No registrations match these filters."}</EmptyState>);
   // Prevent the loading state from shrinking the page and clamping its scroll position.
   return <div ref={workspace} style={{ minHeight: !error && registrations.isPending ? transitionHeight : undefined }}
     className="mx-auto flex max-w-6xl flex-col gap-6">

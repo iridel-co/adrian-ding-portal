@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { BookOpen, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 
@@ -137,7 +137,7 @@ function WorkshopsPage() {
       {workshops.data && (
         <>
           {workshops.data.items.length === 0 ? (
-            <EmptyState>No workshops match these filters.</EmptyState>
+            <EmptyState icon={BookOpen}>No workshops match these filters.</EmptyState>
           ) : (
             <Table>
               <TableHeader>

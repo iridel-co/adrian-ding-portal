@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { Briefcase, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { z } from "zod";
@@ -80,7 +80,7 @@ function ProgramsPage() {
       {programs.isPending ? (
         <SortableListSkeleton label="Loading programs…" />
       ) : programs.data?.length === 0 ? (
-        <EmptyState>No programs yet.</EmptyState>
+        <EmptyState icon={Briefcase}>No programs yet.</EmptyState>
       ) : (
         <SortableList
           items={programs.data ?? []}

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { CalendarDays } from "lucide-react";
 import { z } from "zod";
 
 import { ContentListPage, EmptyState, FilterSelect } from "@/components/cms/content-list-page";
@@ -164,7 +165,7 @@ function SessionList() {
       {sessions.data && (
         <>
           {sessions.data.items.length === 0 ? (
-            <EmptyState>No sessions match these filters.</EmptyState>
+            <EmptyState icon={CalendarDays}>No sessions match these filters.</EmptyState>
           ) : (
             <Table>
               <TableHeader>

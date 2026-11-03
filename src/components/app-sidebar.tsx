@@ -43,6 +43,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem
 } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { authClient } from "@/lib/auth-client";
 import { crmAccessQueryOptions } from "@/features/crm/queries";
 
@@ -89,6 +90,7 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
+            {access.isPending && <NavGroupSkeleton />}
             {!access.isError && access.data && <NavGroup label="CRM" icon={Handshake} paths={["/inquiries", "/registrations"]}>
               <NavItem><Link to="/inquiries" search={{ status: "all", search: "", offset: 0 }} activeProps={ACTIVE_PROPS}><MessagesSquare /><span>Inquiries</span></Link></NavItem>
               <NavItem><Link to="/registrations" search={{ when: "upcoming", offset: 0 }} activeProps={ACTIVE_PROPS}><Users /><span>Registrations</span></Link></NavItem>
@@ -153,6 +155,20 @@ function NavGroup({ label, icon: Icon, paths, children }: { label: string; icon:
         </Collapsible.Content>
       </SidebarMenuItem>
     </Collapsible.Root>
+  );
+}
+
+/* Stands in for the CRM section while we check if the user can see it. */
+function NavGroupSkeleton() {
+  return (
+    <div aria-hidden="true" className="flex flex-col gap-3 px-2 py-2">
+      <div className="flex items-center gap-2">
+        <Skeleton className="size-4" />
+        <Skeleton className="h-4 w-16" />
+      </div>
+      <Skeleton className="ml-8 h-4 w-24" />
+      <Skeleton className="ml-8 h-4 w-28" />
+    </div>
   );
 }
 

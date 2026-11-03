@@ -1,10 +1,11 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 
-import { BackLink, EditorShell, type StatusAction } from "@/components/cms/editor-shell";
+import { EmptyState } from "@/components/cms/content-list-page";
+import { BackLink, EditorShell, EditorSkeleton, type StatusAction } from "@/components/cms/editor-shell";
 import { Field, FormSection } from "@/components/cms/form-section";
 import { MediaField } from "@/components/cms/media-field";
 import type { PickedMedia } from "@/components/cms/media-picker";
@@ -40,6 +41,7 @@ export const Route = createFileRoute("/_app/content/workshops/$id")({
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(workshopQueryOptions(params.id)),
   head: ({ loaderData }) => ({ meta: [{ title: loaderData?.workshop.title ?? "Workshop" }] }),
+  pendingComponent: EditorSkeleton,
   component: WorkshopEditorPage
 });
 
@@ -457,7 +459,9 @@ function UpcomingSessions({ workshopId, sessions }: UpcomingSessionsProps) {
   return (
     <FormSection title="Upcoming sessions">
       {sessions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No upcoming sessions.</p>
+        <EmptyState icon={CalendarDays} className="py-6 shadow-none">
+          No upcoming sessions.
+        </EmptyState>
       ) : (
         <ul className="flex flex-col gap-2 text-sm">
           {sessions.map((session) => (

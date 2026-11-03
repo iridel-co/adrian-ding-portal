@@ -1,6 +1,7 @@
 import { SortableTableHead } from "@/components/table/sortable-table-head";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { CalendarDays } from "lucide-react";
 import { z } from "zod";
 import { TablePagination } from "@/components/table/table-pagination";
 import { ContentListPage, EmptyState } from "@/components/cms/content-list-page";
@@ -63,7 +64,7 @@ function RegistrationRunsPage() {
       loadingMessage="Loading scheduled workshops…" accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage}
       skeleton={<TableSkeleton columns={columns.map(([, label]) => ({ label }))} />} />
     {!runs.isError && runs.data && <>
-      {runs.data.items.length === 0 ? <EmptyState>No scheduled workshops match these filters.</EmptyState> : <>
+      {runs.data.items.length === 0 ? <EmptyState icon={CalendarDays}>No scheduled workshops match these filters.</EmptyState> : <>
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">{search.when === "past" ? "Past workshops" : search.when === "all" ? "All scheduled workshops" : "Upcoming workshops"}</h2>
           {search.when !== "past" && <p className="text-sm text-muted-foreground">Reserved seats include Paid and Unpaid registrations until staff cancel them.</p>}

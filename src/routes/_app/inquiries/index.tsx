@@ -1,6 +1,7 @@
 import { SortableTableHead } from "@/components/table/sortable-table-head";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { MessagesSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ContentListPage, EmptyState, FilterSelect } from "@/components/cms/content-list-page";
 import { TablePagination } from "@/components/table/table-pagination";
@@ -41,7 +42,7 @@ function InquiriesPage() {
     <CrmReadState pending={inquiries.isPending} error={inquiries.error} retry={() => void inquiries.refetch()}
       skeleton={<TableSkeleton columns={columns.map(([, label]) => ({ label }))} />} />
     {!inquiries.isError && inquiries.data && <>
-      {inquiries.data.items.length === 0 ? <EmptyState>No inquiries match these filters.</EmptyState> : <Table>
+      {inquiries.data.items.length === 0 ? <EmptyState icon={MessagesSquare}>No inquiries match these filters.</EmptyState> : <Table>
         <TableHeader><TableRow>{columns.map(([key, label]) =>
             <SortableTableHead key={key} active={search.sort === key} direction={search.direction}
               onClick={() => void navigate({ search: { ...search, sort: key,

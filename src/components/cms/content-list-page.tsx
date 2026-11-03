@@ -1,3 +1,5 @@
+import { cn } from "cn";
+import { Inbox, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import {
@@ -72,6 +74,25 @@ export function FilterSelect<T extends string>({
   );
 }
 
-export function EmptyState({ children }: { children: ReactNode }) {
-  return <p className="py-12 text-center text-sm text-muted-foreground">{children}</p>;
+type EmptyStateProps = {
+  icon?: LucideIcon;
+  className?: string;
+  children: ReactNode;
+};
+
+/* A card with an icon, shown in place of a list that has nothing in it. */
+export function EmptyState({ icon: Icon = Inbox, className, children }: EmptyStateProps) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center gap-3 rounded-xl bg-card px-6 py-12 text-center text-sm text-muted-foreground shadow-xs ring-1 ring-foreground/10",
+        className
+      )}
+    >
+      <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+        <Icon className="size-5" />
+      </div>
+      <p>{children}</p>
+    </div>
+  );
 }

@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 
-import { BackLink, EditorShell, type StatusAction } from "@/components/cms/editor-shell";
+import { BackLink, EditorShell, EditorSkeleton, type StatusAction } from "@/components/cms/editor-shell";
 import { Field, FormSection } from "@/components/cms/form-section";
 import { MediaField } from "@/components/cms/media-field";
 import type { PickedMedia } from "@/components/cms/media-picker";
@@ -36,6 +36,7 @@ export const Route = createFileRoute("/_app/content/corporate-trainings/$id")({
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(programQueryOptions(params.id)),
   head: ({ loaderData }) => ({ meta: [{ title: loaderData?.program.title ?? "Program" }] }),
+  pendingComponent: EditorSkeleton,
   component: ProgramEditorPage
 });
 

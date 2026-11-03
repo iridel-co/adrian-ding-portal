@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Trash2, Users } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 
+import { EmptyState } from "@/components/cms/content-list-page";
+import { TableSkeleton } from "@/components/table/table-skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,18 +27,41 @@ import { errorMessage } from "@/features/shared/error-message";
 export const Route = createFileRoute("/_app/settings/access")({
   head: () => ({ meta: [{ title: "Access" }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(allowedEmailsQueryOptions()),
-  component: SettingsPage
+  pendingComponent: () => (
+    <SettingsPage>
+      <Card>
+        <UsersCardHeader />
+        <CardContent>
+          <TableSkeleton columns={[{ label: "Email" }, { label: "Added" }, { label: "", className: "w-12" }]} />
+        </CardContent>
+      </Card>
+    </SettingsPage>
+  ),
+  component: () => (
+    <SettingsPage>
+      <AllowedUsersCard />
+    </SettingsPage>
+  )
 });
 
-function SettingsPage() {
+function SettingsPage({ children }: { children: ReactNode }) {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-8">
       <div>
         <h1 className="font-display text-4xl">Access</h1>
         <p className="mt-1 text-sm text-muted-foreground">Manage who can access this dashboard.</p>
       </div>
-      <AllowedUsersCard />
+      {children}
     </div>
+  );
+}
+
+function UsersCardHeader() {
+  return (
+    <CardHeader>
+      <CardTitle>Users</CardTitle>
+      <CardDescription>Only these Google accounts can sign in.</CardDescription>
+    </CardHeader>
   );
 }
 
@@ -69,10 +94,7 @@ function AllowedUsersCard() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Users</CardTitle>
-        <CardDescription>Only these Google accounts can sign in.</CardDescription>
-      </CardHeader>
+      <UsersCardHeader />
       <CardContent className="flex flex-col gap-4">
         <form
           className="flex gap-2"
@@ -133,8 +155,10 @@ function AllowedUsersCard() {
             ))}
             {data.adminEmails.length === 0 && data.emails.length === 0 && (
               <TableRow>
-                <TableCell colSpan={3} className="text-center text-muted-foreground">
-                  No users yet.
+                <TableCell colSpan={3}>
+                  <EmptyState icon={Users} className="py-8 shadow-none ring-0">
+                    No users yet.
+                  </EmptyState>
                 </TableCell>
               </TableRow>
             )}

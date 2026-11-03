@@ -3,6 +3,7 @@ import { Archive, ArchiveRestore } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { EmptyState } from "@/components/cms/content-list-page";
 import { FieldErrors } from "@/components/cms/form-section";
 import { SortableListSkeleton } from "@/components/cms/list-skeletons";
 import { SortableList } from "@/components/cms/sortable-list";
@@ -147,7 +148,7 @@ export function TermsManager({
             </ul>
           )}
           {!terms.isPending && activeTerms.length === 0 && savingNames.length === 0 && (
-            <p className="py-4 text-center text-sm text-muted-foreground">Nothing here yet.</p>
+            <EmptyState className="py-8 shadow-none">Nothing here yet.</EmptyState>
           )}
 
           <div className="flex items-center gap-2">

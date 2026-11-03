@@ -70,7 +70,9 @@ export function TermMultiPicker({ kind, value, onChange, addLabel }: TermMultiPi
           <Command>
             <CommandInput placeholder="Search" />
             <CommandList>
-              <CommandEmpty>Nothing to add. Add new ones in Settings.</CommandEmpty>
+              <CommandEmpty>
+                {terms.isPending ? "Loading…" : "Nothing to add. Add new ones in Settings."}
+              </CommandEmpty>
               {available.map((term) => (
                 <CommandItem
                   key={term.id}

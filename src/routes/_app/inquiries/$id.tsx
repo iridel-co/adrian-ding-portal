@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { HistoryIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { EmptyState } from "@/components/cms/content-list-page";
 import { BackLink } from "@/components/cms/editor-shell";
 import { CrmReadState } from "@/components/crm/read-state";
 import { DetailSkeleton } from "@/components/table/detail-skeleton";
@@ -56,7 +58,7 @@ function InquiryDetail({ id }: { id: string }) {
       <InquiryActions inquiry={inquiry} draft={draft} setDraft={setDraft} />
       <InquiryEmails inquiryId={inquiry.id} jobs={inquiry.emailJobs} />
       <section className="space-y-4"><h2 className="text-xl font-medium">History</h2>
-        {inquiry.history.length === 0 ? <p className="text-sm text-muted-foreground">No staff actions recorded yet.</p> : <ol className="space-y-3">{inquiry.history.map(entry => <HistoryEntry key={entry.id} entry={entry} />)}</ol>}
+        {inquiry.history.length === 0 ? <EmptyState icon={HistoryIcon} className="py-6">No staff actions recorded yet.</EmptyState> : <ol className="space-y-3">{inquiry.history.map(entry => <HistoryEntry key={entry.id} entry={entry} />)}</ol>}
         <div className="flex items-center justify-between gap-3"><Button variant="outline" disabled={offset === 0 || result.isFetching} onClick={() => setOffset(Math.max(0, offset - 20))}>Newer history</Button><p className="text-sm">Page {Math.floor(offset / 20) + 1}</p><Button variant="outline" disabled={!inquiry.historyHasMore || result.isFetching || offset >= 100000} onClick={() => setOffset(offset + 20)}>Older history</Button></div>
       </section>
     </>}

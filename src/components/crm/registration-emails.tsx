@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
+import { Mail } from "lucide-react";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/cms/content-list-page";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CrmEmailKind } from "@/db/schema/crm-email-kind";
@@ -55,7 +57,7 @@ export function RegistrationEmails({ registration, onChanged, onAccessError }: {
   return <section ref={section} tabIndex={-1} className="space-y-4" aria-labelledby="registration-email">
     <h2 id="registration-email" className="text-xl font-medium">Email delivery</h2>
     <p className="text-sm text-muted-foreground">Payment status is independent of email delivery. Accepted means the provider accepted the message, not confirmed inbox delivery. All times are in Manila.</p>
-    {jobs.length === 0 && <p className="text-sm text-muted-foreground">No email jobs recorded.</p>}
+    {jobs.length === 0 && <EmptyState icon={Mail} className="py-6">No email jobs recorded.</EmptyState>}
     <div className="grid gap-4 sm:grid-cols-2">{jobs.map(job => <div key={job.id} className="space-y-3 rounded-lg border bg-card shadow-xs p-5">
       <h3 className="font-medium">{job.kind === CrmEmailKind.PaymentInstructions ? registrationEmailLabels[CrmEmailKind.PaymentInstructions] : registrationEmailLabels[CrmEmailKind.PaymentAcknowledgment]}</h3>
       <p className="text-sm font-medium">{emailStateLabels[job.state]}</p>

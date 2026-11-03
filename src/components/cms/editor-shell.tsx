@@ -4,12 +4,14 @@ import type { ReactNode } from "react";
 import { FormErrorList } from "@/components/cms/form-section";
 import { StatusBadge, type StatusDisplay } from "@/components/cms/status-badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export type StatusAction = {
   label: string;
@@ -121,6 +123,56 @@ export function EditorShell({
         {aside && <aside className="flex flex-col gap-6">{aside}</aside>}
       </div>
     </form>
+  );
+}
+
+function placeholders(count: number) {
+  return Array.from({ length: count }, (_, index) => index);
+}
+
+function FormSectionSkeleton({ fields }: { fields: number }) {
+  return (
+    <Card>
+      <CardHeader>
+        <Skeleton className="h-5 w-32" />
+      </CardHeader>
+      <CardContent className="flex flex-col gap-5">
+        {placeholders(fields).map((field) => (
+          <div key={field} className="flex flex-col gap-1.5">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* The editor layout with placeholder fields, shown while the record loads. */
+export function EditorSkeleton() {
+  return (
+    <div role="status" aria-label="Loading editor…" className="mx-auto flex max-w-6xl flex-col gap-6">
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-4 w-28" />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-10 w-72 max-w-full" />
+            <Skeleton className="h-5 w-48" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-16" />
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="flex flex-col gap-6">
+          <FormSectionSkeleton fields={4} />
+          <FormSectionSkeleton fields={3} />
+        </div>
+        <FormSectionSkeleton fields={2} />
+      </div>
+    </div>
   );
 }
 

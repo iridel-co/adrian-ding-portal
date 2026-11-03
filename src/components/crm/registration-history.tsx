@@ -1,4 +1,6 @@
+import { HistoryIcon } from "lucide-react";
 import { useRef, useState } from "react";
+import { EmptyState } from "@/components/cms/content-list-page";
 import { CrmReadState } from "@/components/crm/read-state";
 import { ListSkeleton } from "@/components/table/detail-skeleton";
 import { paymentMethodLabels } from "@/features/crm/registration-presentation";
@@ -23,7 +25,7 @@ export function RegistrationHistory({ entries, offset, hasMore, pending, fetchin
       accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} skeleton={<ListSkeleton />} />
     {!pending && !error && <>
       {entries.length ? <ol className="space-y-3">{entries.map(entry => <HistoryEntry key={entry.id} entry={entry} />)}</ol>
-        : <p className="text-sm text-muted-foreground">No staff actions on this history page.</p>}
+        : <EmptyState icon={HistoryIcon} className="py-6">No staff actions on this history page.</EmptyState>}
       <div className="flex items-center justify-between gap-3">
         <Button variant="outline" disabled={offset === 0 || fetching} onClick={() => page(Math.max(0, offset - 20))}>Newer history</Button>
         <p className="text-sm" aria-live="polite">Page {Math.floor(offset / 20) + 1}</p>

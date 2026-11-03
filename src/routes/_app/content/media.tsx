@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Archive, ArchiveRestore } from "lucide-react";
+import { Archive, ArchiveRestore, Images } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { EmptyState } from "@/components/cms/content-list-page";
 import { FieldErrors } from "@/components/cms/form-section";
 import { MediaGridSkeleton } from "@/components/cms/list-skeletons";
 import { MediaDropzone } from "@/components/cms/media-dropzone";
@@ -90,7 +91,7 @@ function MediaPage() {
         </div>
       )}
       {library.data?.length === 0 && (
-        <p className="py-12 text-center text-sm text-muted-foreground">No images yet.</p>
+        <EmptyState icon={Images}>No images yet.</EmptyState>
       )}
     </div>
   );

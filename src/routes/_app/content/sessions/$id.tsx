@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { BackLink, EditorShell, type StatusAction } from "@/components/cms/editor-shell";
+import { BackLink, EditorShell, EditorSkeleton, type StatusAction } from "@/components/cms/editor-shell";
 import { Field, FormSection } from "@/components/cms/form-section";
 import { MoneyField } from "@/components/cms/money-field";
 import { PreviewButton } from "@/components/cms/preview-dialog";
@@ -48,6 +48,7 @@ export const Route = createFileRoute("/_app/content/sessions/$id")({
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(sessionQueryOptions(params.id)),
   head: ({ loaderData }) => ({ meta: [{ title: loaderData?.workshop.title ?? "Session" }] }),
+  pendingComponent: EditorSkeleton,
   component: SessionEditorPage
 });
 

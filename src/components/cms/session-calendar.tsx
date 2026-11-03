@@ -5,6 +5,7 @@ import { cn } from "cn";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatTime } from "@/features/shared/format";
 import { sessionsQueryOptions } from "@/features/sessions/functions";
 import { manilaToday } from "@/features/shared/time";
@@ -102,6 +103,7 @@ export function SessionCalendar() {
                     {Number(date.slice(8))}
                   </div>
                   <div className="flex flex-col gap-1">
+                    {sessions.isPending && <Skeleton className="h-8 w-full" />}
                     {sessions.data?.items
                       .filter((session) => session.date <= date && date <= session.endDate)
                       .map((session) => (
