@@ -2,10 +2,11 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { ContentListPage, EmptyState, FilterSelect } from "@/components/cms/content-list-page";
+import { Field, FormErrorList } from "@/components/cms/form-section";
 import { CONTENT_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
+import { useFormErrors } from "@/components/cms/use-form-errors";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +18,6 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/table";
 import { formatDate } from "@/features/shared/format";
 import { $createWorkshop, workshopsQueryOptions } from "@/features/workshops/functions";
-import { errorMessage } from "@/features/shared/error-message";
+
+const TITLE_FIELDS = ["title"];
 
 export const Route = createFileRoute("/_app/content/workshops/")({
   head: () => ({ meta: [{ title: "Workshops" }] }),
@@ -130,6 +131,8 @@ function NewWorkshopDialog() {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const { fieldErrors, generalErrors, showErrors, clearFieldErrors, clearErrors } =
+    useFormErrors(TITLE_FIELDS);
 
   const create = useMutation({
     mutationFn: () => $createWorkshop({ data: { title } }),
@@ -138,11 +141,17 @@ function NewWorkshopDialog() {
       setTitle("");
       await navigate({ to: "/content/workshops/$id", params: { id } });
     },
-    onError: (error) => toast.error(errorMessage(error))
+    onError: showErrors
   });
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        clearErrors();
+      }}
+    >
       <DialogTrigger asChild>
         <Button>
           <Plus />
@@ -160,16 +169,19 @@ function NewWorkshopDialog() {
           <DialogHeader>
             <DialogTitle>New workshop</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="new-workshop-title">Title</Label>
+          <Field label="Title" htmlFor="new-workshop-title" errors={fieldErrors.title}>
             <Input
               id="new-workshop-title"
               required
               placeholder="e.g. Coaching for Managers"
               value={title}
-              onChange={(event) => setTitle(event.target.value)}
+              onChange={(event) => {
+                setTitle(event.target.value);
+                clearFieldErrors("title");
+              }}
             />
-          </div>
+          </Field>
+          <FormErrorList messages={generalErrors} />
           <DialogFooter>
             <Button type="submit" disabled={create.isPending}>
               Create draft

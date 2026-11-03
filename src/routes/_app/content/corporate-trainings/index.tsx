@@ -6,8 +6,10 @@ import { toast } from "sonner";
 import type { z } from "zod";
 
 import { ContentListPage, EmptyState, FilterSelect } from "@/components/cms/content-list-page";
+import { Field, FormErrorList } from "@/components/cms/form-section";
 import { SortableList } from "@/components/cms/sortable-list";
 import { CONTENT_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
+import { useFormErrors } from "@/components/cms/use-form-errors";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,7 +20,6 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   $createProgram,
   $reorderPrograms,
@@ -27,6 +28,8 @@ import {
 } from "@/features/corporate-trainings/functions";
 import type { statusFilterSchema } from "@/features/corporate-trainings/schemas";
 import { errorMessage } from "@/features/shared/error-message";
+
+const TITLE_FIELDS = ["title"];
 
 export const Route = createFileRoute("/_app/content/corporate-trainings/")({
   head: () => ({ meta: [{ title: "Corporate trainings" }] }),
@@ -110,6 +113,8 @@ function NewProgramDialog() {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const { fieldErrors, generalErrors, showErrors, clearFieldErrors, clearErrors } =
+    useFormErrors(TITLE_FIELDS);
 
   const create = useMutation({
     mutationFn: () => $createProgram({ data: { title } }),
@@ -118,11 +123,17 @@ function NewProgramDialog() {
       setTitle("");
       await navigate({ to: "/content/corporate-trainings/$id", params: { id } });
     },
-    onError: (error) => toast.error(errorMessage(error))
+    onError: showErrors
   });
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        clearErrors();
+      }}
+    >
       <DialogTrigger asChild>
         <Button>
           <Plus />
@@ -140,16 +151,19 @@ function NewProgramDialog() {
           <DialogHeader>
             <DialogTitle>New program</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="new-program-title">Title</Label>
+          <Field label="Title" htmlFor="new-program-title" errors={fieldErrors.title}>
             <Input
               id="new-program-title"
               required
               placeholder="e.g. Leadership Training & Development"
               value={title}
-              onChange={(event) => setTitle(event.target.value)}
+              onChange={(event) => {
+                setTitle(event.target.value);
+                clearFieldErrors("title");
+              }}
             />
-          </div>
+          </Field>
+          <FormErrorList messages={generalErrors} />
           <DialogFooter>
             <Button type="submit" disabled={create.isPending}>
               Create draft
