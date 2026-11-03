@@ -4,6 +4,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarDays } from "lucide-react";
 import { z } from "zod";
 import { TablePagination } from "@/components/table/table-pagination";
+import { TableCard } from "@/components/table/table-card";
 import { ContentListPage, EmptyState } from "@/components/cms/content-list-page";
 import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { CrmReadState } from "@/components/crm/read-state";
@@ -64,12 +65,12 @@ function RegistrationRunsPage() {
       loadingMessage="Loading scheduled workshops…" accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage}
       skeleton={<TableSkeleton columns={columns.map(([, label]) => ({ label }))} />} />
     {!runs.isError && runs.data && <>
-      {runs.data.items.length === 0 ? <EmptyState icon={CalendarDays}>No scheduled workshops match these filters.</EmptyState> : <>
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold">{search.when === "past" ? "Past workshops" : search.when === "all" ? "All scheduled workshops" : "Upcoming workshops"}</h2>
-          {search.when !== "past" && <p className="text-sm text-muted-foreground">Reserved seats include Paid and Unpaid registrations until staff cancel them.</p>}
-        </div>
-        <Table>
+      {runs.data.items.length > 0 && <div className="space-y-1">
+        <h2 className="text-lg font-semibold">{search.when === "past" ? "Past workshops" : search.when === "all" ? "All scheduled workshops" : "Upcoming workshops"}</h2>
+        {search.when !== "past" && <p className="text-sm text-muted-foreground">Reserved seats include Paid and Unpaid registrations until staff cancel them.</p>}
+      </div>}
+      <TableCard>
+        {runs.data.items.length === 0 ? <EmptyState icon={CalendarDays}>No scheduled workshops match these filters.</EmptyState> : <Table>
           <TableHeader><TableRow>{columns.map(([key, label]) =>
             <SortableTableHead key={key} active={search.sort === key} direction={search.direction}
               onClick={() => void navigate({ search: { ...search, sort: key,
@@ -93,11 +94,11 @@ function RegistrationRunsPage() {
             <TableCell className="font-medium tabular-nums">{run.counts.reserved} / {run.capacity}</TableCell>
             <TableCell><p className="tabular-nums">{run.counts.paid} paid</p><p className="mt-1 text-xs text-destructive tabular-nums">{run.counts.unpaid} unpaid</p></TableCell>
           </TableRow>)}</TableBody>
-        </Table>
-      </>}
-      <TablePagination limit={search.limit} offset={search.offset} count={runs.data.items.length}
-        hasMore={runs.data.hasMore} fetching={runs.isFetching}
-        onChange={page => void navigate({ search: { ...search, ...page } })} />
+        </Table>}
+        <TablePagination limit={search.limit} offset={search.offset} count={runs.data.items.length}
+          hasMore={runs.data.hasMore} fetching={runs.isFetching}
+          onChange={page => void navigate({ search: { ...search, ...page } })} />
+      </TableCard>
     </>}
   </ContentListPage>;
 }

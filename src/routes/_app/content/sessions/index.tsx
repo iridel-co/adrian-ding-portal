@@ -15,6 +15,7 @@ import { ReadState } from "@/components/table/read-state";
 import { nextSort } from "@/components/table/sort-search";
 import { SortableTableHead } from "@/components/table/sortable-table-head";
 import { TableSkeleton } from "@/components/table/table-skeleton";
+import { TableCard } from "@/components/table/table-card";
 import { TablePagination } from "@/components/table/table-pagination";
 import { Table, TableBody, TableCell, TableHeader, TableRow, tableRowLinkClass } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -168,7 +169,7 @@ function SessionList() {
         errorMessage={errorMessage}
       />
       {sessions.data && (
-        <>
+        <TableCard>
           {sessions.data.items.length === 0 ? (
             <EmptyState icon={CalendarDays}>No sessions match these filters.</EmptyState>
           ) : (
@@ -231,7 +232,7 @@ function SessionList() {
             fetching={sessions.isFetching}
             onChange={(page) => void navigate({ search: { ...search, ...page } })}
           />
-        </>
+        </TableCard>
       )}
     </div>
   );

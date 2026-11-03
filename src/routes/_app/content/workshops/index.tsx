@@ -12,6 +12,7 @@ import { ReadState } from "@/components/table/read-state";
 import { nextSort } from "@/components/table/sort-search";
 import { SortableTableHead } from "@/components/table/sortable-table-head";
 import { TableSkeleton } from "@/components/table/table-skeleton";
+import { TableCard } from "@/components/table/table-card";
 import { TablePagination } from "@/components/table/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -133,7 +134,7 @@ function WorkshopsPage() {
         errorMessage={errorMessage}
       />
       {workshops.data && (
-        <>
+        <TableCard>
           {workshops.data.items.length === 0 ? (
             <EmptyState icon={BookOpen}>No workshops match these filters.</EmptyState>
           ) : (
@@ -191,7 +192,7 @@ function WorkshopsPage() {
             fetching={workshops.isFetching}
             onChange={(page) => void navigate({ search: { ...search, ...page } })}
           />
-        </>
+        </TableCard>
       )}
     </ContentListPage>
   );

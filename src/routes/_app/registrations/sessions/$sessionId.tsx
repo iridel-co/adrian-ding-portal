@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { z } from "zod";
+import { TableCard } from "@/components/table/table-card";
 import { TablePagination } from "@/components/table/table-pagination";
 import { EmptyState, FilterSelect, SearchInput } from "@/components/cms/content-list-page";
 import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
@@ -22,7 +23,6 @@ import { RegistrationAction } from "@/features/crm/registration-staff-schemas";
 import { RegistrationStatus } from "@/components/crm/registration-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, tableRowLinkClass } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { $getRegistrationSession, $listRegistrations } from "@/features/crm/functions";
@@ -127,11 +127,13 @@ function RegistrationWorkspace() {
             <FilterSelect label="Registration status" value={search.filter} options={filterOptions}
               onChange={filter => void navigate({ search: { ...search, filter, offset: 0 } })} />
           </div>
-          {listState}{rows}
-          {!registrations.isError && registrations.data && <TablePagination
-            limit={search.limit} offset={search.offset} count={registrations.data.items.length}
-            hasMore={registrations.data.hasMore} fetching={registrations.isFetching}
-            onChange={page => void navigate({ search: { ...search, ...page } })} />}
+          {listState}
+          {!registrations.isError && registrations.data && <TableCard>
+            {rows}
+            <TablePagination limit={search.limit} offset={search.offset} count={registrations.data.items.length}
+              hasMore={registrations.data.hasMore} fetching={registrations.isFetching}
+              onChange={page => void navigate({ search: { ...search, ...page } })} />
+          </TableCard>}
         </TabsContent>}
       </Tabs>
     </>}
@@ -213,38 +215,37 @@ function RegistrationRows({ items, search }: { items: RegistrationRow[]; search:
   const toggle = (id: string, checked: boolean) => setSelected(current => checked ? [...current, id] : current.filter(value => value !== id));
   return <div ref={table} tabIndex={-1}>
     <p className="sr-only" aria-live="polite">{chosen.length} selected</p>
-    <Card className="gap-0 py-0">
-      {chosen.length > 0 && <SelectionBar count={chosen.length} total={eligible.length}
-        onSelectAll={() => setSelected(eligible.map(item => item.id))} onClear={() => setSelected([])}>
-        <QuickAction icon={CircleCheck} onClick={() => setBatch({ items: chosen, action: RegistrationAction.MarkPaid })}>Mark paid</QuickAction>
-        <QuickAction icon={Ban} tone="destructive" onClick={() => setBatch({ items: chosen, action: RegistrationAction.Cancel })}>Cancel</QuickAction>
-      </SelectionBar>}
-      <Table>
-        <TableHeader><TableRow>
-          <TableHead><Checkbox aria-label="Select all unpaid registrations on this page" disabled={!eligible.length}
-            checked={chosen.length > 0 && chosen.length === eligible.length ? true : chosen.length ? "indeterminate" : false}
-            onCheckedChange={checked => setSelected(checked === true ? eligible.map(item => item.id) : [])} /></TableHead>
-          {registrantColumns.map(([key, label]) =>
-            <SortableTableHead key={key} active={search.sort === key} direction={search.direction}
-              onClick={() => void navigate({ search: { ...search, tab: "registrations", sort: key,
-                direction: search.sort === key && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>
-          )}<TableHead>Actions</TableHead>
-        </TableRow></TableHeader>
-        <TableBody>{items.map(item => <TableRow key={item.id} data-state={chosen.some(row => row.id === item.id) ? "selected" : undefined}>
-          <TableCell className="relative z-10"><Checkbox aria-label={`Select ${item.reference}`} disabled={item.isPaid || !!item.cancelledAt}
-            checked={chosen.some(row => row.id === item.id)} onCheckedChange={checked => toggle(item.id, checked === true)} /></TableCell>
-          <TableCell className="whitespace-normal"><Link to="/registrations/$id" params={{ id: item.id }} search={search} className={tableRowLinkClass}>{item.fullName}</Link><p className="mt-0.5 break-all text-muted-foreground">{item.email}</p><p className="text-xs text-muted-foreground">{item.phone}</p></TableCell>
-          <TableCell><RegistrationStatus isPaid={item.isPaid} cancelledAt={item.cancelledAt} /></TableCell>
-          <TableCell className="tabular-nums">{formatPesos(item.priceCentavos)}</TableCell><TableCell className="text-muted-foreground">{formatCrmTime(item.createdAt)}</TableCell>
-          <TableCell className="relative z-10">{!item.isPaid && !item.cancelledAt && <div className="flex gap-2">
-            <Button size="sm" variant="outline" aria-label={`Mark ${item.reference} Paid`}
-              onClick={() => setBatch({ items: [item], action: RegistrationAction.MarkPaid })}>Mark Paid</Button>
-            <Button size="sm" variant="outline" aria-label={`Cancel ${item.reference}`}
-              onClick={() => setBatch({ items: [item], action: RegistrationAction.Cancel })}>Cancel</Button>
-          </div>}</TableCell>
-        </TableRow>)}</TableBody>
-      </Table>
-    </Card>
+    {/* The page wraps this in a TableCard, so the bar, table and pager share one card. */}
+    {chosen.length > 0 && <SelectionBar count={chosen.length} total={eligible.length}
+      onSelectAll={() => setSelected(eligible.map(item => item.id))} onClear={() => setSelected([])}>
+      <QuickAction icon={CircleCheck} onClick={() => setBatch({ items: chosen, action: RegistrationAction.MarkPaid })}>Mark paid</QuickAction>
+      <QuickAction icon={Ban} tone="destructive" onClick={() => setBatch({ items: chosen, action: RegistrationAction.Cancel })}>Cancel</QuickAction>
+    </SelectionBar>}
+    <Table>
+      <TableHeader><TableRow>
+        <TableHead><Checkbox aria-label="Select all unpaid registrations on this page" disabled={!eligible.length}
+          checked={chosen.length > 0 && chosen.length === eligible.length ? true : chosen.length ? "indeterminate" : false}
+          onCheckedChange={checked => setSelected(checked === true ? eligible.map(item => item.id) : [])} /></TableHead>
+        {registrantColumns.map(([key, label]) =>
+          <SortableTableHead key={key} active={search.sort === key} direction={search.direction}
+            onClick={() => void navigate({ search: { ...search, tab: "registrations", sort: key,
+              direction: search.sort === key && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>
+        )}<TableHead>Actions</TableHead>
+      </TableRow></TableHeader>
+      <TableBody>{items.map(item => <TableRow key={item.id} data-state={chosen.some(row => row.id === item.id) ? "selected" : undefined}>
+        <TableCell className="relative z-10"><Checkbox aria-label={`Select ${item.reference}`} disabled={item.isPaid || !!item.cancelledAt}
+          checked={chosen.some(row => row.id === item.id)} onCheckedChange={checked => toggle(item.id, checked === true)} /></TableCell>
+        <TableCell className="whitespace-normal"><Link to="/registrations/$id" params={{ id: item.id }} search={search} className={tableRowLinkClass}>{item.fullName}</Link><p className="mt-0.5 break-all text-muted-foreground">{item.email}</p><p className="text-xs text-muted-foreground">{item.phone}</p></TableCell>
+        <TableCell><RegistrationStatus isPaid={item.isPaid} cancelledAt={item.cancelledAt} /></TableCell>
+        <TableCell className="tabular-nums">{formatPesos(item.priceCentavos)}</TableCell><TableCell className="text-muted-foreground">{formatCrmTime(item.createdAt)}</TableCell>
+        <TableCell className="relative z-10">{!item.isPaid && !item.cancelledAt && <div className="flex gap-2">
+          <Button size="sm" variant="outline" aria-label={`Mark ${item.reference} Paid`}
+            onClick={() => setBatch({ items: [item], action: RegistrationAction.MarkPaid })}>Mark Paid</Button>
+          <Button size="sm" variant="outline" aria-label={`Cancel ${item.reference}`}
+            onClick={() => setBatch({ items: [item], action: RegistrationAction.Cancel })}>Cancel</Button>
+        </div>}</TableCell>
+      </TableRow>)}</TableBody>
+    </Table>
     {batch && <RegistrationBatchDialog items={batch.items} action={batch.action} onCloseFocus={() => table.current?.focus()} onClose={() => { setBatch(null); setSelected([]); }} />}
   </div>;
 }

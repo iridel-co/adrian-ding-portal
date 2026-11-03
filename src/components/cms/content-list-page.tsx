@@ -123,7 +123,7 @@ export function EmptyState({ icon: Icon = Inbox, className, children }: EmptySta
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-3 rounded-xl bg-card px-6 py-12 text-center text-sm text-muted-foreground shadow-xs ring-1 ring-foreground/10",
+        "flex flex-col items-center gap-3 rounded-xl bg-card px-6 py-12 text-center text-sm text-muted-foreground shadow-xs ring-1 ring-foreground/10 in-data-[slot=card]:rounded-none in-data-[slot=card]:shadow-none in-data-[slot=card]:ring-0",
         className
       )}
     >

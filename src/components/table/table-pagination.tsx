@@ -9,7 +9,7 @@ type TablePaginationProps = {
 };
 
 export function TablePagination({ limit, offset, count, hasMore, fetching, onChange }: TablePaginationProps) {
-  return <nav aria-label="Table pagination" className="flex flex-wrap items-center justify-end gap-3 px-2 text-sm">
+  return <nav aria-label="Table pagination" className="flex flex-wrap items-center justify-end gap-3 border-t bg-muted/40 px-4 py-2 text-sm">
     <span className="text-muted-foreground">Rows per page:</span>
     <Select value={String(limit)} disabled={fetching} onValueChange={value => {
       const size = pageSizes.find(size => String(size) === value);

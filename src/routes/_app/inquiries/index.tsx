@@ -5,6 +5,7 @@ import { MessagesSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ContentListPage, EmptyState, FilterSelect, SearchInput } from "@/components/cms/content-list-page";
 import { TablePagination } from "@/components/table/table-pagination";
+import { TableCard } from "@/components/table/table-card";
 import { CrmReadState } from "@/components/crm/read-state";
 import { TableSkeleton } from "@/components/table/table-skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +40,7 @@ function InquiriesPage() {
     </>}>
     <CrmReadState pending={inquiries.isPending} error={inquiries.error} retry={() => void inquiries.refetch()}
       skeleton={<TableSkeleton columns={columns.map(([, label]) => ({ label }))} />} />
-    {!inquiries.isError && inquiries.data && <>
+    {!inquiries.isError && inquiries.data && <TableCard>
       {inquiries.data.items.length === 0 ? <EmptyState icon={MessagesSquare}>No inquiries match these filters.</EmptyState> : <Table>
         <TableHeader><TableRow>{columns.map(([key, label]) =>
             <SortableTableHead key={key} active={search.sort === key} direction={search.direction}
@@ -57,6 +58,6 @@ function InquiriesPage() {
       <TablePagination limit={search.limit} offset={search.offset} count={inquiries.data.items.length}
         hasMore={inquiries.data.hasMore} fetching={inquiries.isFetching}
         onChange={page => void navigate({ search: { ...search, ...page } })} />
-    </>}
+    </TableCard>}
   </ContentListPage>;
 }
