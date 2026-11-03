@@ -101,7 +101,7 @@ function RegistrationWorkspace() {
         </>}
         actions={<div className="flex gap-1">
           <QuickAction icon={PencilLine} asChild><Link to="/content/sessions/$id" params={{ id: run.id }}>Edit session</Link></QuickAction>
-          <RefreshButton isRefreshing={summary.isFetching || registrations.isFetching} onClick={refresh} />
+          <RefreshButton quick isRefreshing={summary.isFetching || registrations.isFetching} onClick={refresh} />
         </div>}
       />
       <Tabs value={search.tab} onValueChange={tab => { if (tab === "overview" || tab === "registrations") changeTab(tab); }}>
