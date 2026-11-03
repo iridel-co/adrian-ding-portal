@@ -38,7 +38,8 @@ function AppLayout() {
     >
       <AppSidebar user={user} crmAccess={crmAccess} closedSections={readClosedSections()} />
       <SidebarInset className="bg-transparent">
-        <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/70 px-4 backdrop-blur-md">
+        {/* Solid and above table buttons (z-10) and dragged rows (z-20), so nothing shows through it on scroll. */}
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background px-4">
           <SidebarTrigger />
           <ThemeSwitcher />
         </header>
