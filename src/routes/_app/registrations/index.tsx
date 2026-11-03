@@ -10,7 +10,7 @@ import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-bad
 import { CrmReadState } from "@/components/crm/read-state";
 import { TableSkeleton } from "@/components/table/table-skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { RefreshButton } from "@/components/refresh-button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHeader, TableRow, tableRowLinkClass } from "@/components/ui/table";
@@ -40,7 +40,7 @@ function RegistrationRunsPage() {
   const navigate = Route.useNavigate();
   const runs = useQuery(registrationSessionsQueryOptions(search));
   return <ContentListPage title="Scheduled workshops" description="Reserved seats and payment counts for each scheduled workshop. All dates and times are in Manila."
-    action={<Button variant="outline" disabled={runs.isFetching} onClick={() => void runs.refetch()}>Refresh</Button>}
+    action={<RefreshButton isRefreshing={runs.isFetching} onClick={() => void runs.refetch()} />}
     filters={<div className="flex flex-wrap items-center gap-3">
       <Tabs value={search.status} onValueChange={value => {
         const status = registrationSessionListSchema.shape.status.parse(value);

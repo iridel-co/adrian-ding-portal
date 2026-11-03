@@ -14,7 +14,7 @@ import { InquiryBulkActions } from "@/components/crm/inquiry-bulk-actions";
 import { CrmReadState } from "@/components/crm/read-state";
 import { TableSkeleton } from "@/components/table/table-skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { RefreshButton } from "@/components/refresh-button";
 import { ProgramChip } from "@/components/crm/program-chip";
 import { Table, TableBody, TableCell, TableHeader, TableRow, tableRowLinkClass } from "@/components/ui/table";
 import { inquiriesQueryOptions } from "@/features/crm/queries";
@@ -37,7 +37,7 @@ function InquiriesPage() {
   const inquiries = useQuery(inquiriesQueryOptions(search));
   const selection = useRowSelection(inquiries.data?.items ?? []);
   return <ContentListPage title="Corporate inquiries" description="Record replies, proposals and outcomes. All times are in Manila."
-    action={<Button variant="outline" onClick={() => void inquiries.refetch()} disabled={inquiries.isFetching}>Refresh</Button>}
+    action={<RefreshButton isRefreshing={inquiries.isFetching} onClick={() => void inquiries.refetch()} />}
     filters={<>
       <form onSubmit={event => { event.preventDefault(); void navigate({ search: { ...search, search: text, offset: 0 } }); }}>
         <SearchInput aria-label="Search inquiries by company, name or email" placeholder="Company, name or email" maxLength={200} value={text} onChange={event => setText(event.target.value)} />

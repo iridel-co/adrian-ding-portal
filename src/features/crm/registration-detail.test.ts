@@ -39,6 +39,7 @@ import { RegistrationActions } from "@/components/crm/registration-actions";
 import { emptyRegistrationDraft, type RegistrationDraft } from "./registration-presentation";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { RegistrationAction } from "./registration-staff-schemas";
 import { CrmEmailKind } from "@/db/schema/crm-email-kind";
 import { CrmEmailState } from "@/db/schema/crm-email-state";
@@ -83,7 +84,8 @@ function actionTree(registration = record, draft = paidDraft, setDraft = vi.fn()
 }
 const submit = (tree: ReactNode) => (find(tree, "form")!.props.onSubmit as (event: { preventDefault(): void }) => void)({ preventDefault() {} });
 const formHtml = (tree: ReactNode) => renderToStaticMarkup(createElement(Dialog, { open: true }, find(tree, "form")!));
-const render = () => renderToStaticMarkup(createElement(Route.options.component as ComponentType));
+/* The app root provides tooltips, so the tests do too. */
+const render = () => renderToStaticMarkup(createElement(TooltipProvider, { children: createElement(Route.options.component as ComponentType) }));
 beforeEach(() => {
   vi.clearAllMocks(); harness.pending = false; harness.mutationError = null;
   harness.result = { data: structuredClone(record), isPending: false, isError: false, isFetching: false, error: null, refetch: harness.refetch };

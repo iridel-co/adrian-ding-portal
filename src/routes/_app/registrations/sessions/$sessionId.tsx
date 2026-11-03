@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Armchair, Ban, BookOpen, Building2, CalendarDays, ChevronRight, CircleCheck, CircleDot, Clock, Hash, Info,
-  LayoutDashboard, MapPin, PencilLine, RefreshCw, TriangleAlert, Users, Wallet, type LucideIcon
+  LayoutDashboard, MapPin, PencilLine, TriangleAlert, Users, Wallet, type LucideIcon
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { z } from "zod";
@@ -17,6 +17,7 @@ import { DetailSkeleton } from "@/components/table/detail-skeleton";
 import { SelectionBar } from "@/components/table/selection-bar";
 import { RowAction, RowActions } from "@/components/table/row-actions";
 import { TableSkeleton } from "@/components/table/table-skeleton";
+import { RefreshButton } from "@/components/refresh-button";
 import { QuickAction } from "@/components/quick-action";
 import { RegistrationBatchDialog, type BatchAction } from "@/components/crm/registration-batch-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -101,7 +102,7 @@ function RegistrationWorkspace() {
         </>}
         actions={<div className="flex gap-1">
           <QuickAction icon={PencilLine} asChild><Link to="/content/sessions/$id" params={{ id: run.id }}>Edit session</Link></QuickAction>
-          <QuickAction icon={RefreshCw} disabled={summary.isFetching || registrations.isFetching} onClick={refresh}>Refresh</QuickAction>
+          <RefreshButton isRefreshing={summary.isFetching || registrations.isFetching} onClick={refresh} />
         </div>}
       />
       <Tabs value={search.tab} onValueChange={tab => { if (tab === "overview" || tab === "registrations") changeTab(tab); }}>

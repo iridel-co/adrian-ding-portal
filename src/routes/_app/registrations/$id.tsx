@@ -9,7 +9,7 @@ import { RegistrationActions } from "@/components/crm/registration-actions";
 import { RegistrationEmails } from "@/components/crm/registration-emails";
 import { RegistrationHistory } from "@/components/crm/registration-history";
 import { RegistrationStatus } from "@/components/crm/registration-status";
-import { Button } from "@/components/ui/button";
+import { RefreshButton } from "@/components/refresh-button";
 import { formatCrmTime, isCrmAccessError } from "@/features/crm/presentation";
 import { registrationWorkspaceSearchSchema } from "@/features/crm/registration-navigation";
 import { emptyRegistrationDraft, paymentMethodLabels, registrationErrorMessage, type RegistrationDraft } from "@/features/crm/registration-presentation";
@@ -53,7 +53,7 @@ function RegistrationDetail({ id }: { id: string }) {
     <div className="flex items-center justify-between gap-3">
       {showRegistration && <Link to="/registrations/sessions/$sessionId" params={{ sessionId: registration.workshopSessionId }}
         search={{ ...search, tab: "overview" }}><BackLink>Back to workshop overview</BackLink></Link>}
-      <Button className="ml-auto" variant="outline" disabled={result.isFetching} onClick={refresh}>Refresh</Button>
+      <div className="ml-auto"><RefreshButton isRefreshing={result.isFetching} onClick={refresh} /></div>
     </div>
     <CrmReadState pending={result.isPending && !actionAccessError} error={error}
       retry={() => { setActionAccessError(null); refresh(); }} loadingMessage="Loading registration…"

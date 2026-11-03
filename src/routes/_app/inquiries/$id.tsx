@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight, Ban, BriefcaseBusiness, CalendarClock, CalendarDays, ChevronRight, CircleDot, CircleX, ClipboardList, Contact,
   FileText, Flag, GraduationCap, HistoryIcon, Inbox, Mail, MailCheck, MapPin, MessageSquareText, Phone, Presentation,
-  RefreshCw, RotateCw, Sparkles, Trophy, UserRound, Users, Wallet, type LucideIcon
+  RotateCw, Sparkles, Trophy, UserRound, Users, Wallet, type LucideIcon
 } from "lucide-react";
 import { useState } from "react";
 import { CrmReadState } from "@/components/crm/read-state";
@@ -11,11 +11,11 @@ import { DetailSkeleton } from "@/components/table/detail-skeleton";
 import { DetailHeader, Fact, InfoCard, InfoList, InfoRow, TimelineItem, type TimelineTone } from "@/components/crm/detail-parts";
 import { InquiryActions, type InquiryDraft } from "@/components/crm/inquiry-actions";
 import { InquiryEmails } from "@/components/crm/inquiry-emails";
+import { RefreshButton } from "@/components/refresh-button";
 import { ProgramChip } from "@/components/crm/program-chip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { inquirySearchSchema } from "@/features/crm/inquiry-navigation";
 import type { InquiryStatus } from "@/features/crm/lifecycle";
 import { inquiryQueryOptions } from "@/features/crm/queries";
@@ -84,12 +84,7 @@ function InquiryDetail({ id }: { id: string }) {
       </>}
       actions={<>
         <InquiryActions inquiry={inquiry} draft={draft} setDraft={setDraft} />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" disabled={result.isFetching} onClick={() => void result.refetch()}><RefreshCw /><span className="sr-only">Refresh</span></Button>
-          </TooltipTrigger>
-          <TooltipContent>Refresh</TooltipContent>
-        </Tooltip>
+        <RefreshButton isRefreshing={result.isFetching} onClick={() => void result.refetch()} />
       </>}
     />
 

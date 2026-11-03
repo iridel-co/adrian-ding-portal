@@ -35,7 +35,7 @@ import { Route } from "@/routes/_app/registrations/sessions/$sessionId";
 import { TablePagination } from "@/components/table/table-pagination";
 import { SelectionBar } from "@/components/table/selection-bar";
 import { FilterSelect } from "@/components/cms/content-list-page";
-import { QuickAction } from "@/components/quick-action";
+import { RefreshButton } from "@/components/refresh-button";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -183,10 +183,10 @@ describe("Workshop workspace", () => {
     (tabs.props.onValueChange as (value: string) => void)("overview");
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, tab: "overview" }, resetScroll: false });
     // The overview has no list, so Refresh only reloads the summary there.
-    (find(page, QuickAction, "Refresh")!.props.onClick as () => void)();
+    (find(page, RefreshButton)!.props.onClick as () => void)();
     expect(harness.summaryRefresh).toHaveBeenCalledOnce(); expect(harness.listRefresh).not.toHaveBeenCalled();
     harness.search.tab = "registrations";
-    (find(tree(), QuickAction, "Refresh")!.props.onClick as () => void)();
+    (find(tree(), RefreshButton)!.props.onClick as () => void)();
     expect(harness.summaryRefresh).toHaveBeenCalledTimes(2); expect(harness.listRefresh).toHaveBeenCalledOnce();
     const back = find(page, Link)!;
     expect(back.props.search).toEqual({ when: "past", offset: 100, limit: 50 });
@@ -249,7 +249,7 @@ describe("Workshop workspace", () => {
     harness.search.offset = 50; harness.list.isFetching = true;
     expect(find(tree(), Button, "Previous")!.props.disabled).toBe(true);
     expect(find(tree(), Button, "Next")!.props.disabled).toBe(true);
-    expect(find(tree(), QuickAction, "Refresh")!.props.disabled).toBe(true);
+    expect(find(tree(), RefreshButton)!.props.isRefreshing).toBe(true);
   });
   it("validates direct-link defaults and URL state without arbitrary tabs or filters", () => {
     const schema = Route.options.validateSearch as z.ZodType;

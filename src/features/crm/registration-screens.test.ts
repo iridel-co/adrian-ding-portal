@@ -50,7 +50,8 @@ const run = {
   counts: { reserved: 18, remaining: 2, paid: 10, unpaid: 8, cancelled: 1 }
 };
 const Component = ListRoute.options.component as ComponentType;
-const render = () => renderToStaticMarkup(createElement(Component));
+/* The app root provides tooltips, so the tests do too. */
+const render = () => renderToStaticMarkup(createElement(TooltipProvider, { children: createElement(Component) }));
 const tree = () => (Component as () => ReactElement<Record<string, unknown>>)();
 function findControl(node: ReactNode, type: typeof Select | typeof Tabs): ReactElement<Record<string, unknown>> | undefined {
   for (const child of Children.toArray(node)) {
@@ -187,7 +188,7 @@ describe("Workshop run list", () => {
     const page = tree();
     expect(findButton(page, "Next")!.props.disabled).toBe(true);
     expect(findButton(page, "Previous")!.props.disabled).toBe(true);
-    expect((page.props.action as ReactElement<{ disabled: boolean }>).props.disabled).toBe(true);
+    expect((page.props.action as ReactElement<{ isRefreshing: boolean }>).props.isRefreshing).toBe(true);
   });
   it("normalizes URL page offsets and defaults to Upcoming without accepting arbitrary date filters", () => {
     const schema = ListRoute.options.validateSearch as z.ZodType;
