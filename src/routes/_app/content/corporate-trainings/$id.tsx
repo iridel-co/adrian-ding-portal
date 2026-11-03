@@ -68,7 +68,8 @@ function ProgramEditorPage() {
 function ProgramEditor({ detail }: { detail: ProgramDetail }) {
   const queryClient = useQueryClient();
   const { program } = detail;
-  const { values, setField, isDirty, markSaved } = useEditorForm(toForm(detail));
+  const { values, setField, isDirty, markSaved, errors } = useEditorForm(toForm(detail));
+  const { fieldErrors, generalErrors, showErrors } = errors;
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["programs"] });
 
   const save = useMutation({
@@ -78,7 +79,7 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
       toast.success("Program saved.");
       await refresh();
     },
-    onError: (error) => toast.error(errorMessage(error))
+    onError: showErrors
   });
 
   const setStatus = useMutation({
@@ -124,6 +125,7 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
       lastEdited={{ name: detail.updatedByName, at: program.updatedAt }}
       isSaving={save.isPending}
       isDirty={isDirty}
+      errors={generalErrors}
       onSave={() => save.mutate()}
       preview={<PreviewButton content={previewContent} />}
       aside={
@@ -133,7 +135,7 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
       }
     >
       <FormSection title="Basics">
-        <Field label="Title" htmlFor="title">
+        <Field label="Title" htmlFor="title" errors={fieldErrors.title}>
           <Input
             id="title"
             value={values.title}
@@ -143,6 +145,7 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
         <Field
           label="Slug"
           htmlFor="slug"
+          errors={fieldErrors.slug}
           hint="Used in the Inquire link, e.g. /corporate-training?program=leadership"
         >
           <SlugField id="slug" title={values.title} value={values.slug} onChange={setSlug} />
@@ -150,6 +153,7 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
         <Field
           label="Summary"
           htmlFor="summary"
+          errors={fieldErrors.summary}
           hint="One sentence. Shows on the card on desktop until a visitor hovers it."
         >
           <Textarea
@@ -162,7 +166,11 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
         </Field>
       </FormSection>
 
-      <FormSection title="Useful for" description="Who the program is for. Shows on the card.">
+      <FormSection
+        title="Useful for"
+        errors={fieldErrors.usefulFor}
+        description="Who the program is for. Shows on the card."
+      >
         <StringListField
           value={values.usefulFor}
           onChange={(list) => setField("usefulFor", list)}

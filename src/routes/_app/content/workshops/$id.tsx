@@ -111,7 +111,8 @@ function WorkshopEditorPage() {
 function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
   const queryClient = useQueryClient();
   const { workshop } = detail;
-  const { values, setField, isDirty, markSaved } = useEditorForm(toForm(detail));
+  const { values, setField, isDirty, markSaved, errors } = useEditorForm(toForm(detail));
+  const { fieldErrors, generalErrors, showErrors } = errors;
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["workshops"] });
 
   const save = useMutation({
@@ -121,7 +122,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       toast.success("Workshop saved.");
       await refresh();
     },
-    onError: (error) => toast.error(errorMessage(error))
+    onError: showErrors
   });
 
   const setStatus = useMutation({
@@ -170,6 +171,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       lastEdited={{ name: detail.updatedByName, at: workshop.updatedAt }}
       isSaving={save.isPending}
       isDirty={isDirty}
+      errors={generalErrors}
       onSave={() => save.mutate()}
       preview={<PreviewButton content={previewContent} />}
       aside={
@@ -193,7 +195,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       }
     >
       <FormSection title="Basics">
-        <Field label="Title" htmlFor="title">
+        <Field label="Title" htmlFor="title" errors={fieldErrors.title}>
           <Input
             id="title"
             value={values.title}
@@ -204,6 +206,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
           <Field
             label="Slug"
             htmlFor="slug"
+            errors={fieldErrors.slug}
             hint="The page address, e.g. /workshops/coaching-for-managers"
           >
             <SlugField id="slug" title={values.title} value={values.slug} onChange={setSlug} />
@@ -211,6 +214,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
           <Field
             label="Course code"
             htmlFor="courseCode"
+            errors={fieldErrors.courseCode}
             hint="2 to 8 capital letters or digits. Used in reference IDs, e.g. AD-PSW-0042."
           >
             <Input
@@ -221,7 +225,12 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
             />
           </Field>
         </div>
-        <Field label="Summary" htmlFor="summary" hint="One or two sentences for the workshop card.">
+        <Field
+          label="Summary"
+          htmlFor="summary"
+          errors={fieldErrors.summary}
+          hint="One or two sentences for the workshop card."
+        >
           <Textarea
             id="summary"
             rows={2}
@@ -229,7 +238,12 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
             onChange={(event) => setField("summary", event.target.value)}
           />
         </Field>
-        <Field label="Problem" htmlFor="problem" hint="The hook line at the top of the page.">
+        <Field
+          label="Problem"
+          htmlFor="problem"
+          errors={fieldErrors.problem}
+          hint="The hook line at the top of the page."
+        >
           <Textarea
             id="problem"
             rows={2}
@@ -237,7 +251,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
             onChange={(event) => setField("problem", event.target.value)}
           />
         </Field>
-        <Field label="Intro" htmlFor="intro">
+        <Field label="Intro" htmlFor="intro" errors={fieldErrors.intro}>
           <Textarea
             id="intro"
             rows={4}
@@ -247,7 +261,11 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
         </Field>
       </FormSection>
 
-      <FormSection title="Outcomes" description='Shown as "You leave able to…".'>
+      <FormSection
+        title="Outcomes"
+        errors={fieldErrors.outcomes}
+        description='Shown as "You leave able to…".'
+      >
         <StringListField
           value={values.outcomes}
           onChange={(list) => setField("outcomes", list)}
@@ -255,7 +273,11 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
         />
       </FormSection>
 
-      <FormSection title="Curriculum" description='Shown as "What the day covers".'>
+      <FormSection
+        title="Curriculum"
+        errors={fieldErrors.curriculum}
+        description='Shown as "What the day covers".'
+      >
         <StringListField
           value={values.curriculum}
           onChange={(list) => setField("curriculum", list)}
@@ -263,7 +285,11 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
         />
       </FormSection>
 
-      <FormSection title="Inclusions" description="What every attendee gets.">
+      <FormSection
+        title="Inclusions"
+        errors={fieldErrors.inclusions}
+        description="What every attendee gets."
+      >
         <StringListField
           value={values.inclusions}
           onChange={(list) => setField("inclusions", list)}
@@ -271,7 +297,11 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
         />
       </FormSection>
 
-      <FormSection title="What to expect" description="Arrival, dress code and what to bring.">
+      <FormSection
+        title="What to expect"
+        errors={fieldErrors.whatToExpect}
+        description="Arrival, dress code and what to bring."
+      >
         <StringListField
           value={values.whatToExpect}
           onChange={(list) => setField("whatToExpect", list)}
@@ -280,7 +310,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       </FormSection>
 
       <FormSection title="Audience and format">
-        <Field label="Who it's for" htmlFor="audience">
+        <Field label="Who it's for" htmlFor="audience" errors={fieldErrors.audience}>
           <Textarea
             id="audience"
             rows={2}
@@ -288,7 +318,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
             onChange={(event) => setField("audience", event.target.value)}
           />
         </Field>
-        <Field label="Format" htmlFor="format">
+        <Field label="Format" htmlFor="format" errors={fieldErrors.format}>
           <Textarea
             id="format"
             rows={2}
@@ -299,7 +329,12 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       </FormSection>
 
       <FormSection title="Primer video">
-        <Field label="Video link" htmlFor="primerVideoUrl" hint="A full https:// link.">
+        <Field
+          label="Video link"
+          htmlFor="primerVideoUrl"
+          errors={fieldErrors.primerVideoUrl}
+          hint="A full https:// link."
+        >
           <Input
             id="primerVideoUrl"
             type="url"
@@ -308,7 +343,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
             onChange={(event) => setField("primerVideoUrl", event.target.value)}
           />
         </Field>
-        <Field label="Blurb" htmlFor="primerBlurb">
+        <Field label="Blurb" htmlFor="primerBlurb" errors={fieldErrors.primerBlurb}>
           <Textarea
             id="primerBlurb"
             rows={2}
@@ -323,14 +358,14 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
         description="New sessions start with these values. Existing sessions keep their own."
       >
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Venue" htmlFor="defaultVenueName">
+          <Field label="Venue" htmlFor="defaultVenueName" errors={fieldErrors.defaultVenueName}>
             <Input
               id="defaultVenueName"
               value={values.defaultVenueName}
               onChange={(event) => setField("defaultVenueName", event.target.value)}
             />
           </Field>
-          <Field label="City" htmlFor="defaultCity">
+          <Field label="City" htmlFor="defaultCity" errors={fieldErrors.defaultCity}>
             <Input
               id="defaultCity"
               value={values.defaultCity}
@@ -338,7 +373,12 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
             />
           </Field>
         </div>
-        <Field label="Venue map link" htmlFor="defaultVenueMapUrl" hint="A full https:// link.">
+        <Field
+          label="Venue map link"
+          htmlFor="defaultVenueMapUrl"
+          errors={fieldErrors.defaultVenueMapUrl}
+          hint="A full https:// link."
+        >
           <Input
             id="defaultVenueMapUrl"
             type="url"
@@ -348,21 +388,26 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
           />
         </Field>
         <div className="grid gap-5 sm:grid-cols-3">
-          <Field label="Price" htmlFor="defaultPrice">
+          <Field label="Price" htmlFor="defaultPrice" errors={fieldErrors.defaultPriceCentavos}>
             <MoneyField
               id="defaultPrice"
               value={values.defaultPriceCentavos}
               onChange={(centavos) => setField("defaultPriceCentavos", centavos)}
             />
           </Field>
-          <Field label="Price note" htmlFor="defaultPriceNote" hint="e.g. VAT exclusive">
+          <Field
+            label="Price note"
+            htmlFor="defaultPriceNote"
+            errors={fieldErrors.defaultPriceNote}
+            hint="e.g. VAT exclusive"
+          >
             <Input
               id="defaultPriceNote"
               value={values.defaultPriceNote}
               onChange={(event) => setField("defaultPriceNote", event.target.value)}
             />
           </Field>
-          <Field label="Capacity" htmlFor="defaultCapacity">
+          <Field label="Capacity" htmlFor="defaultCapacity" errors={fieldErrors.defaultCapacity}>
             <Input
               id="defaultCapacity"
               type="number"

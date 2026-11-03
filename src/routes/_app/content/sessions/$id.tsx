@@ -39,7 +39,7 @@ import {
   type SessionDetail,
   sessionQueryOptions
 } from "@/features/sessions/functions";
-import { errorMessage } from "@/features/shared/error-message";
+import { errorMessage, validationError } from "@/features/shared/error-message";
 
 export const Route = createFileRoute("/_app/content/sessions/$id")({
   loader: ({ context, params }) =>
@@ -60,6 +60,16 @@ type SessionForm = {
   priceCentavos: number | null;
   priceNote: string;
   capacity: number | null;
+};
+
+const PRICE_MISSING_ISSUE = {
+  path: ["priceCentavos"],
+  message: "Enter a price."
+};
+
+const CAPACITY_MISSING_ISSUE = {
+  path: ["capacity"],
+  message: "Enter a capacity."
 };
 
 const STATUS_ACTION_LABELS: Record<SessionStatus, string> = {
@@ -106,7 +116,8 @@ function SessionEditorPage() {
 function SessionEditor({ detail }: { detail: SessionDetail }) {
   const queryClient = useQueryClient();
   const { session } = detail;
-  const { values, setField, isDirty, markSaved } = useEditorForm(toForm(detail));
+  const { values, setField, isDirty, markSaved, errors } = useEditorForm(toForm(detail));
+  const { fieldErrors, generalErrors, showErrors } = errors;
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const isLocked = session.status === "cancelled";
   const { data: parent } = useQuery(workshopQueryOptions(detail.workshop.id));
@@ -129,8 +140,14 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
   const save = useMutation({
     mutationFn: () => {
       const { priceCentavos, capacity } = values;
-      if (priceCentavos === null) throw new Error("Enter a price.");
-      if (capacity === null) throw new Error("Enter a capacity.");
+      if (priceCentavos === null || capacity === null) {
+        throw validationError(
+          [
+            priceCentavos === null && PRICE_MISSING_ISSUE,
+            capacity === null && CAPACITY_MISSING_ISSUE
+          ].filter((issue) => issue !== false)
+        );
+      }
 
       return $updateSession({
         data: {
@@ -144,7 +161,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
       toast.success("Session saved.");
       await refresh();
     },
-    onError: (error) => toast.error(errorMessage(error))
+    onError: showErrors
   });
 
   const setStatus = useMutation({
@@ -194,6 +211,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
         lastEdited={{ name: detail.updatedByName, at: session.updatedAt }}
         isSaving={save.isPending}
         isDirty={isDirty && !isLocked}
+        errors={generalErrors}
         onSave={() => save.mutate()}
         preview={previewContent && <PreviewButton content={previewContent} />}
         aside={
@@ -217,7 +235,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
         <fieldset disabled={isLocked} className="flex flex-col gap-6">
           <FormSection title="Date and time" description="All times are Manila time.">
             <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="First day" htmlFor="date">
+              <Field label="First day" htmlFor="date" errors={fieldErrors.date}>
                 <Input
                   id="date"
                   type="date"
@@ -225,7 +243,12 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
                   onChange={(event) => setField("date", event.target.value)}
                 />
               </Field>
-              <Field label="Last day" htmlFor="endDate" hint="Leave empty for a one-day session.">
+              <Field
+                label="Last day"
+                htmlFor="endDate"
+                errors={fieldErrors.endDate}
+                hint="Leave empty for a one-day session."
+              >
                 <Input
                   id="endDate"
                   type="date"
@@ -236,7 +259,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
               </Field>
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="Starts each day" htmlFor="startTime">
+              <Field label="Starts each day" htmlFor="startTime" errors={fieldErrors.startTime}>
                 <Input
                   id="startTime"
                   type="time"
@@ -244,7 +267,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
                   onChange={(event) => setField("startTime", event.target.value)}
                 />
               </Field>
-              <Field label="Ends each day" htmlFor="endTime">
+              <Field label="Ends each day" htmlFor="endTime" errors={fieldErrors.endTime}>
                 <Input
                   id="endTime"
                   type="time"
@@ -256,6 +279,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
             <Field
               label="Registration closes"
               htmlFor="registrationCutoff"
+              errors={fieldErrors.registrationCutoff}
               hint="Leave empty to close registration when the session starts."
             >
               <Input
@@ -269,7 +293,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
 
           <FormSection title="Venue">
             <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="Venue" htmlFor="venueName">
+              <Field label="Venue" htmlFor="venueName" errors={fieldErrors.venueName}>
                 <VenueSuggestInput
                   id="venueName"
                   field="venueName"
@@ -277,7 +301,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
                   onChange={(value) => setField("venueName", value)}
                 />
               </Field>
-              <Field label="City" htmlFor="city">
+              <Field label="City" htmlFor="city" errors={fieldErrors.city}>
                 <VenueSuggestInput
                   id="city"
                   field="city"
@@ -286,7 +310,12 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
                 />
               </Field>
             </div>
-            <Field label="Map link" htmlFor="venueMapUrl" hint="A full https:// link.">
+            <Field
+              label="Map link"
+              htmlFor="venueMapUrl"
+              errors={fieldErrors.venueMapUrl}
+              hint="A full https:// link."
+            >
               <Input
                 id="venueMapUrl"
                 type="url"
@@ -299,21 +328,26 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
 
           <FormSection title="Price and seats">
             <div className="grid gap-5 sm:grid-cols-3">
-              <Field label="Price" htmlFor="price">
+              <Field label="Price" htmlFor="price" errors={fieldErrors.priceCentavos}>
                 <MoneyField
                   id="price"
                   value={values.priceCentavos}
                   onChange={(centavos) => setField("priceCentavos", centavos)}
                 />
               </Field>
-              <Field label="Price note" htmlFor="priceNote" hint="e.g. VAT exclusive">
+              <Field
+                label="Price note"
+                htmlFor="priceNote"
+                errors={fieldErrors.priceNote}
+                hint="e.g. VAT exclusive"
+              >
                 <Input
                   id="priceNote"
                   value={values.priceNote}
                   onChange={(event) => setField("priceNote", event.target.value)}
                 />
               </Field>
-              <Field label="Capacity" htmlFor="capacity">
+              <Field label="Capacity" htmlFor="capacity" errors={fieldErrors.capacity}>
                 <Input
                   id="capacity"
                   type="number"
