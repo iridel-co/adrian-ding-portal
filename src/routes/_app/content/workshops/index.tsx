@@ -245,7 +245,7 @@ function NewWorkshopDialog() {
       }}
     >
       <DialogTrigger asChild>
-        <Button>
+        <Button variant="brand">
           <Plus />
           New workshop
         </Button>

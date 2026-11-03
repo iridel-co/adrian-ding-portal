@@ -140,7 +140,7 @@ function NewProgramDialog() {
       }}
     >
       <DialogTrigger asChild>
-        <Button>
+        <Button variant="brand">
           <Plus />
           New program
         </Button>

@@ -70,7 +70,7 @@ export function NewSessionDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button>
+        <Button variant="brand">
           <Plus />
           New session
         </Button>
