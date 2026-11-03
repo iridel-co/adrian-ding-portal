@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { CrmReadState } from "@/components/crm/read-state";
+import { ListSkeleton } from "@/components/table/detail-skeleton";
 import { paymentMethodLabels } from "@/features/crm/registration-presentation";
 import { Button } from "@/components/ui/button";
 import type { $getRegistration } from "@/features/crm/functions";
@@ -19,7 +20,7 @@ export function RegistrationHistory({ entries, offset, hasMore, pending, fetchin
     <h2 id="registration-history" className="text-xl font-medium">History</h2>
     <p className="text-sm text-muted-foreground">Staff changes and email retry attempts. All times are in Manila. Check Email delivery for the current outcome of an attempt.</p>
     <CrmReadState pending={pending} error={error} retry={retry} loadingMessage="Loading registration history…"
-      accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />
+      accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} skeleton={<ListSkeleton />} />
     {!pending && !error && <>
       {entries.length ? <ol className="space-y-3">{entries.map(entry => <HistoryEntry key={entry.id} entry={entry} />)}</ol>
         : <p className="text-sm text-muted-foreground">No staff actions on this history page.</p>}

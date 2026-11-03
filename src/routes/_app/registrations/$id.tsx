@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { BackLink } from "@/components/cms/editor-shell";
 import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { CrmReadState } from "@/components/crm/read-state";
+import { DetailSkeleton } from "@/components/table/detail-skeleton";
 import { RegistrationActions } from "@/components/crm/registration-actions";
 import { RegistrationEmails } from "@/components/crm/registration-emails";
 import { RegistrationHistory } from "@/components/crm/registration-history";
@@ -56,7 +57,7 @@ function RegistrationDetail({ id }: { id: string }) {
     </div>
     <CrmReadState pending={result.isPending && !actionAccessError} error={error}
       retry={() => { setActionAccessError(null); refresh(); }} loadingMessage="Loading registration…"
-      accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />
+      accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} skeleton={<DetailSkeleton />} />
     {showRegistration && <>
       <header className="space-y-3">
         <p className="text-sm text-muted-foreground">{registration.reference}</p>

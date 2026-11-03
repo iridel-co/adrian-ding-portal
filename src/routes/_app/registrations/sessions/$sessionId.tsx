@@ -8,6 +8,8 @@ import { TablePagination } from "@/components/table/table-pagination";
 import { EmptyState } from "@/components/cms/content-list-page";
 import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { CrmReadState } from "@/components/crm/read-state";
+import { DetailSkeleton } from "@/components/table/detail-skeleton";
+import { TableSkeleton } from "@/components/table/table-skeleton";
 import { RegistrationBatchDialog, type BatchAction } from "@/components/crm/registration-batch-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RegistrationAction } from "@/features/crm/registration-staff-schemas";
@@ -29,6 +31,8 @@ const filterOptions: { value: z.output<typeof searchSchema>["filter"]; label: st
   { value: "active", label: "Active" }, { value: "unpaid", label: "Unpaid" }, { value: "paid", label: "Paid" },
   { value: "cancelled", label: "Cancelled" }
 ];
+
+const registrantColumns = [["fullName", "Registrant"], ["status", "Status"], ["priceCentavos", "Saved price"], ["createdAt", "Submitted"]] as const;
 
 export const Route = createFileRoute("/_app/registrations/sessions/$sessionId")({
   validateSearch: searchSchema,
@@ -58,7 +62,8 @@ function RegistrationWorkspace() {
   const error = accessError || summary.error;
   const listState = <CrmReadState pending={registrations.isPending} error={registrations.error}
     retry={() => void registrations.refetch()} loadingMessage="Loading registrations…"
-    accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />;
+    accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage}
+    skeleton={<TableSkeleton columns={[{ label: "" }, ...registrantColumns.map(([, label]) => ({ label })), { label: "Actions" }]} />} />;
   const rows = !registrations.isError && registrations.data && (registrations.data.items.length
     ? <RegistrationRows key={`${sessionId}-${search.tab}-${search.filter}-${search.search}-${search.offset}-${search.limit}-${search.sort}-${search.direction}`} items={registrations.data.items} search={search} />
     : <EmptyState>{overview ? "No registrations for this scheduled workshop yet." : "No registrations match these filters."}</EmptyState>);
@@ -70,7 +75,8 @@ function RegistrationWorkspace() {
       <Button variant="outline" disabled={summary.isFetching || registrations.isFetching} onClick={refresh}>Refresh</Button>
     </div>
     <CrmReadState pending={summary.isPending && !accessError} error={error} retry={refresh}
-      loadingMessage="Loading scheduled workshop…" accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />
+      loadingMessage="Loading scheduled workshop…" accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage}
+      skeleton={<DetailSkeleton />} />
     {!error && !summary.isError && run && <>
       <header className="space-y-3">
         <p className="text-sm text-muted-foreground">{run.courseCode || "No course code"}</p>
@@ -159,7 +165,7 @@ function RegistrationRows({ items, search }: { items: RegistrationRow[]; search:
       <TableHead><Checkbox aria-label="Select all unpaid registrations on this page" disabled={!eligible.length}
         checked={chosen.length > 0 && chosen.length === eligible.length ? true : chosen.length ? "indeterminate" : false}
         onCheckedChange={checked => setSelected(checked === true ? eligible.map(item => item.id) : [])} /></TableHead>
-      {([["fullName", "Registrant"], ["status", "Status"], ["priceCentavos", "Saved price"], ["createdAt", "Submitted"]] as const).map(([key, label]) =>
+      {registrantColumns.map(([key, label]) =>
         <SortableTableHead key={key} active={sort === key} direction={direction}
           onClick={() => void navigate({ search: { ...search, tab: "registrations", sort: key,
             direction: sort === key && direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>

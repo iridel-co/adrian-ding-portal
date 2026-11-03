@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ContentListPage, EmptyState, FilterSelect } from "@/components/cms/content-list-page";
 import { TablePagination } from "@/components/table/table-pagination";
 import { CrmReadState } from "@/components/crm/read-state";
+import { TableSkeleton } from "@/components/table/table-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,8 @@ export const Route = createFileRoute("/_app/inquiries/")({
   head: () => ({ meta: [{ title: "Corporate inquiries" }] }),
   component: InquiriesPage
 });
+
+const columns = [["company", "Company / contact"], ["program", "Programme"], ["status", "Status"], ["createdAt", "Received"], ["slaDueAt", "First reply due"]] as const;
 
 function InquiriesPage() {
   const search = Route.useSearch();
@@ -35,10 +38,11 @@ function InquiriesPage() {
       <FilterSelect label="Inquiry status" options={inquiryStatusOptions} value={search.status}
         onChange={status => void navigate({ search: { ...search, status, offset: 0 } })} />
     </>}>
-    <CrmReadState pending={inquiries.isPending} error={inquiries.error} retry={() => void inquiries.refetch()} />
+    <CrmReadState pending={inquiries.isPending} error={inquiries.error} retry={() => void inquiries.refetch()}
+      skeleton={<TableSkeleton columns={columns.map(([, label]) => ({ label }))} />} />
     {!inquiries.isError && inquiries.data && <>
       {inquiries.data.items.length === 0 ? <EmptyState>No inquiries match these filters.</EmptyState> : <Table>
-        <TableHeader><TableRow>{([["company", "Company / contact"], ["program", "Programme"], ["status", "Status"], ["createdAt", "Received"], ["slaDueAt", "First reply due"]] as const).map(([key, label]) =>
+        <TableHeader><TableRow>{columns.map(([key, label]) =>
             <SortableTableHead key={key} active={search.sort === key} direction={search.direction}
               onClick={() => void navigate({ search: { ...search, sort: key,
                 direction: search.sort === key && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>

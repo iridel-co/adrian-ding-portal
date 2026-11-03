@@ -6,6 +6,7 @@ import { TablePagination } from "@/components/table/table-pagination";
 import { ContentListPage, EmptyState } from "@/components/cms/content-list-page";
 import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { CrmReadState } from "@/components/crm/read-state";
+import { TableSkeleton } from "@/components/table/table-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -29,6 +30,8 @@ export const Route = createFileRoute("/_app/registrations/")({
   head: () => ({ meta: [{ title: "Scheduled workshops" }] }),
   component: RegistrationRunsPage
 });
+
+const columns = [["workshopTitle", "Workshop"], ["status", "Status"], ["date", "Schedule"], ["venueName", "Venue"], ["reserved", "Seats"], ["paid", "Payment"]] as const;
 
 function RegistrationRunsPage() {
   const search = Route.useSearch();
@@ -57,7 +60,8 @@ function RegistrationRunsPage() {
       </Select>
     </div>}>
     <CrmReadState pending={runs.isPending} error={runs.error} retry={() => void runs.refetch()}
-      loadingMessage="Loading scheduled workshops…" accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} />
+      loadingMessage="Loading scheduled workshops…" accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage}
+      skeleton={<TableSkeleton columns={columns.map(([, label]) => ({ label }))} />} />
     {!runs.isError && runs.data && <>
       {runs.data.items.length === 0 ? <EmptyState>No scheduled workshops match these filters.</EmptyState> : <>
         <div className="space-y-1">
@@ -65,7 +69,7 @@ function RegistrationRunsPage() {
           {search.when !== "past" && <p className="text-sm text-muted-foreground">Reserved seats include Paid and Unpaid registrations until staff cancel them.</p>}
         </div>
         <Table>
-          <TableHeader><TableRow>{([["workshopTitle", "Workshop"], ["status", "Status"], ["date", "Schedule"], ["venueName", "Venue"], ["reserved", "Seats"], ["paid", "Payment"]] as const).map(([key, label]) =>
+          <TableHeader><TableRow>{columns.map(([key, label]) =>
             <SortableTableHead key={key} active={search.sort === key} direction={search.direction}
               onClick={() => void navigate({ search: { ...search, sort: key,
                 direction: search.sort === key && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>
