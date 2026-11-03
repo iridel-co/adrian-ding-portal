@@ -10,6 +10,7 @@ import { CrmReadState } from "@/components/crm/read-state";
 import { TableSkeleton } from "@/components/table/table-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ProgramChip } from "@/components/crm/program-chip";
 import { Table, TableBody, TableCell, TableHeader, TableRow, tableRowLinkClass } from "@/components/ui/table";
 import { inquiriesQueryOptions } from "@/features/crm/queries";
 import { inquirySearchSchema as searchSchema } from "@/features/crm/inquiry-navigation";
@@ -49,7 +50,7 @@ function InquiriesPage() {
           )}</TableRow></TableHeader>
         <TableBody>{inquiries.data.items.map(item => <TableRow key={item.id}>
           <TableCell className="whitespace-normal"><Link to="/inquiries/$id" params={{ id: item.id }} search={search} className={tableRowLinkClass}>{item.company}</Link><p className="mt-0.5 text-muted-foreground">{item.fullName}</p><p className="text-xs text-muted-foreground break-all">{item.email}</p></TableCell>
-          <TableCell className="max-w-64 whitespace-normal text-muted-foreground">{item.program}</TableCell>
+          <TableCell className="max-w-64 whitespace-normal"><ProgramChip program={item.program} /></TableCell>
           <TableCell><Badge variant={inquiryStatusVariants[item.status]}>{inquiryStatusLabels[item.status]}</Badge></TableCell>
           <TableCell>{formatCrmTime(item.createdAt)}</TableCell>
           <TableCell>{formatCrmTime(item.slaDueAt)}{isInquiryOverdue(item) && <Badge variant="destructive" className="mt-1 flex">Overdue</Badge>}</TableCell>

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { $changeInquiry } from "@/features/crm/functions";
 import { inquiryTransitions, type InquiryStatus } from "@/features/crm/lifecycle";
 import { inquiryActionLabels, inquiryErrorMessage, inquiryStatusLabels, isCrmAccessError } from "@/features/crm/presentation";
@@ -40,16 +41,24 @@ export function InquiryActions({ inquiry, draft, setDraft }: {
   const actionAvailable = selected && allowed.includes(selected);
   /* The next step forward is the brand-red call to action; closing it as lost or spam stays quiet. */
   const nextStep = allowed.find(status => !isClosingAction(status));
-  return <div role="group" aria-label="Record progress" className="flex flex-col gap-2 lg:items-end">
-    <div className="flex flex-wrap gap-2 lg:justify-end">{allowed.map(status => {
+  const choose = (status: InquiryStatus) => {
+    updateDraft({ selected: status as ActionStatus, expectedStatus: inquiry.status, value: null, reason: "", validation: "" }); change.reset();
+  };
+  return <div role="group" aria-label="Record progress" className="flex items-center gap-2">
+    {allowed.map(status => {
       const Icon = ACTION_ICONS[status as ActionStatus];
-      return <Button key={status} variant={status === nextStep ? "brand" : "outline"} onClick={() => {
-        updateDraft({ selected: status as ActionStatus, expectedStatus: inquiry.status, value: null, reason: "", validation: "" }); change.reset();
-      }}><Icon data-icon="inline-start" />{inquiryActionLabels[status]}</Button>;
-    })}</div>
-    <p className="text-xs text-muted-foreground lg:text-right">{allowed.length === 0
-      ? "This inquiry is closed. No further status changes are available."
-      : "Send replies and proposals outside the portal, then record them here."}</p>
+      const label = inquiryActionLabels[status];
+      if (!isClosingAction(status)) return <Button key={status} variant={status === nextStep ? "brand" : "outline"} onClick={() => choose(status)}>
+        <Icon data-icon="inline-start" />{label}
+      </Button>;
+      /* Lost and spam are icon buttons, named by a tooltip and by hidden text for screen readers. */
+      return <Tooltip key={status}>
+        <TooltipTrigger asChild>
+          <Button variant="outline" size="icon" onClick={() => choose(status)}><Icon /><span className="sr-only">{label}</span></Button>
+        </TooltipTrigger>
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>;
+    })}
     <Dialog open={selected !== null} onOpenChange={open => { if (!open && !change.isPending) updateDraft({ selected: null }); }}>
       <DialogContent><form className="space-y-5" onSubmit={event => {
         event.preventDefault();

@@ -11,9 +11,11 @@ import { DetailSkeleton } from "@/components/table/detail-skeleton";
 import { DetailHeader, Fact, InfoCard, InfoList, InfoRow, TimelineItem, type TimelineTone } from "@/components/crm/detail-parts";
 import { InquiryActions, type InquiryDraft } from "@/components/crm/inquiry-actions";
 import { InquiryEmails } from "@/components/crm/inquiry-emails";
+import { ProgramChip } from "@/components/crm/program-chip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { inquirySearchSchema } from "@/features/crm/inquiry-navigation";
 import type { InquiryStatus } from "@/features/crm/lifecycle";
 import { inquiryQueryOptions } from "@/features/crm/queries";
@@ -68,7 +70,7 @@ function InquiryDetail({ id }: { id: string }) {
           <Badge variant={inquiryStatusVariants[inquiry.status]}>{inquiryStatusLabels[inquiry.status]}</Badge>
           {overdue && <Badge variant="destructive">First reply overdue</Badge>}
         </Fact>
-        <Fact icon={Presentation} label="Programme">{inquiry.program}</Fact>
+        <Fact icon={Presentation} label="Programme"><ProgramChip program={inquiry.program} /></Fact>
         <Fact icon={Inbox} label="Received">{formatCrmTime(inquiry.createdAt)}</Fact>
         {inquiry.contactedAt
           ? <Fact icon={MailCheck} label="First reply">{formatCrmTime(inquiry.contactedAt)}</Fact>
@@ -80,17 +82,22 @@ function InquiryDetail({ id }: { id: string }) {
         {inquiry.closedAt && <Fact icon={Flag} label="Closed">{formatCrmTime(inquiry.closedAt)}</Fact>}
         {inquiry.lostReason && <Fact icon={CircleX} label="Loss reason"><span className="font-normal whitespace-pre-wrap break-words">{inquiry.lostReason}</span></Fact>}
       </>}
-      actions={<div className="flex items-start gap-2">
+      actions={<>
         <InquiryActions inquiry={inquiry} draft={draft} setDraft={setDraft} />
-        <Button variant="ghost" size="icon" aria-label="Refresh" title="Refresh" disabled={result.isFetching} onClick={() => void result.refetch()}><RefreshCw /></Button>
-      </div>}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" disabled={result.isFetching} onClick={() => void result.refetch()}><RefreshCw /><span className="sr-only">Refresh</span></Button>
+          </TooltipTrigger>
+          <TooltipContent>Refresh</TooltipContent>
+        </Tooltip>
+      </>}
     />
 
     <Tabs defaultValue="details" className="gap-3">
       <TabsList aria-label="Inquiry sections">
         <TabsTrigger value="details"><ClipboardList />Details</TabsTrigger>
         <TabsTrigger value="history">
-          <HistoryIcon />History & emails
+          <HistoryIcon />History & Emails
           <span className="rounded-full bg-current/15 px-1.5 text-xs tabular-nums">{inquiry.history.length + inquiry.emailJobs.length}{inquiry.historyHasMore ? "+" : ""}</span>
         </TabsTrigger>
       </TabsList>
@@ -108,12 +115,12 @@ function InquiryDetail({ id }: { id: string }) {
           </InfoCard>
           <InfoCard icon={GraduationCap} title="Training request">
             <InfoList>
-              <InfoRow icon={Presentation} label="Programme">{inquiry.program}</InfoRow>
+              <InfoRow icon={Presentation} label="Programme"><ProgramChip program={inquiry.program} /></InfoRow>
               <InfoRow icon={Users} label="Attendees">{inquiry.attendees}</InfoRow>
               <InfoRow icon={CalendarDays} label="Target dates">{targetDates}</InfoRow>
               <InfoRow icon={MapPin} label="Venue">{inquiry.venue}</InfoRow>
               <InfoRow icon={Sparkles} label="Also interested in">{inquiry.alsoInterested.length
-                ? <span className="flex flex-wrap gap-1.5">{inquiry.alsoInterested.map(item => <Badge key={item} variant="neutral">{item}</Badge>)}</span>
+                ? <span className="flex flex-wrap gap-1.5">{inquiry.alsoInterested.map(item => <ProgramChip key={item} program={item} />)}</span>
                 : <span className="font-normal text-muted-foreground">None specified</span>}</InfoRow>
             </InfoList>
           </InfoCard>

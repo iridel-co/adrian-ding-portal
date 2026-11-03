@@ -23,7 +23,7 @@ export function DetailHeader({ crumb, title, subtitle, facts, actions }: {
         {subtitle && <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground [&_svg]:size-4">{subtitle}</div>}
         {facts && <dl className="mt-4 grid grid-cols-[auto_1fr] items-center gap-x-8 gap-y-3 text-sm">{facts}</dl>}
       </div>
-      {actions && <div className="flex shrink-0 flex-col gap-2 lg:max-w-sm lg:items-end">{actions}</div>}
+      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
     </header>
   );
 }

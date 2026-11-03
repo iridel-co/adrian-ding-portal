@@ -28,6 +28,7 @@ import { Route as ListRoute } from "@/routes/_app/inquiries/index";
 import { Route as DetailRoute } from "@/routes/_app/inquiries/$id";
 import { Route as LandingRoute } from "@/routes/_app/index";
 import { Dialog } from "@/components/ui/dialog";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { InquiryActions, type InquiryDraft } from "@/components/crm/inquiry-actions";
 import { inquiryTransitions } from "./lifecycle";
 import { inquiryActionLabels } from "./presentation";
@@ -43,7 +44,9 @@ const inquiry = {
     { id: "e2", kind: "corporate_notification", state: "sent", attemptCount: 1, lastAttemptAt: null, sentAt: new Date(), leaseExpiresAt: null, lastErrorCode: null }
   ]
 };
-const render = (route: typeof ListRoute | typeof DetailRoute) => renderToStaticMarkup(createElement(route.options.component as ComponentType));
+/* The app root provides tooltips, so the tests do too. */
+const withTooltips = (node: ReactNode) => createElement(TooltipProvider, { children: node });
+const render = (route: typeof ListRoute | typeof DetailRoute) => renderToStaticMarkup(withTooltips(createElement(route.options.component as ComponentType)));
 beforeEach(() => { harness.search = { status: "all", search: "", offset: 0, limit: 50 }; harness.query.mockClear(); harness.result = { isPending: false, isError: false, isFetching: false, error: null }; harness.access.mockReset(); harness.mutate.mockReset(); harness.mutationError = null; });
 
 describe("Staff inquiry screens", () => {
@@ -144,7 +147,7 @@ describe("Status confirmation forms", () => {
     submit(tree);
     expect(harness.mutate).not.toHaveBeenCalled();
     expect(setDraft).not.toHaveBeenCalled();
-    const html = renderToStaticMarkup(tree);
+    const html = renderToStaticMarkup(withTooltips(tree));
     // Radix portals omit their content in server rendering; inspect the form itself.
     const form = renderToStaticMarkup(createElement(Dialog, { open: true }, findElement(tree, "form")!));
     expect(form).toContain("Budget unavailable");
