@@ -38,8 +38,12 @@ it("reads recovery mail configuration without enabling public intake", () => {
   vi.stubEnv("TURNSTILE_SECRET_KEY", "");
   expect(getRegistrationMailConfig().REGISTRATION_EMAIL_ENABLED).toBe(false);
 });
-it.each(["bad", ""])("requires a selected payment account: %s", value => {
-  vi.stubEnv("REGISTRATION_PAYMENT_ACCOUNT_ID", value);
+it("allows the portal to provide the selected payment account", () => {
+  vi.stubEnv("REGISTRATION_PAYMENT_ACCOUNT_ID", "");
+  expect(getRegistrationMailConfig().REGISTRATION_PAYMENT_ACCOUNT_ID).toBeUndefined();
+});
+it("rejects an invalid payment account fallback", () => {
+  vi.stubEnv("REGISTRATION_PAYMENT_ACCOUNT_ID", "bad");
   expect(() => getRegistrationMailConfig()).toThrow("intake_unavailable");
 });
 it.each(["bad", "Injected\r\nBcc: other@company.test"])("rejects invalid sender headers", value => {

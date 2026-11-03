@@ -6,7 +6,7 @@ import { formatPesos } from "@/features/shared/money";
 export type RegistrationMailConfig = {
   EMAIL_FROM: string;
   EMAIL_REPLY_TO: string;
-  REGISTRATION_PAYMENT_ACCOUNT_ID: string;
+  REGISTRATION_PAYMENT_ACCOUNT_ID?: string;
   REGISTRATION_EMAIL_ENABLED: boolean;
   RESEND_API_KEY: string;
 };

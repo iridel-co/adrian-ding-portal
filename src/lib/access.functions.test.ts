@@ -236,7 +236,7 @@ describe("Registered workshop staff functions", () => {
     await expect($changeRegistration({ data: markPaidInput })).rejects.toThrow("crm_unavailable");
     expect(harness.sendCall).not.toHaveBeenCalled();
   });
-  it("allows corrections and cancellation without mail configuration", async () => {
+  it("allows corrections and cancellation with portal-managed payment selection", async () => {
     harness.request = new Request("https://portal.test/_server/action", { method: "POST", headers: { Origin: "https://portal.test" } });
     vi.stubEnv("REGISTRATION_PAYMENT_ACCOUNT_ID", "");
     for (const action of [RegistrationAction.CorrectPayment, RegistrationAction.Cancel]) {
@@ -245,8 +245,8 @@ describe("Registered workshop staff functions", () => {
     }
     expect(harness.registrationCall).toHaveBeenCalledTimes(2);
     expect(harness.sendCall).not.toHaveBeenCalled();
-    await expect($changeRegistration({ data: markPaidInput })).rejects.toThrow("intake_unavailable");
-    expect(harness.registrationCall).toHaveBeenCalledTimes(2);
+    await expect($changeRegistration({ data: markPaidInput })).resolves.toEqual({});
+    expect(harness.registrationCall).toHaveBeenCalledTimes(3);
   });
   it("does not retry workshop mail while sending is disabled", async () => {
     vi.stubEnv("REGISTRATION_EMAIL_ENABLED", "false");
