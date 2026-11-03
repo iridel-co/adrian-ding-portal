@@ -36,6 +36,7 @@ import { Route as GuardRoute } from "@/routes/_app/registrations";
 import { Route as ListRoute } from "@/routes/_app/registrations/index";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { TablePagination } from "@/components/table/table-pagination";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -208,9 +209,8 @@ describe("Registration access and reads", () => {
     await expect(beforeLoad()).rejects.toThrow("staff_access_required");
   });
   it("shows the sidebar link only with CRM access and keeps existing navigation", () => {
-    const sidebar = () => renderToStaticMarkup(createElement(SidebarProvider, {}, createElement(AppSidebar,
-      { user: { name: "Test Staff", email: "staff@company.test" } })));
-    /* A section only shows its links while it's open, and it starts open when it holds the current page. */
+    const sidebar = () => renderToStaticMarkup(createElement(TooltipProvider, { children: createElement(SidebarProvider, {},
+      createElement(AppSidebar, { user: { name: "Test Staff", email: "staff@company.test" }, closedSections: [] })) }));
     for (const role of ["staff", "admin"]) {
       harness.result.data = { role }; harness.result.isError = false;
       harness.pathname = "/registrations";

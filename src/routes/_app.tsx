@@ -1,8 +1,10 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
+import type { CSSProperties } from "react";
 
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar, readClosedSections } from "@/components/app-sidebar";
 import { ThemeSwitcher } from "@/components/theme";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { readCookie } from "@/lib/cookies";
 import { requireUser } from "@/lib/require-user";
 
 /* Every route under _app/ requires a signed-in user. */
@@ -18,8 +20,12 @@ function AppLayout() {
   const { user } = Route.useRouteContext();
 
   return (
-    <SidebarProvider>
-      <AppSidebar user={user} />
+    /* The sidebar opens the way it was left. Its own cookie remembers if it was narrowed to icons. */
+    <SidebarProvider
+      defaultOpen={readCookie("sidebar_state") !== "false"}
+      style={{ "--sidebar-width-icon": "4.5rem" } as CSSProperties}
+    >
+      <AppSidebar user={user} closedSections={readClosedSections()} />
       <SidebarInset className="bg-transparent">
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/70 px-4 backdrop-blur-md">
           <SidebarTrigger />

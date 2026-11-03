@@ -17,6 +17,7 @@ import {
   Users,
   type LucideIcon
 } from "lucide-react";
+import { cn } from "cn";
 import { Collapsible } from "radix-ui";
 import type { ReactNode } from "react";
 
@@ -41,10 +42,13 @@ import {
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
-  SidebarMenuSubItem
+  SidebarMenuSubItem,
+  useSidebar
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { authClient } from "@/lib/auth-client";
+import { readCookie } from "@/lib/cookies";
 import { crmAccessQueryOptions } from "@/features/crm/queries";
 
 type SidebarUser = {
@@ -72,32 +76,65 @@ const ACTIVE_PROPS = { "data-active": true } as const;
 /* Size and spacing shared by section headers and links that stand on their own. */
 const TOP_LEVEL_CLASS = "h-10 gap-3 rounded-xl px-3 text-[15px] [&_svg]:size-4.5";
 
-export function AppSidebar({ user }: { user: SidebarUser }) {
+/* When the sidebar is narrowed to icons, a link becomes a centered square with only its icon. */
+const ICON_ONLY_CLASS =
+  "group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:[&>span]:hidden";
+
+const CLOSED_SECTIONS_COOKIE = "sidebar_closed_sections";
+const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
+
+/* The sections the user closed. They're kept in a cookie so a reload shows them the same way. */
+export function readClosedSections() {
+  return (readCookie(CLOSED_SECTIONS_COOKIE) ?? "").split("|").filter(Boolean);
+}
+
+function rememberSection(label: string, isOpen: boolean) {
+  const closed = new Set(readClosedSections());
+  if (isOpen) closed.delete(label);
+  else closed.add(label);
+  document.cookie = `${CLOSED_SECTIONS_COOKIE}=${encodeURIComponent([...closed].join("|"))}; path=/; max-age=${ONE_YEAR_SECONDS}`;
+}
+
+function Divider({ className }: { className?: string }) {
+  return <div className={cn("mx-4 border-t border-dashed border-sidebar-border", className)} />;
+}
+
+type AppSidebarProps = {
+  user: SidebarUser;
+  closedSections: readonly string[];
+};
+
+export function AppSidebar({ user, closedSections }: AppSidebarProps) {
   const access = useQuery(crmAccessQueryOptions());
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-3 px-2 py-2">
+        <div className="flex items-center gap-3 px-2 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border bg-card shadow-xs">
             <img src={logoUrl} alt="Adrian Ding" className="size-8 dark:invert" />
           </div>
-          <div className="grid leading-tight">
+          <div className="grid leading-tight group-data-[collapsible=icon]:hidden">
             <span className="truncate text-[15px] font-semibold">Adrian Ding</span>
             <span className="truncate text-xs text-muted-foreground">Admin portal</span>
           </div>
         </div>
       </SidebarHeader>
+      <Divider />
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
             {access.isPending && <NavGroupSkeleton />}
-            {!access.isError && access.data && <NavGroup label="CRM" icon={Handshake} paths={["/inquiries", "/registrations"]}>
-              <NavItem><Link to="/inquiries" search={{ status: "all", search: "", offset: 0 }} activeProps={ACTIVE_PROPS}><MessagesSquare /><span>Inquiries</span></Link></NavItem>
-              <NavItem><Link to="/registrations" search={{ when: "upcoming", offset: 0 }} activeProps={ACTIVE_PROPS}><Users /><span>Registrations</span></Link></NavItem>
-            </NavGroup>}
-            <NavGroup label={CONTENT_GROUP.label} icon={CONTENT_GROUP.icon} paths={CONTENT_GROUP.items.map((item) => item.to)}>
+            {!access.isError && access.data && <>
+              <NavGroup label="CRM" icon={Handshake} paths={["/inquiries", "/registrations"]} closedSections={closedSections}>
+                <NavItem title="Inquiries"><Link to="/inquiries" search={{ status: "all", search: "", offset: 0 }} activeProps={ACTIVE_PROPS}><MessagesSquare /><span>Inquiries</span></Link></NavItem>
+                <NavItem title="Registrations"><Link to="/registrations" search={{ when: "upcoming", offset: 0 }} activeProps={ACTIVE_PROPS}><Users /><span>Registrations</span></Link></NavItem>
+              </NavGroup>
+              {/* Between sections, only when the sidebar shows icons and section headers are hidden. */}
+              <li aria-hidden="true" className="mx-4 my-1 hidden border-t border-dashed border-sidebar-border group-data-[collapsible=icon]:block" />
+            </>}
+            <NavGroup label={CONTENT_GROUP.label} icon={CONTENT_GROUP.icon} paths={CONTENT_GROUP.items.map((item) => item.to)} closedSections={closedSections}>
               {CONTENT_GROUP.items.map((item) => (
-                <NavItem key={item.to}>
+                <NavItem key={item.to} title={item.title}>
                   <Link to={item.to} activeProps={ACTIVE_PROPS}>
                     <item.icon />
                     <span>{item.title}</span>
@@ -107,14 +144,19 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
             </NavGroup>
           </SidebarMenu>
         </SidebarGroup>
-        <div className="mx-4 mt-auto border-t border-dashed border-sidebar-border" />
+        <Divider className="mt-auto" />
         <SidebarGroup>
           <SidebarMenu>
             {/* A link on its own gets a solid brand red fill when it's the current page. */}
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                className={`${TOP_LEVEL_CLASS} [&>svg]:text-muted-foreground data-active:bg-brand data-active:text-brand-foreground data-active:hover:bg-brand/90 data-active:hover:text-brand-foreground data-active:[&>svg]:text-brand-foreground`}
+                tooltip="Settings"
+                className={cn(
+                  TOP_LEVEL_CLASS,
+                  "[&>svg]:text-muted-foreground data-active:bg-brand data-active:text-brand-foreground data-active:hover:bg-brand/90 data-active:hover:text-brand-foreground data-active:[&>svg]:text-brand-foreground",
+                  ICON_ONLY_CLASS
+                )}
               >
                 <Link to="/settings/access" activeProps={ACTIVE_PROPS}>
                   <Settings />
@@ -132,26 +174,41 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
   );
 }
 
+type NavGroupProps = {
+  label: string;
+  icon: LucideIcon;
+  paths: readonly string[];
+  closedSections: readonly string[];
+  children: ReactNode;
+};
+
 /*
-  A section that opens and closes. It starts open, with its icon in brand red,
-  when the current page is one of its links, so you can always see where you are.
+  A section that opens and closes. It stays the way the user left it, even after
+  a reload, and its icon turns brand red when the current page is one of its links.
+  When the sidebar shows only icons, the header hides and the links always show.
 */
-function NavGroup({ label, icon: Icon, paths, children }: { label: string; icon: LucideIcon; paths: readonly string[]; children: ReactNode }) {
+function NavGroup({ label, icon: Icon, paths, closedSections, children }: NavGroupProps) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const holdsCurrentPage = paths.some((path) => pathname.startsWith(path));
 
   return (
-    <Collapsible.Root asChild defaultOpen={holdsCurrentPage}>
+    <Collapsible.Root
+      asChild
+      defaultOpen={!closedSections.includes(label)}
+      onOpenChange={(isOpen) => rememberSection(label, isOpen)}
+    >
       <SidebarMenuItem className="group/collapsible">
         <Collapsible.Trigger asChild>
-          <SidebarMenuButton className={TOP_LEVEL_CLASS}>
+          <SidebarMenuButton className={cn(TOP_LEVEL_CLASS, "group-data-[collapsible=icon]:hidden")}>
             <Icon className={holdsCurrentPage ? "text-brand" : "text-muted-foreground"} />
             <span>{label}</span>
             <ChevronDown className="ml-auto text-muted-foreground transition-transform group-data-[state=open]/collapsible:rotate-180" />
           </SidebarMenuButton>
         </Collapsible.Trigger>
-        <Collapsible.Content forceMount className="data-[state=closed]:hidden">
-          <SidebarMenuSub className="mx-0 ml-5 py-1 pr-0 pl-3">{children}</SidebarMenuSub>
+        <Collapsible.Content forceMount className="data-[state=closed]:hidden group-data-[collapsible=icon]:block!">
+          <SidebarMenuSub className="mx-0 ml-5 py-1 pr-0 pl-3 group-data-[collapsible=icon]:m-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:translate-x-0 group-data-[collapsible=icon]:border-l-0 group-data-[collapsible=icon]:p-0">
+            {children}
+          </SidebarMenuSub>
         </Collapsible.Content>
       </SidebarMenuItem>
     </Collapsible.Root>
@@ -161,27 +218,42 @@ function NavGroup({ label, icon: Icon, paths, children }: { label: string; icon:
 /* Stands in for the CRM section while we check if the user can see it. */
 function NavGroupSkeleton() {
   return (
-    <div aria-hidden="true" className="flex flex-col gap-3 px-2 py-2">
-      <div className="flex items-center gap-2">
+    <div aria-hidden="true" className="flex flex-col gap-3 px-2 py-2 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-0">
+      <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
         <Skeleton className="size-4" />
         <Skeleton className="h-4 w-16" />
       </div>
-      <Skeleton className="ml-8 h-4 w-24" />
-      <Skeleton className="ml-8 h-4 w-28" />
+      <Skeleton className="ml-8 h-4 w-24 group-data-[collapsible=icon]:ml-0 group-data-[collapsible=icon]:size-10" />
+      <Skeleton className="ml-8 h-4 w-28 group-data-[collapsible=icon]:ml-0 group-data-[collapsible=icon]:size-10" />
     </div>
   );
 }
 
-/* One link inside a section. The current page gets a light red tint. */
-function NavItem({ children }: { children: ReactNode }) {
+/*
+  One link inside a section. The current page gets a light red tint, or a solid
+  red fill when the sidebar shows only icons. The name shows on hover then.
+*/
+function NavItem({ title, children }: { title: string; children: ReactNode }) {
+  const { state, isMobile } = useSidebar();
   return (
     <SidebarMenuSubItem>
-      <SidebarMenuSubButton
-        asChild
-        className="h-9 gap-3 rounded-lg px-3 data-[size=md]:text-[15px] data-active:bg-brand/10 data-active:font-medium data-active:text-brand data-active:hover:bg-brand/15 data-active:hover:text-brand [&>svg]:text-muted-foreground data-active:[&>svg]:text-brand"
-      >
-        {children}
-      </SidebarMenuSubButton>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <SidebarMenuSubButton
+            asChild
+            className={cn(
+              "h-9 gap-3 rounded-lg px-3 data-[size=md]:text-[15px] data-active:bg-brand/10 data-active:font-medium data-active:text-brand data-active:hover:bg-brand/15 data-active:hover:text-brand [&>svg]:text-muted-foreground data-active:[&>svg]:text-brand",
+              ICON_ONLY_CLASS,
+              "group-data-[collapsible=icon]:translate-x-0 group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:data-active:bg-brand group-data-[collapsible=icon]:data-active:text-brand-foreground group-data-[collapsible=icon]:data-active:hover:bg-brand/90 group-data-[collapsible=icon]:data-active:[&>svg]:text-brand-foreground"
+            )}
+          >
+            {children}
+          </SidebarMenuSubButton>
+        </TooltipTrigger>
+        <TooltipContent side="right" align="center" hidden={state !== "collapsed" || isMobile}>
+          {title}
+        </TooltipContent>
+      </Tooltip>
     </SidebarMenuSubItem>
   );
 }
@@ -201,13 +273,16 @@ function UserMenu({ user }: { user: SidebarUser }) {
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton size="lg" className="h-14 gap-3 rounded-xl">
+            <SidebarMenuButton
+              size="lg"
+              className="h-14 gap-3 rounded-xl group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:justify-center"
+            >
               <UserAvatar user={user} />
-              <div className="grid flex-1 text-left text-sm leading-tight">
+              <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                 <span className="truncate font-semibold">{user.name}</span>
                 <span className="truncate text-xs text-muted-foreground">{user.email}</span>
               </div>
-              <Ellipsis className="ml-auto text-muted-foreground" />
+              <Ellipsis className="ml-auto text-muted-foreground group-data-[collapsible=icon]:hidden" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="top" className="min-w-56">
