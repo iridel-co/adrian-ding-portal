@@ -15,7 +15,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { EditorShell, EditorSkeleton, type StatusAction } from "@/components/cms/editor-shell";
-import { Crumb } from "@/components/crm/detail-parts";
+import { Crumb, Fact } from "@/components/crm/detail-parts";
 import { Field, FormSection } from "@/components/cms/form-section";
 import { MoneyField } from "@/components/cms/money-field";
 import { PreviewButton } from "@/components/cms/preview-dialog";
@@ -238,30 +238,30 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
         errors={generalErrors}
         onSave={() => save.mutate()}
         preview={previewContent && <PreviewButton content={previewContent} />}
-        aside={
-          <>
-            {session.status === "draft" && (
-              <PublishChecklist
-                title="Ready to Open"
-                checks={publishChecklist(sessionOpenSchema, values, SESSION_FIELD_LABELS)}
-              />
+        statusNote={detail.isPast && <StatusBadge display={PAST_DISPLAY} />}
+        facts={
+          <Fact icon={BookOpen} label="Workshop">
+            <Link
+              to="/content/workshops/$id"
+              params={{ id: detail.workshop.id }}
+              className="text-brand hover:underline"
+            >
+              {detail.workshop.title}
+            </Link>
+            {detail.workshop.status !== "published" && (
+              <span className="font-normal text-amber-700 dark:text-amber-300">
+                Not published yet. Publish it before you open this session.
+              </span>
             )}
-            <FormSection icon={BookOpen} title="Workshop">
-              <Link
-                to="/content/workshops/$id"
-                params={{ id: detail.workshop.id }}
-                className="text-sm font-medium hover:underline"
-              >
-                {detail.workshop.title}
-              </Link>
-              {detail.workshop.status !== "published" && (
-                <p className="text-xs text-muted-foreground">
-                  Publish this workshop before you open the session.
-                </p>
-              )}
-              {detail.isPast && <StatusBadge display={PAST_DISPLAY} />}
-            </FormSection>
-          </>
+          </Fact>
+        }
+        aside={
+          session.status === "draft" && (
+            <PublishChecklist
+              title="Ready to Open"
+              checks={publishChecklist(sessionOpenSchema, values, SESSION_FIELD_LABELS)}
+            />
+          )
         }
       >
         <fieldset disabled={isLocked} className="flex flex-col gap-6">

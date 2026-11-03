@@ -23,6 +23,8 @@ type EditorShellProps = {
   statusActions?: StatusAction[];
   isLive?: boolean;
   liveNote?: string;
+  statusNote?: ReactNode;
+  facts?: ReactNode;
   isSaving: boolean;
   isDirty: boolean;
   errors?: string[];
@@ -41,6 +43,8 @@ export function EditorShell({
   statusActions = [],
   isLive = false,
   liveNote = DEFAULT_LIVE_NOTE,
+  statusNote,
+  facts,
   isSaving,
   isDirty,
   errors = [],
@@ -65,7 +69,10 @@ export function EditorShell({
         <DetailHeader
           crumb={back}
           title={title || "Untitled"}
-          facts={status && <Fact icon={CircleDot} label="Status"><StatusBadge display={status} /></Fact>}
+          facts={<>
+            {status && <Fact icon={CircleDot} label="Status"><StatusBadge display={status} />{statusNote}</Fact>}
+            {facts}
+          </>}
           actions={<>
             {preview}
             {statusActions.map((action) => (
@@ -95,7 +102,8 @@ export function EditorShell({
         <FormErrorList messages={errors} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      {/* Without an aside the form takes the full width instead of leaving an empty column. */}
+      <div className={cn("grid gap-6", aside && "lg:grid-cols-[minmax(0,1fr)_20rem]")}>
         <div className="flex min-w-0 flex-col gap-6">{children}</div>
         {aside && <aside className="flex flex-col gap-6">{aside}</aside>}
       </div>

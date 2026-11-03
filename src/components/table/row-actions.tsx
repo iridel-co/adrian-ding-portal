@@ -64,10 +64,19 @@ export function ActionsHead() {
 export function RowActions({ children }: { children: ReactNode }) {
   return (
     <TableCell className="relative z-10 w-px">
-      <div className="flex justify-end gap-0.5">{children}</div>
+      <div className="flex justify-end gap-1.5">{children}</div>
     </TableCell>
   );
 }
+
+/* Row buttons keep a tinted rounded box even at rest, so they clearly read as buttons. Hover deepens it. */
+const RESTING_BOXES: Record<ActionTone, string> = {
+  default: "bg-muted hover:bg-foreground/10",
+  success: "bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-400/10 dark:hover:bg-emerald-400/20",
+  info: "bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-400/20",
+  warning: "bg-amber-50 hover:bg-amber-100 dark:bg-amber-400/10 dark:hover:bg-amber-400/20",
+  destructive: "bg-destructive/10 hover:bg-destructive/20"
+};
 
 /* A small icon button for one row. A tooltip names it, and so does hidden text for screen readers. */
 export function RowAction({ icon: Icon, label, tone = "default", className, ...props }: ComponentProps<typeof Button> & {
@@ -81,7 +90,7 @@ export function RowAction({ icon: Icon, label, tone = "default", className, ...p
         <Button
           variant="ghost"
           size="icon-sm"
-          className={cn(ACTION_TONES[tone], className)}
+          className={cn("rounded-lg", ACTION_TONES[tone], RESTING_BOXES[tone], className)}
           {...props}
         >
           <Icon />
