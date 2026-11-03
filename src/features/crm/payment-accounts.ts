@@ -31,6 +31,7 @@ async function getAccount(db: DbOrTx, id: string) {
 }
 
 async function validateQr(db: DbOrTx, id: string) {
+  if (!id) throw new CmsValidationError("Choose an active PNG, JPEG, or WebP QR image no larger than 1 MiB.");
   const [qr] = await db.select().from(media).where(and(eq(media.id, id), isNull(media.archivedAt)));
   if (!qr || !QR_TYPES.includes(qr.contentType) || !qr.key || qr.sizeBytes <= 0 || qr.sizeBytes > MAX_QR_BYTES) {
     throw new CmsValidationError("Choose an active PNG, JPEG, or WebP QR image no larger than 1 MiB.");
