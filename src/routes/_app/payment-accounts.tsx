@@ -1,11 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Pencil, Plus, RotateCcw, ShieldCheck, Trash2 } from "lucide-react";
+import { Plus, ShieldCheck } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { Field } from "@/components/cms/form-section";
+import { ContentListPage, EmptyState } from "@/components/cms/content-list-page";
 import { MediaPicker, type PickedMedia } from "@/components/cms/media-picker";
+import { CrmReadState } from "@/components/crm/read-state";
+import { SortableTableHead } from "@/components/table/sortable-table-head";
+import { TablePagination } from "@/components/table/table-pagination";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -44,11 +58,12 @@ import {
   type PaymentAccount
 } from "@/features/crm/payment-accounts-functions";
 import { $crmAccess } from "@/features/crm/functions";
-import type { PaymentMethod } from "@/features/crm/payment-accounts-schemas";
+import { paymentAccountSearchSchema, type PaymentMethod } from "@/features/crm/payment-accounts-schemas";
 import { crmAccessQueryOptions } from "@/features/crm/queries";
 import { errorMessage } from "@/features/shared/error-message";
 
 export const Route = createFileRoute("/_app/payment-accounts")({
+  validateSearch: paymentAccountSearchSchema,
   beforeLoad: () => $crmAccess(),
   head: () => ({ meta: [{ title: "Payment accounts" }] }),
   component: PaymentAccountsPage
@@ -61,12 +76,19 @@ function maskAccountNumber(value: string) {
   return `${"•".repeat(Math.min(8, value.length - 4))}${value.slice(-4)}`;
 }
 
+type ConfirmedAccountAction = {
+  kind: "activate" | "archive";
+  account: PaymentAccount;
+};
+
 function PaymentAccountsPage() {
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const access = useQuery(crmAccessQueryOptions());
-  const [includeArchived, setIncludeArchived] = useState(false);
   const [editing, setEditing] = useState<PaymentAccount | null | undefined>(undefined);
+  const [confirming, setConfirming] = useState<ConfirmedAccountAction | null>(null);
   const queryClient = useQueryClient();
-  const accounts = useQuery(paymentAccountsQueryOptions({ includeArchived }));
+  const accounts = useQuery(paymentAccountsQueryOptions(search));
   const isAdmin = access.data?.role === "admin";
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["payment-accounts"] });
 
@@ -90,45 +112,77 @@ function PaymentAccountsPage() {
     onError: (error) => toast.error(errorMessage(error))
   });
 
-  return <div className="mx-auto flex max-w-6xl flex-col gap-8">
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h1 className="font-display text-4xl">Payment accounts</h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          The account details and QR code sent in new workshop payment instructions.
-        </p>
-      </div>
+  return <ContentListPage
+    title="Payment accounts"
+    description="The account details and QR code sent in new workshop payment instructions."
+    action={<div className="flex gap-2">
+      <Button variant="outline" onClick={() => void accounts.refetch()} disabled={accounts.isFetching}>Refresh</Button>
       {isAdmin && <Button onClick={() => setEditing(null)}><Plus /> Add account</Button>}
-    </div>
-
-    <div className="flex items-center gap-2">
-      <Checkbox id="payment-account-archived" checked={includeArchived} onCheckedChange={(checked) => setIncludeArchived(checked === true)} />
+    </div>}
+    filters={<div className="flex items-center gap-2">
+      <Checkbox id="payment-account-archived" checked={search.includeArchived} onCheckedChange={(checked) => void navigate({ search: { ...search, includeArchived: checked === true, offset: 0 } })} />
       <Label htmlFor="payment-account-archived">Show archived accounts</Label>
-    </div>
-
-    {accounts.isError ? <p role="alert" className="rounded-md border border-destructive/40 py-12 text-center text-sm text-destructive">{errorMessage(accounts.error)}</p> : accounts.isPending ? <p className="py-12 text-center text-sm text-muted-foreground">Loading payment accounts…</p> : accounts.data?.length === 0 ? <p className="rounded-md border py-12 text-center text-sm text-muted-foreground">No payment accounts yet.</p> :
-      <Table><TableHeader><TableRow>
-        <TableHead>Channel</TableHead><TableHead>Pay to</TableHead><TableHead>Account</TableHead><TableHead>Payment QR</TableHead><TableHead>Status</TableHead><TableHead><span className="sr-only">Actions</span></TableHead>
+    </div>}
+  >
+    <CrmReadState pending={accounts.isPending} error={accounts.error} retry={() => void accounts.refetch()}
+      loadingMessage="Loading payment accounts…" accessTitle="Payment-account access unavailable" errorMessage={errorMessage} />
+    {!accounts.isError && accounts.data && (accounts.data.items.length === 0 ? <EmptyState>No payment accounts yet.</EmptyState> : <>
+      <Table>
+      <TableHeader><TableRow>{([['method', 'Channel'], ['providerName', 'Pay to'], ['accountName', 'Account']] as const).map(([key, label]) =>
+        <SortableTableHead key={key} active={search.sort === key} direction={search.direction}
+          onClick={() => void navigate({ search: { ...search, sort: key, direction: search.sort === key && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>
+      )}<TableHead>Payment QR</TableHead><SortableTableHead active={search.sort === "isActive"} direction={search.direction}
+        onClick={() => void navigate({ search: { ...search, sort: "isActive", direction: search.sort === "isActive" && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>Status</SortableTableHead><TableHead>Actions</TableHead>
       </TableRow></TableHeader><TableBody>
-        {accounts.data?.map((account) => <TableRow key={account.id} className={account.archivedAt ? "opacity-60" : undefined}>
-          <TableCell><div className="font-medium">{METHOD_LABELS[account.method]}</div><div className="text-xs text-muted-foreground">{account.providerName}</div></TableCell>
-          <TableCell>{account.providerName}</TableCell>
-          <TableCell><div>{account.accountName}</div><div className="font-mono text-xs text-muted-foreground">{maskAccountNumber(account.accountNumber)}</div></TableCell>
-          <TableCell>{account.qrUrl ? <img src={account.qrUrl} alt={account.qrAlt || "Payment QR"} className="size-14 rounded border object-contain" /> : <span className="text-sm text-destructive">Missing</span>}</TableCell>
-          <TableCell>{account.archivedAt ? <Badge variant="outline">Archived</Badge> : account.selectedForNewRegistrations ? <Badge><ShieldCheck /> Used for new registrations</Badge> : <Badge variant="secondary">Available</Badge>}</TableCell>
-          <TableCell><div className="flex justify-end gap-1">
+        {accounts.data.items.map((account) => <TableRow key={account.id} className={account.archivedAt ? "opacity-60" : undefined}>
+          <TableCell className="py-5"><div className="font-medium">{METHOD_LABELS[account.method]}</div><div className="text-xs text-muted-foreground">{account.providerName}</div></TableCell>
+          <TableCell className="py-5">{account.providerName}</TableCell>
+          <TableCell className="py-5"><div>{account.accountName}</div><div className="font-mono text-xs text-muted-foreground">{maskAccountNumber(account.accountNumber)}</div></TableCell>
+          <TableCell className="py-5">{account.qrUrl ? <img src={account.qrUrl} alt={account.qrAlt || "Payment QR"} className="size-14 rounded border object-contain" /> : <span className="text-sm text-destructive">Missing</span>}</TableCell>
+          <TableCell className="py-5">{account.archivedAt ? <Badge variant="outline">Archived</Badge> : account.selectedForNewRegistrations ? <Badge><ShieldCheck /> Used for new registrations</Badge> : <Badge variant="secondary">Available</Badge>}</TableCell>
+          <TableCell className="py-5"><div className="flex flex-wrap gap-2">
             {isAdmin && !account.archivedAt && <>
-              <Button variant="ghost" size="icon" title="Edit account" aria-label={`Edit ${account.providerName}`} onClick={() => setEditing(account)}><Pencil /></Button>
-              {!account.selectedForNewRegistrations && <Button variant="outline" size="sm" disabled={activate.isPending} onClick={() => { if (window.confirm(`Use ${account.providerName} for new workshop registrations?`)) action(activate, account.id); }}>Use for new registrations</Button>}
-              {!account.isActive && !account.selectedForNewRegistrations && <Button variant="ghost" size="icon" title="Archive account" aria-label={`Archive ${account.providerName}`} onClick={() => { if (window.confirm(`Archive ${account.providerName}?`)) action(archive, account.id); }}><Trash2 /></Button>}
+              <Button size="sm" variant="outline" onClick={() => setEditing(account)}>Edit</Button>
+              {!account.selectedForNewRegistrations && <Button size="sm" variant="outline" disabled={activate.isPending} onClick={() => setConfirming({ kind: "activate", account })}>Set as active</Button>}
+              {!account.isActive && !account.selectedForNewRegistrations && <Button size="sm" variant="outline" onClick={() => setConfirming({ kind: "archive", account })}>Archive</Button>}
             </>}
-            {isAdmin && account.archivedAt && <Button variant="ghost" size="icon" title="Restore account" aria-label={`Restore ${account.providerName}`} onClick={() => action(restore, account.id)}><RotateCcw /></Button>}
+            {isAdmin && account.archivedAt && <Button size="sm" variant="outline" onClick={() => action(restore, account.id)}>Restore</Button>}
           </div></TableCell>
         </TableRow>)}
-      </TableBody></Table>}
+      </TableBody></Table>
+      <TablePagination limit={search.limit} offset={search.offset} count={accounts.data.items.length}
+        hasMore={accounts.data.hasMore} fetching={accounts.isFetching}
+        onChange={(page) => void navigate({ search: { ...search, ...page } })} />
+    </>)}
 
     {editing !== undefined && <PaymentAccountDialog account={editing} onClose={() => setEditing(undefined)} onSaved={refresh} />}
-  </div>;
+    <AlertDialog open={confirming !== null} onOpenChange={(open) => { if (!open) setConfirming(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{confirming?.kind === "archive" ? "Archive this payment account?" : "Use this payment account for new registrations?"}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {confirming?.kind === "archive"
+              ? `${confirming.account.providerName} will be hidden from the active list. You can restore it later.`
+              : `${confirming?.account.providerName ?? "This account"} will replace the current payment account in new workshop instructions.`}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{confirming?.kind === "archive" ? "Keep account" : "Keep current account"}</AlertDialogCancel>
+          <AlertDialogAction
+            variant={confirming?.kind === "archive" ? "destructive" : "default"}
+            disabled={archive.isPending || activate.isPending}
+            onClick={() => {
+              if (!confirming) return;
+              action(confirming.kind === "archive" ? archive : activate, confirming.account.id);
+              setConfirming(null);
+            }}
+          >
+            {confirming?.kind === "archive" ? "Archive account" : "Use account"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </ContentListPage>;
 }
 
 type AccountForm = { method: PaymentMethod; providerName: string; accountName: string; accountNumber: string; qrMediaId: string };
