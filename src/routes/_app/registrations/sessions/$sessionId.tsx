@@ -192,16 +192,21 @@ function Stat({ icon: Icon, tone, label, value }: { icon: LucideIcon; tone: stri
 }
 
 function DetailsCard({ run }: { run: Run }) {
-  return <InfoCard icon={BookOpen} title="Workshop Details"><InfoList>
-    <InfoRow icon={BookOpen} label="Workshop">{run.workshopTitle}</InfoRow>
-    <InfoRow icon={Hash} label="Course code">{run.courseCode ? displayCourseCode(run.courseCode) : "Not set"}</InfoRow>
-    <InfoRow icon={CalendarDays} label="Dates">{formatDateRange(run.date, run.endDate)}</InfoRow>
-    <InfoRow icon={Clock} label="Time">{formatTimeRange(run.startTime, run.endTime)} <span className="font-normal text-muted-foreground">Manila time</span></InfoRow>
-    <InfoRow icon={MapPin} label="Venue">{run.venueName || "Venue not set"}</InfoRow>
-    <InfoRow icon={Building2} label="City">{run.city || "Not set"}</InfoRow>
-    <InfoRow icon={Wallet} label="Price">{formatPesos(run.priceCentavos)}</InfoRow>
-    <InfoRow icon={Users} label="Capacity">{run.capacity} seats</InfoRow>
-  </InfoList></InfoCard>;
+  // Two short columns (what and when, then where and how much) keep the card low.
+  return <InfoCard icon={BookOpen} title="Workshop Details"><div className="grid gap-x-10 gap-y-3 md:grid-cols-2">
+    <InfoList>
+      <InfoRow icon={BookOpen} label="Workshop">{run.workshopTitle}</InfoRow>
+      <InfoRow icon={Hash} label="Course code">{run.courseCode ? displayCourseCode(run.courseCode) : "Not set"}</InfoRow>
+      <InfoRow icon={CalendarDays} label="Dates">{formatDateRange(run.date, run.endDate)}</InfoRow>
+      <InfoRow icon={Clock} label="Time">{formatTimeRange(run.startTime, run.endTime)} <span className="font-normal text-muted-foreground">Manila time</span></InfoRow>
+    </InfoList>
+    <InfoList>
+      <InfoRow icon={MapPin} label="Venue">{run.venueName || "Venue not set"}</InfoRow>
+      <InfoRow icon={Building2} label="City">{run.city || "Not set"}</InfoRow>
+      <InfoRow icon={Wallet} label="Price">{formatPesos(run.priceCentavos)}</InfoRow>
+      <InfoRow icon={Users} label="Capacity">{run.capacity} seats</InfoRow>
+    </InfoList>
+  </div></InfoCard>;
 }
 
 type RegistrationRow = Awaited<ReturnType<typeof $listRegistrations>>["items"][number];
