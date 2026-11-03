@@ -1,15 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, ShieldCheck } from "lucide-react";
+import { Archive, ArchiveRestore, CircleCheck, Pencil, Plus } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { Field } from "@/components/cms/form-section";
 import { ContentListPage, EmptyState } from "@/components/cms/content-list-page";
 import { MediaPicker, type PickedMedia } from "@/components/cms/media-picker";
+import { StatusBadge, type StatusDisplay } from "@/components/cms/status-badge";
 import { CrmReadState } from "@/components/crm/read-state";
 import { SortableTableHead } from "@/components/table/sortable-table-head";
 import { TablePagination } from "@/components/table/table-pagination";
+import { ActionsHead, RowAction, RowActions } from "@/components/table/row-actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -71,9 +72,25 @@ export const Route = createFileRoute("/_app/payment-accounts")({
 
 const METHOD_LABELS: Record<PaymentMethod, string> = { bank: "Bank", gcash: "GCash", maya: "Maya" };
 
+type PaymentAccountStatus = "active" | "available" | "archived";
+
+const PAYMENT_ACCOUNT_STATUS_DISPLAY = {
+  active: { label: "Used for new registrations", variant: "success" },
+  available: { label: "Available", variant: "info" },
+  archived: { label: "Archived", variant: "neutral" }
+} as const satisfies Record<PaymentAccountStatus, StatusDisplay>;
+
 function maskAccountNumber(value: string) {
   if (value.length <= 4) return value;
   return `${"•".repeat(Math.min(8, value.length - 4))}${value.slice(-4)}`;
+}
+
+function paymentAccountStatus(account: PaymentAccount): StatusDisplay {
+  return account.archivedAt
+    ? PAYMENT_ACCOUNT_STATUS_DISPLAY.archived
+    : account.selectedForNewRegistrations
+      ? PAYMENT_ACCOUNT_STATUS_DISPLAY.active
+      : PAYMENT_ACCOUNT_STATUS_DISPLAY.available;
 }
 
 type ConfirmedAccountAction = {
@@ -132,22 +149,22 @@ function PaymentAccountsPage() {
         <SortableTableHead key={key} active={search.sort === key} direction={search.direction}
           onClick={() => void navigate({ search: { ...search, sort: key, direction: search.sort === key && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>
       )}<TableHead>Payment QR</TableHead><SortableTableHead active={search.sort === "isActive"} direction={search.direction}
-        onClick={() => void navigate({ search: { ...search, sort: "isActive", direction: search.sort === "isActive" && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>Status</SortableTableHead><TableHead>Actions</TableHead>
+        onClick={() => void navigate({ search: { ...search, sort: "isActive", direction: search.sort === "isActive" && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>Status</SortableTableHead><ActionsHead />
       </TableRow></TableHeader><TableBody>
         {accounts.data.items.map((account) => <TableRow key={account.id} className={account.archivedAt ? "opacity-60" : undefined}>
           <TableCell className="py-5"><div className="font-medium">{METHOD_LABELS[account.method]}</div><div className="text-xs text-muted-foreground">{account.providerName}</div></TableCell>
           <TableCell className="py-5">{account.providerName}</TableCell>
           <TableCell className="py-5"><div>{account.accountName}</div><div className="font-mono text-xs text-muted-foreground">{maskAccountNumber(account.accountNumber)}</div></TableCell>
           <TableCell className="py-5">{account.qrUrl ? <img src={account.qrUrl} alt={account.qrAlt || "Payment QR"} className="size-14 rounded border object-contain" /> : <span className="text-sm text-destructive">Missing</span>}</TableCell>
-          <TableCell className="py-5">{account.archivedAt ? <Badge variant="outline">Archived</Badge> : account.selectedForNewRegistrations ? <Badge><ShieldCheck /> Used for new registrations</Badge> : <Badge variant="secondary">Available</Badge>}</TableCell>
-          <TableCell className="py-5"><div className="flex flex-wrap gap-2">
+          <TableCell className="py-5"><StatusBadge display={paymentAccountStatus(account)} /></TableCell>
+          <RowActions>
             {isAdmin && !account.archivedAt && <>
-              <Button size="sm" variant="outline" onClick={() => setEditing(account)}>Edit</Button>
-              {!account.selectedForNewRegistrations && <Button size="sm" variant="outline" disabled={activate.isPending} onClick={() => setConfirming({ kind: "activate", account })}>Set as active</Button>}
-              {!account.isActive && !account.selectedForNewRegistrations && <Button size="sm" variant="outline" onClick={() => setConfirming({ kind: "archive", account })}>Archive</Button>}
+              <RowAction icon={Pencil} label="Edit account" onClick={() => setEditing(account)} />
+              {!account.selectedForNewRegistrations && <RowAction icon={CircleCheck} label="Set as active" disabled={activate.isPending || !account.qrMediaId} onClick={() => setConfirming({ kind: "activate", account })} />}
+              {!account.isActive && !account.selectedForNewRegistrations && <RowAction icon={Archive} label="Archive account" tone="destructive" onClick={() => setConfirming({ kind: "archive", account })} />}
             </>}
-            {isAdmin && account.archivedAt && <Button size="sm" variant="outline" onClick={() => action(restore, account.id)}>Restore</Button>}
-          </div></TableCell>
+            {isAdmin && account.archivedAt && <RowAction icon={ArchiveRestore} label="Restore account" onClick={() => action(restore, account.id)} />}
+          </RowActions>
         </TableRow>)}
       </TableBody></Table>
       <TablePagination limit={search.limit} offset={search.offset} count={accounts.data.items.length}
