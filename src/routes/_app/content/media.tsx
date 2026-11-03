@@ -1,6 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { Archive, ArchiveRestore, Images } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  Archive,
+  ArchiveRestore,
+  BookOpen,
+  Briefcase,
+  Building2,
+  Images,
+  type LucideIcon,
+  QrCode,
+  Quote,
+  UserRound
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -10,8 +21,8 @@ import { MediaGridSkeleton } from "@/components/cms/list-skeletons";
 import { MediaDropzone } from "@/components/cms/media-dropzone";
 import { NO_FIELDS, useFormErrors } from "@/components/cms/use-form-errors";
 import { useMediaUploads } from "@/components/cms/use-media-uploads";
+import { RowAction } from "@/components/table/row-actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +33,7 @@ import {
   type MediaItem,
   mediaListQueryOptions
 } from "@/features/media/functions";
+import type { MediaUsage } from "@/features/media/usage";
 import { errorMessage } from "@/features/shared/error-message";
 
 export const Route = createFileRoute("/_app/content/media")({
@@ -125,8 +137,17 @@ function MediaCard({ item, onChanged }: { item: MediaItem; onChanged: () => Prom
 
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border bg-card shadow-xs">
-      <div className="aspect-video bg-muted">
+      <div className="relative aspect-video bg-muted">
         <img src={item.url} alt={item.alt} className="size-full object-contain" />
+        {/* Sits on the image's top right corner, on a white backing so it shows on any picture. */}
+        <RowAction
+          icon={isArchived ? ArchiveRestore : Archive}
+          label={isArchived ? "Restore image" : "Archive image"}
+          tone={isArchived ? "info" : "warning"}
+          className="absolute top-2 right-2 bg-card/95 shadow-sm ring-1 ring-foreground/10"
+          disabled={toggleArchive.isPending}
+          onClick={() => toggleArchive.mutate()}
+        />
       </div>
       <div className="flex flex-1 flex-col gap-2 p-3">
         <div className="flex items-start justify-between gap-2">
@@ -163,23 +184,43 @@ function MediaCard({ item, onChanged }: { item: MediaItem; onChanged: () => Prom
         />
         {generalErrors.length > 0 && <FieldErrors errors={generalErrors} />}
         {item.usages.length > 0 && (
-          <p className="text-xs text-muted-foreground">
-            In: {item.usages.map((usage) => usage.label).join(", ")}
-          </p>
+          <div className="flex flex-col gap-1.5">
+            <p className="text-xs font-medium text-muted-foreground">Used in</p>
+            <div className="flex flex-wrap gap-1.5">
+              {item.usages.map((usage) => (
+                <UsageChip key={`${usage.entityType}-${usage.entityId}`} usage={usage} />
+              ))}
+            </div>
+          </div>
         )}
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="mt-auto self-start"
-          disabled={toggleArchive.isPending}
-          onClick={() => toggleArchive.mutate()}
-        >
-          {isArchived ? <ArchiveRestore /> : <Archive />}
-          {isArchived ? "Restore" : "Archive"}
-        </Button>
       </div>
     </div>
   );
+}
+
+const USAGE_ICONS: Record<string, LucideIcon> = {
+  workshop: BookOpen,
+  inhouse_program: Briefcase,
+  testimonial: Quote,
+  client: Building2,
+  payment_account: QrCode,
+  site_profile: UserRound
+};
+const CHIP_LINK_CLASS = "h-auto min-h-5 whitespace-normal hover:border-brand/30 hover:text-brand";
+
+/* Where an image is used. Workshops and corporate trainings link to their editor; the rest have no page here. */
+function UsageChip({ usage }: { usage: MediaUsage }) {
+  const Icon = USAGE_ICONS[usage.entityType] ?? Images;
+  const content = <><Icon data-icon="inline-start" />{usage.label}</>;
+  if (usage.entityType === "workshop") {
+    return <Badge asChild variant="neutral" className={CHIP_LINK_CLASS}>
+      <Link to="/content/workshops/$id" params={{ id: usage.entityId }}>{content}</Link>
+    </Badge>;
+  }
+  if (usage.entityType === "inhouse_program") {
+    return <Badge asChild variant="neutral" className={CHIP_LINK_CLASS}>
+      <Link to="/content/corporate-trainings/$id" params={{ id: usage.entityId }}>{content}</Link>
+    </Badge>;
+  }
+  return <Badge variant="neutral" className="h-auto min-h-5 whitespace-normal">{content}</Badge>;
 }
