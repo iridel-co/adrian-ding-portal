@@ -1,12 +1,17 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { z } from "zod";
 
 import { ContentListPage, EmptyState, FilterSelect } from "@/components/cms/content-list-page";
 import { Field, FormErrorList } from "@/components/cms/form-section";
 import { CONTENT_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { useFormErrors } from "@/components/cms/use-form-errors";
+import { ReadState } from "@/components/table/read-state";
+import { nextSort } from "@/components/table/sort-search";
+import { SortableTableHead } from "@/components/table/sortable-table-head";
+import { TablePagination } from "@/components/table/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,17 +31,33 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import { errorMessage } from "@/features/shared/error-message";
 import { formatDate } from "@/features/shared/format";
+import { paginationSearchSchema, sortDirection } from "@/features/shared/pagination";
 import { $createWorkshop, workshopsQueryOptions } from "@/features/workshops/functions";
+import { statusFilterSchema, workshopListSort } from "@/features/workshops/schemas";
 
 const TITLE_FIELDS = ["title"];
 
+const searchSchema = z
+  .object({
+    status: statusFilterSchema.catch("active").default("active"),
+    search: z.string().trim().catch("").default(""),
+    sort: workshopListSort.catch("updatedAt"),
+    direction: sortDirection.catch("desc")
+  })
+  .and(paginationSearchSchema);
+
+type WorkshopSearch = z.output<typeof searchSchema>;
+type WorkshopSort = WorkshopSearch["sort"];
+
 export const Route = createFileRoute("/_app/content/workshops/")({
+  validateSearch: searchSchema,
   head: () => ({ meta: [{ title: "Workshops" }] }),
   component: WorkshopsPage
 });
 
-type StatusFilter = "active" | "draft" | "published" | "archived";
+type StatusFilter = WorkshopSearch["status"];
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "active", label: "All but archived" },
@@ -45,10 +66,30 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "archived", label: "Archived" }
 ];
 
+type Column = {
+  label: string;
+  sort?: WorkshopSort;
+  className?: string;
+};
+
+const COLUMNS: Column[] = [
+  { sort: "title", label: "Title" },
+  { sort: "courseCode", label: "Code" },
+  { label: "Tags", className: "hidden md:table-cell" },
+  { sort: "status", label: "Status" },
+  { sort: "nextSessionDate", label: "Next session", className: "hidden sm:table-cell" },
+  { sort: "updatedAt", label: "Updated", className: "hidden lg:table-cell" }
+];
+
 function WorkshopsPage() {
-  const [status, setStatus] = useState<StatusFilter>("active");
-  const [search, setSearch] = useState("");
-  const workshops = useQuery(workshopsQueryOptions({ status, search }));
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const [text, setText] = useState(search.search);
+  useEffect(() => setText(search.search), [search.search]);
+
+  const workshops = useQuery(workshopsQueryOptions(search));
+  const updateSearch = (changes: Partial<WorkshopSearch>) =>
+    void navigate({ search: { ...search, ...changes } });
 
   return (
     <ContentListPage
@@ -57,73 +98,122 @@ function WorkshopsPage() {
       action={<NewWorkshopDialog />}
       filters={
         <>
-          <Input
-            className="sm:max-w-xs"
-            placeholder="Search by title"
-            aria-label="Search workshops"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
+          <form
+            className="flex gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              updateSearch({ search: text, offset: 0 });
+            }}
+          >
+            <Input
+              className="sm:max-w-xs"
+              placeholder="Search by title"
+              aria-label="Search workshops"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+            />
+            <Button variant="outline" type="submit">
+              Search
+            </Button>
+          </form>
           <FilterSelect
             label="Status"
-            value={status}
+            value={search.status}
             options={STATUS_OPTIONS}
-            onChange={setStatus}
+            onChange={(status) => updateSearch({ status, offset: 0 })}
           />
         </>
       }
     >
-      {workshops.data?.length === 0 ? (
-        <EmptyState>No workshops yet.</EmptyState>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Code</TableHead>
-              <TableHead className="hidden md:table-cell">Tags</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden sm:table-cell">Next session</TableHead>
-              <TableHead className="hidden lg:table-cell">Updated</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {workshops.data?.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="font-medium whitespace-normal">
-                  <Link
-                    to="/content/workshops/$id"
-                    params={{ id: item.id }}
-                    className="hover:underline"
-                  >
-                    {item.title}
-                  </Link>
-                </TableCell>
-                <TableCell className="font-mono text-xs">{item.courseCode ?? "-"}</TableCell>
-                <TableCell className="hidden md:table-cell">
-                  <div className="flex flex-wrap gap-1">
-                    {item.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge display={CONTENT_STATUS_DISPLAY[item.status]} />
-                </TableCell>
-                <TableCell className="hidden text-muted-foreground sm:table-cell">
-                  {item.nextSessionDate ? formatDate(item.nextSessionDate) : "None"}
-                </TableCell>
-                <TableCell className="hidden text-muted-foreground lg:table-cell">
-                  {new Date(item.updatedAt).toLocaleDateString()}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      <ReadState
+        pending={workshops.isPending}
+        error={workshops.error}
+        retry={() => void workshops.refetch()}
+        loadingMessage="Loading workshops…"
+        errorMessage={errorMessage}
+      />
+      {workshops.data && (
+        <>
+          {workshops.data.items.length === 0 ? (
+            <EmptyState>No workshops match these filters.</EmptyState>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {COLUMNS.map((column) => (
+                    <WorkshopHead key={column.label} column={column} search={search} />
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {workshops.data.items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="whitespace-normal">
+                      <Link
+                        to="/content/workshops/$id"
+                        params={{ id: item.id }}
+                        className="font-medium underline underline-offset-4"
+                      >
+                        {item.title}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{item.courseCode ?? "-"}</TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <div className="flex flex-wrap gap-1">
+                        {item.tags.map((tag) => (
+                          <Badge key={tag} variant="secondary">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge display={CONTENT_STATUS_DISPLAY[item.status]} />
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground sm:table-cell">
+                      {item.nextSessionDate ? formatDate(item.nextSessionDate) : "None"}
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground lg:table-cell">
+                      {new Date(item.updatedAt).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          <TablePagination
+            limit={search.limit}
+            offset={search.offset}
+            count={workshops.data.items.length}
+            hasMore={workshops.data.hasMore}
+            fetching={workshops.isFetching}
+            onChange={(page) => void navigate({ search: { ...search, ...page } })}
+          />
+        </>
       )}
     </ContentListPage>
+  );
+}
+
+type WorkshopHeadProps = {
+  column: Column;
+  search: WorkshopSearch;
+};
+
+function WorkshopHead({ column, search }: WorkshopHeadProps) {
+  const navigate = Route.useNavigate();
+  const { sort } = column;
+  if (!sort) return <TableHead className={column.className}>{column.label}</TableHead>;
+
+  return (
+    <SortableTableHead
+      className={column.className}
+      active={search.sort === sort}
+      direction={search.direction}
+      onClick={() => void navigate({ search: { ...search, ...nextSort(search, sort) } })}
+    >
+      {column.label}
+    </SortableTableHead>
   );
 }
 
