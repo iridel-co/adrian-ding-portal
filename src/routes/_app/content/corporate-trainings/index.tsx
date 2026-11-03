@@ -96,7 +96,7 @@ function ProgramsPage() {
 
 function ProgramRow({ program }: { program: ProgramListItem }) {
   return (
-    <div className="flex items-center gap-4 rounded-md border px-4 py-3">
+    <div className="flex items-center gap-4 rounded-md border bg-card shadow-xs px-4 py-3">
       <Link
         to="/content/corporate-trainings/$id"
         params={{ id: program.id }}

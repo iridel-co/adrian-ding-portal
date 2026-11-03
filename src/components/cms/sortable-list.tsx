@@ -81,7 +81,7 @@ function SortableRow({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       data-dragging={isDragging || undefined}
-      className="flex items-center gap-2 rounded-md bg-background data-dragging:z-10 data-dragging:shadow-md"
+      className="flex items-center gap-2 rounded-md bg-card data-dragging:z-10 data-dragging:shadow-md"
     >
       {!disabled && (
         <button

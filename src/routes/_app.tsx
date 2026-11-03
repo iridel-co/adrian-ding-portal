@@ -20,8 +20,8 @@ function AppLayout() {
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
-      <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background px-4">
+      <SidebarInset className="bg-transparent">
+        <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/70 px-4 backdrop-blur-md">
           <SidebarTrigger />
           <ThemeSwitcher />
         </header>

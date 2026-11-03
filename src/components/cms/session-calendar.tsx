@@ -74,7 +74,7 @@ export function SessionCalendar() {
       </div>
 
       <div className="overflow-x-auto">
-        <div className="grid min-w-[42rem] grid-cols-7 overflow-hidden rounded-lg border">
+        <div className="grid min-w-[42rem] grid-cols-7 overflow-hidden rounded-lg border bg-card shadow-xs">
           {WEEKDAYS.map((weekday) => (
             <div
               key={weekday}

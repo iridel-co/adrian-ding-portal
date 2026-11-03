@@ -13,7 +13,6 @@ import {
   LogOut,
   MessagesSquare,
   Settings,
-  ShieldCheck,
   Tags,
   Users,
   type LucideIcon
@@ -53,7 +52,7 @@ type SidebarUser = {
   image?: string | null;
 };
 
-/* Add new pages here. Settings sits at the bottom of the sidebar. */
+/* Add new pages here. */
 const CONTENT_GROUP = {
   label: "Content",
   icon: LayoutGrid,
@@ -62,20 +61,15 @@ const CONTENT_GROUP = {
     { title: "Sessions", to: "/content/sessions", icon: CalendarDays },
     { title: "Corporate trainings", to: "/content/corporate-trainings", icon: Briefcase },
     { title: "Media", to: "/content/media", icon: Images },
-    { title: "Tags", to: "/content/tags", icon: Tags }
-  ]
-} as const;
-
-const SETTINGS_GROUP = {
-  label: "Settings",
-  icon: Settings,
-  items: [
-    { title: "Access", to: "/settings/access", icon: ShieldCheck },
-    { title: "Industries", to: "/settings/industries", icon: Building2 }
+    { title: "Tags", to: "/content/tags", icon: Tags },
+    { title: "Industries", to: "/content/industries", icon: Building2 }
   ]
 } as const;
 
 const ACTIVE_PROPS = { "data-active": true } as const;
+
+/* Size and spacing shared by section headers and links that stand on their own. */
+const TOP_LEVEL_CLASS = "h-10 gap-3 rounded-xl px-3 text-[15px] [&_svg]:size-4.5";
 
 export function AppSidebar({ user }: { user: SidebarUser }) {
   const access = useQuery(crmAccessQueryOptions());
@@ -99,13 +93,33 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
               <NavItem><Link to="/inquiries" search={{ status: "all", search: "", offset: 0 }} activeProps={ACTIVE_PROPS}><MessagesSquare /><span>Inquiries</span></Link></NavItem>
               <NavItem><Link to="/registrations" search={{ when: "upcoming", offset: 0 }} activeProps={ACTIVE_PROPS}><Users /><span>Registrations</span></Link></NavItem>
             </NavGroup>}
-            <LinkGroup group={CONTENT_GROUP} />
+            <NavGroup label={CONTENT_GROUP.label} icon={CONTENT_GROUP.icon} paths={CONTENT_GROUP.items.map((item) => item.to)}>
+              {CONTENT_GROUP.items.map((item) => (
+                <NavItem key={item.to}>
+                  <Link to={item.to} activeProps={ACTIVE_PROPS}>
+                    <item.icon />
+                    <span>{item.title}</span>
+                  </Link>
+                </NavItem>
+              ))}
+            </NavGroup>
           </SidebarMenu>
         </SidebarGroup>
         <div className="mx-4 mt-auto border-t border-dashed border-sidebar-border" />
         <SidebarGroup>
           <SidebarMenu>
-            <LinkGroup group={SETTINGS_GROUP} />
+            {/* A link on its own gets a solid brand red fill when it's the current page. */}
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                className={`${TOP_LEVEL_CLASS} [&>svg]:text-muted-foreground data-active:bg-brand data-active:text-brand-foreground data-active:hover:bg-brand/90 data-active:hover:text-brand-foreground data-active:[&>svg]:text-brand-foreground`}
+              >
+                <Link to="/settings/access" activeProps={ACTIVE_PROPS}>
+                  <Settings />
+                  <span>Settings</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
@@ -113,21 +127,6 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
         <UserMenu user={user} />
       </SidebarFooter>
     </Sidebar>
-  );
-}
-
-function LinkGroup({ group }: { group: typeof CONTENT_GROUP | typeof SETTINGS_GROUP }) {
-  return (
-    <NavGroup label={group.label} icon={group.icon} paths={group.items.map((item) => item.to)}>
-      {group.items.map((item) => (
-        <NavItem key={item.to}>
-          <Link to={item.to} activeProps={ACTIVE_PROPS}>
-            <item.icon />
-            <span>{item.title}</span>
-          </Link>
-        </NavItem>
-      ))}
-    </NavGroup>
   );
 }
 
@@ -143,7 +142,7 @@ function NavGroup({ label, icon: Icon, paths, children }: { label: string; icon:
     <Collapsible.Root asChild defaultOpen={holdsCurrentPage}>
       <SidebarMenuItem className="group/collapsible">
         <Collapsible.Trigger asChild>
-          <SidebarMenuButton className="h-10 gap-3 rounded-xl px-3 text-[15px] [&_svg]:size-4.5">
+          <SidebarMenuButton className={TOP_LEVEL_CLASS}>
             <Icon className={holdsCurrentPage ? "text-brand" : "text-muted-foreground"} />
             <span>{label}</span>
             <ChevronDown className="ml-auto text-muted-foreground transition-transform group-data-[state=open]/collapsible:rotate-180" />

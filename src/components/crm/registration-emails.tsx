@@ -56,7 +56,7 @@ export function RegistrationEmails({ registration, onChanged, onAccessError }: {
     <h2 id="registration-email" className="text-xl font-medium">Email delivery</h2>
     <p className="text-sm text-muted-foreground">Payment status is independent of email delivery. Accepted means the provider accepted the message, not confirmed inbox delivery. All times are in Manila.</p>
     {jobs.length === 0 && <p className="text-sm text-muted-foreground">No email jobs recorded.</p>}
-    <div className="grid gap-4 sm:grid-cols-2">{jobs.map(job => <div key={job.id} className="space-y-3 rounded-lg border p-5">
+    <div className="grid gap-4 sm:grid-cols-2">{jobs.map(job => <div key={job.id} className="space-y-3 rounded-lg border bg-card shadow-xs p-5">
       <h3 className="font-medium">{job.kind === CrmEmailKind.PaymentInstructions ? registrationEmailLabels[CrmEmailKind.PaymentInstructions] : registrationEmailLabels[CrmEmailKind.PaymentAcknowledgment]}</h3>
       <p className="text-sm font-medium">{emailStateLabels[job.state]}</p>
       <dl className="space-y-2 text-sm">

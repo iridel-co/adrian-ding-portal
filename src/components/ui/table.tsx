@@ -3,9 +3,10 @@ import { cn } from "cn"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
+    /* Tables sit on a white card, unless they're already inside one. */
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      className="relative w-full overflow-x-auto rounded-xl bg-card shadow-xs ring-1 ring-foreground/10 [&_tr>*:first-child]:pl-4 [&_tr>*:last-child]:pr-4 in-data-[slot=card]:rounded-none in-data-[slot=card]:shadow-none in-data-[slot=card]:ring-0"
     >
       <table
         data-slot="table"

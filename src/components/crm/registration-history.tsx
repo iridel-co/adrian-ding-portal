@@ -39,7 +39,7 @@ function HistoryEntry({ entry }: { entry: History }) {
   const payment = (value: boolean | null) => value === null ? "Not recorded" : value ? "Paid" : "Unpaid";
   const title = changes.emailRetry ? "Email retry attempt recorded" : changes.cancelledAt?.to ? "Registration cancelled"
     : changes.isPaid?.to === true ? "Marked Paid" : changes.isPaid?.to === false ? "Corrected to Unpaid" : "Registration updated";
-  return <li className="space-y-2 rounded-lg border p-5">
+  return <li className="space-y-2 rounded-lg border bg-card shadow-xs p-5">
     <h3 className="font-medium">{title}</h3>
     <p className="text-sm text-muted-foreground">{formatCrmTime(entry.createdAt)} · {actor ? `${actor.name} (${actor.email})` : "Staff identity not recorded"}</p>
     <dl className="space-y-2 text-sm">

@@ -123,7 +123,7 @@ function MediaCard({ item, onChanged }: { item: MediaItem; onChanged: () => Prom
   });
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border">
+    <div className="flex flex-col overflow-hidden rounded-lg border bg-card shadow-xs">
       <div className="aspect-video bg-muted">
         <img src={item.url} alt={item.alt} className="size-full object-contain" />
       </div>

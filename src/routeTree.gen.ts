@@ -19,6 +19,7 @@ import { Route as ApiCorporateInquiriesRouteImport } from './routes/api/corporat
 import { Route as ApiRegistrationsRouteImport } from './routes/api/registrations'
 import { Route as PreviewProgramRouteImport } from './routes/preview/program'
 import { Route as PreviewWorkshopRouteImport } from './routes/preview/workshop'
+import { Route as AppContentIndustriesRouteImport } from './routes/_app/content/industries'
 import { Route as AppContentMediaRouteImport } from './routes/_app/content/media'
 import { Route as AppContentTagsRouteImport } from './routes/_app/content/tags'
 import { Route as AppInquiriesIndexRouteImport } from './routes/_app/inquiries/index'
@@ -27,7 +28,6 @@ import { Route as AppRegistrationsIndexRouteImport } from './routes/_app/registr
 import { Route as AppRegistrationsIdRouteImport } from './routes/_app/registrations/$id'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAccessRouteImport } from './routes/_app/settings/access'
-import { Route as AppSettingsIndustriesRouteImport } from './routes/_app/settings/industries'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiInternalCorporateSchedulerRouteImport } from './routes/api/internal/corporate-scheduler'
 import { Route as ApiPublicClientsRouteImport } from './routes/api/public/clients'
@@ -97,6 +97,11 @@ const PreviewWorkshopRoute = PreviewWorkshopRouteImport.update({
   path: '/workshop',
   getParentRoute: () => PreviewRoute,
 } as any)
+const AppContentIndustriesRoute = AppContentIndustriesRouteImport.update({
+  id: '/content/industries',
+  path: '/content/industries',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppContentMediaRoute = AppContentMediaRouteImport.update({
   id: '/content/media',
   path: '/content/media',
@@ -135,11 +140,6 @@ const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
 const AppSettingsAccessRoute = AppSettingsAccessRouteImport.update({
   id: '/settings/access',
   path: '/settings/access',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSettingsIndustriesRoute = AppSettingsIndustriesRouteImport.update({
-  id: '/settings/industries',
-  path: '/settings/industries',
   getParentRoute: () => AppRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -253,12 +253,12 @@ export interface FileRoutesByFullPath {
   '/api/registrations': typeof ApiRegistrationsRoute
   '/preview/program': typeof PreviewProgramRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
+  '/content/industries': typeof AppContentIndustriesRoute
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
   '/inquiries/$id': typeof AppInquiriesIdRoute
   '/registrations/$id': typeof AppRegistrationsIdRoute
   '/settings/access': typeof AppSettingsAccessRoute
-  '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/internal/corporate-scheduler': typeof ApiInternalCorporateSchedulerRoute
   '/api/public/clients': typeof ApiPublicClientsRoute
@@ -290,12 +290,12 @@ export interface FileRoutesByTo {
   '/preview/program': typeof PreviewProgramRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/': typeof AppIndexRoute
+  '/content/industries': typeof AppContentIndustriesRoute
   '/content/media': typeof AppContentMediaRoute
   '/content/tags': typeof AppContentTagsRoute
   '/inquiries/$id': typeof AppInquiriesIdRoute
   '/registrations/$id': typeof AppRegistrationsIdRoute
   '/settings/access': typeof AppSettingsAccessRoute
-  '/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/internal/corporate-scheduler': typeof ApiInternalCorporateSchedulerRoute
   '/api/public/clients': typeof ApiPublicClientsRoute
@@ -331,12 +331,12 @@ export interface FileRoutesById {
   '/preview/program': typeof PreviewProgramRoute
   '/preview/workshop': typeof PreviewWorkshopRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/content/industries': typeof AppContentIndustriesRoute
   '/_app/content/media': typeof AppContentMediaRoute
   '/_app/content/tags': typeof AppContentTagsRoute
   '/_app/inquiries/$id': typeof AppInquiriesIdRoute
   '/_app/registrations/$id': typeof AppRegistrationsIdRoute
   '/_app/settings/access': typeof AppSettingsAccessRoute
-  '/_app/settings/industries': typeof AppSettingsIndustriesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/internal/corporate-scheduler': typeof ApiInternalCorporateSchedulerRoute
   '/api/public/clients': typeof ApiPublicClientsRoute
@@ -372,12 +372,12 @@ export interface FileRouteTypes {
     | '/api/registrations'
     | '/preview/program'
     | '/preview/workshop'
+    | '/content/industries'
     | '/content/media'
     | '/content/tags'
     | '/inquiries/$id'
     | '/registrations/$id'
     | '/settings/access'
-    | '/settings/industries'
     | '/api/auth/$'
     | '/api/internal/corporate-scheduler'
     | '/api/public/clients'
@@ -409,12 +409,12 @@ export interface FileRouteTypes {
     | '/preview/program'
     | '/preview/workshop'
     | '/'
+    | '/content/industries'
     | '/content/media'
     | '/content/tags'
     | '/inquiries/$id'
     | '/registrations/$id'
     | '/settings/access'
-    | '/settings/industries'
     | '/api/auth/$'
     | '/api/internal/corporate-scheduler'
     | '/api/public/clients'
@@ -449,12 +449,12 @@ export interface FileRouteTypes {
     | '/preview/program'
     | '/preview/workshop'
     | '/_app/'
+    | '/_app/content/industries'
     | '/_app/content/media'
     | '/_app/content/tags'
     | '/_app/inquiries/$id'
     | '/_app/registrations/$id'
     | '/_app/settings/access'
-    | '/_app/settings/industries'
     | '/api/auth/$'
     | '/api/internal/corporate-scheduler'
     | '/api/public/clients'
@@ -571,6 +571,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PreviewWorkshopRouteImport
       parentRoute: typeof PreviewRoute
     }
+    '/_app/content/industries': {
+      id: '/_app/content/industries'
+      path: '/content/industries'
+      fullPath: '/content/industries'
+      preLoaderRoute: typeof AppContentIndustriesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/content/media': {
       id: '/_app/content/media'
       path: '/content/media'
@@ -625,13 +632,6 @@ declare module '@tanstack/react-router' {
       path: '/settings/access'
       fullPath: '/settings/access'
       preLoaderRoute: typeof AppSettingsAccessRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/settings/industries': {
-      id: '/_app/settings/industries'
-      path: '/settings/industries'
-      fullPath: '/settings/industries'
-      preLoaderRoute: typeof AppSettingsIndustriesRouteImport
       parentRoute: typeof AppRoute
     }
     '/api/auth/$': {
@@ -804,10 +804,10 @@ interface AppRouteChildren {
   AppInquiriesRoute: typeof AppInquiriesRouteWithChildren
   AppRegistrationsRoute: typeof AppRegistrationsRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
+  AppContentIndustriesRoute: typeof AppContentIndustriesRoute
   AppContentMediaRoute: typeof AppContentMediaRoute
   AppContentTagsRoute: typeof AppContentTagsRoute
   AppSettingsAccessRoute: typeof AppSettingsAccessRoute
-  AppSettingsIndustriesRoute: typeof AppSettingsIndustriesRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
   AppContentCorporateTrainingsIdRoute: typeof AppContentCorporateTrainingsIdRoute
   AppContentSessionsIdRoute: typeof AppContentSessionsIdRoute
@@ -821,10 +821,10 @@ const AppRouteChildren: AppRouteChildren = {
   AppInquiriesRoute: AppInquiriesRouteWithChildren,
   AppRegistrationsRoute: AppRegistrationsRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
+  AppContentIndustriesRoute: AppContentIndustriesRoute,
   AppContentMediaRoute: AppContentMediaRoute,
   AppContentTagsRoute: AppContentTagsRoute,
   AppSettingsAccessRoute: AppSettingsAccessRoute,
-  AppSettingsIndustriesRoute: AppSettingsIndustriesRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
   AppContentCorporateTrainingsIdRoute: AppContentCorporateTrainingsIdRoute,
   AppContentSessionsIdRoute: AppContentSessionsIdRoute,

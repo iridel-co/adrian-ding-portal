@@ -64,14 +64,14 @@ function RegistrationDetail({ id }: { id: string }) {
         <h1 className="font-display text-3xl sm:text-4xl">{registration.fullName}</h1>
         <RegistrationStatus isPaid={registration.isPaid} cancelledAt={registration.cancelledAt} />
       </header>
-      <section className="space-y-3 rounded-lg border p-5" aria-label="Scheduled workshop">
+      <section className="space-y-3 rounded-lg border bg-card shadow-xs p-5" aria-label="Scheduled workshop">
         <h2 className="text-xl font-medium">{registration.session.workshopTitle}</h2>
         <p className="text-sm text-muted-foreground">{registration.session.courseCode || "No course code"}</p>
         <StatusBadge display={SESSION_STATUS_DISPLAY[registration.session.status]} />
         <p>{formatDateRange(registration.session.date, registration.session.endDate)} · {formatTimeRange(registration.session.startTime, registration.session.endTime)} Manila time</p>
         <p>{registration.session.venueName || "Venue not set"}{registration.session.city && ` · ${registration.session.city}`}</p>
       </section>
-      <section className="space-y-4 rounded-lg border p-5" aria-labelledby="registration-submitted">
+      <section className="space-y-4 rounded-lg border bg-card shadow-xs p-5" aria-labelledby="registration-submitted">
         <h2 id="registration-submitted" className="text-xl font-medium">Submitted information</h2>
         <dl className="grid gap-4 sm:grid-cols-2">
           <Field label="Email">{registration.email}</Field><Field label="Phone">{registration.phone}</Field>
@@ -80,7 +80,7 @@ function RegistrationDetail({ id }: { id: string }) {
           <Field label="Submitted">{formatCrmTime(registration.createdAt)}</Field><Field label="Consent recorded">{formatCrmTime(registration.consentAt)}</Field>
         </dl>
       </section>
-      <section className="space-y-4 rounded-lg border p-5" aria-labelledby="registration-payment">
+      <section className="space-y-4 rounded-lg border bg-card shadow-xs p-5" aria-labelledby="registration-payment">
         <h2 id="registration-payment" className="text-xl font-medium">Payment verification</h2>
         {registration.verifiedAt ? <>
           {!registration.isPaid && <p className="text-sm text-muted-foreground">The previous verification is retained. This registration is currently {registration.cancelledAt ? "Cancelled" : "Unpaid"}.</p>}
@@ -93,7 +93,7 @@ function RegistrationDetail({ id }: { id: string }) {
           </dl>
         </> : <p className="text-sm text-muted-foreground">Payment has not been verified.</p>}
       </section>
-      {registration.cancelledAt && <section className="space-y-4 rounded-lg border p-5" aria-labelledby="registration-cancellation">
+      {registration.cancelledAt && <section className="space-y-4 rounded-lg border bg-card shadow-xs p-5" aria-labelledby="registration-cancellation">
         <h2 id="registration-cancellation" className="text-xl font-medium">Cancellation</h2>
         <dl className="grid gap-4 sm:grid-cols-2"><Field label="Cancelled at">{formatCrmTime(registration.cancelledAt)}</Field>
           <Field label="Reason">{registration.cancellationReason}</Field>

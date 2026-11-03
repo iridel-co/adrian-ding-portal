@@ -33,7 +33,15 @@
   --brand: #980f09;
   --brand-foreground: #fafafa;
 
-  --background: oklch(1 0 0);
+  /*
+    Light mode: the page is a soft blue-gray wash with a faint glow in the top
+    corners, and cards, inputs and the sidebar stay white so they stand out.
+  */
+  --background: oklch(0.972 0.006 255);
+  --canvas:
+    radial-gradient(70rem 40rem at 0% 0%, oklch(0.93 0.035 265 / 0.8), transparent 70%),
+    radial-gradient(50rem 35rem at 100% 0%, oklch(0.95 0.025 230 / 0.6), transparent 70%),
+    var(--background);
   --foreground: var(--base-800);
   --card: oklch(1 0 0);
   --card-foreground: var(--base-800);
@@ -41,28 +49,28 @@
   --popover-foreground: var(--base-800);
   --primary: var(--base-950);
   --primary-foreground: oklch(1 0 0);
-  --secondary: var(--base-100);
+  --secondary: oklch(0.955 0.008 255);
   --secondary-foreground: var(--base-800);
-  --muted: var(--base-50);
+  --muted: oklch(0.965 0.006 255);
   --muted-foreground: var(--base-600);
-  --accent: var(--base-100);
+  --accent: oklch(0.95 0.01 255);
   --accent-foreground: var(--base-800);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: var(--base-200);
-  --input: var(--base-300);
+  --border: oklch(0.91 0.01 255);
+  --input: oklch(0.87 0.012 255);
   --ring: var(--base-950);
   --chart-1: var(--base-950);
   --chart-2: var(--base-500);
   --chart-3: var(--base-700);
   --chart-4: var(--base-400);
   --chart-5: var(--base-600);
-  --sidebar: var(--base-50);
+  --sidebar: oklch(1 0 0);
   --sidebar-foreground: var(--base-800);
   --sidebar-primary: var(--base-950);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: var(--base-100);
+  --sidebar-accent: oklch(0.96 0.008 255);
   --sidebar-accent-foreground: var(--base-800);
-  --sidebar-border: var(--base-200);
+  --sidebar-border: oklch(0.92 0.01 255);
   --sidebar-ring: var(--base-950);
 }
 
@@ -71,6 +79,7 @@
   --brand: #d6372b;
 
   --background: var(--base-950);
+  --canvas: var(--background);
   --foreground: var(--base-200);
   --card: var(--base-950);
   --card-foreground: var(--base-200);
@@ -175,7 +184,9 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background: var(--canvas);
+    background-attachment: fixed;
   }
 }
 

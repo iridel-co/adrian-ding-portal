@@ -39,7 +39,7 @@ function InquiryDetail({ id }: { id: string }) {
       loadingMessage="Loading inquiry…" skeleton={<DetailSkeleton />} />
     {!result.isError && inquiry && <>
       <header><h1 className="font-display text-4xl break-words">{inquiry.company}</h1><p className="mt-2">{inquiry.program}</p><div className="mt-3 flex flex-wrap gap-2"><Badge variant="secondary">{inquiryStatusLabels[inquiry.status]}</Badge>{isInquiryOverdue(inquiry) && <Badge variant="destructive">First reply overdue</Badge>}</div><p className="mt-2 text-xs text-muted-foreground break-all">Inquiry ID: {inquiry.id}</p></header>
-      <section className="rounded-lg border p-5"><h2 className="mb-4 text-xl font-medium">Submitted requirements</h2><dl className="grid gap-4 sm:grid-cols-2">
+      <section className="rounded-lg border bg-card shadow-xs p-5"><h2 className="mb-4 text-xl font-medium">Submitted requirements</h2><dl className="grid gap-4 sm:grid-cols-2">
         <Field label="Contact">{inquiry.fullName}</Field><Field label="Role">{inquiry.role}</Field>
         <Field label="Email"><a className="underline break-all" href={`mailto:${inquiry.email}`}>{inquiry.email}</a></Field><Field label="Phone">{inquiry.phone}</Field>
         <Field label="Programme">{inquiry.program}</Field><Field label="Attendees">{inquiry.attendees}</Field>
@@ -47,7 +47,7 @@ function InquiryDetail({ id }: { id: string }) {
         <Field label="Venue">{inquiry.venue}</Field><Field label="Also interested in">{inquiry.alsoInterested.length ? inquiry.alsoInterested.join(", ") : "None specified"}</Field>
         <Field label="Context">{inquiry.context || "None provided"}</Field>
       </dl></section>
-      <section className="rounded-lg border p-5"><h2 className="mb-4 text-xl font-medium">Progress and response deadline</h2><p className="mb-4 text-sm text-muted-foreground">All times are in Manila. The first reply deadline is two weekdays after submission.</p><dl className="grid gap-4 sm:grid-cols-2">
+      <section className="rounded-lg border bg-card shadow-xs p-5"><h2 className="mb-4 text-xl font-medium">Progress and response deadline</h2><p className="mb-4 text-sm text-muted-foreground">All times are in Manila. The first reply deadline is two weekdays after submission.</p><dl className="grid gap-4 sm:grid-cols-2">
         <Field label="Received">{formatCrmTime(inquiry.createdAt)}</Field><Field label="First reply due">{formatCrmTime(inquiry.slaDueAt)}</Field>
         <Field label="First reply recorded">{formatCrmTime(inquiry.contactedAt)}</Field><Field label="Proposal recorded">{formatCrmTime(inquiry.proposalSentAt)}</Field>
         <Field label="Proposal value">{inquiry.estimatedValueCentavos === null ? "Not recorded" : formatPesos(inquiry.estimatedValueCentavos)}</Field><Field label="Closed">{formatCrmTime(inquiry.closedAt)}</Field>
@@ -71,7 +71,7 @@ type History = Awaited<ReturnType<typeof $getInquiry>>["history"][number];
 function HistoryEntry({ entry }: { entry: History }) {
   const { changes } = entry;
   const actor = changes.actor?.to;
-  return <li className="space-y-2 rounded-lg border p-4">
+  return <li className="space-y-2 rounded-lg border bg-card shadow-xs p-4">
     <p className="font-medium">{changes.emailRetry ? "Email retry attempted" : "Status changed"}</p>
     <p className="text-sm text-muted-foreground">{formatCrmTime(entry.createdAt)} · {actor ? `${actor.name} (${actor.email})` : "Staff"}</p>
     {changes.status && <p>{changes.status.from ? inquiryStatusLabels[changes.status.from] : "Not recorded"} → {changes.status.to ? inquiryStatusLabels[changes.status.to] : "Not recorded"}</p>}

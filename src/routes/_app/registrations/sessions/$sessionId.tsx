@@ -88,7 +88,7 @@ function RegistrationWorkspace() {
       <Tabs value={search.tab} onValueChange={tab => { if (tab === "overview" || tab === "registrations") changeTab(tab); }}>
         <TabsList aria-label="Workshop workspace"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="registrations">Registrations</TabsTrigger></TabsList>
         {overview ? <TabsContent value="overview" className="space-y-8 pt-4">
-          <section aria-labelledby="reserved-heading" className="space-y-4 rounded-lg border p-5">
+          <section aria-labelledby="reserved-heading" className="space-y-4 rounded-lg border bg-card shadow-xs p-5">
             <h2 id="reserved-heading" className="text-lg font-semibold">Reserved seats</h2>
             <p className="text-2xl font-medium tabular-nums">{run.counts.reserved} / {run.capacity} <span className="text-sm font-normal text-muted-foreground">reserved</span></p>
             <Progress aria-label="Reserved capacity" value={Math.min(100, Math.max(0, run.counts.reserved / run.capacity * 100))}

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { TermsManager } from "@/components/cms/terms-manager";
 
-export const Route = createFileRoute("/_app/settings/industries")({
+export const Route = createFileRoute("/_app/content/industries")({
   head: () => ({ meta: [{ title: "Client industries" }] }),
   component: IndustriesPage
 });

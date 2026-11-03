@@ -29,7 +29,7 @@ export function InquiryEmails({ inquiryId, jobs }: { inquiryId: string; jobs: Em
   const selectedJob = jobs.find(job => job.id === selected);
   return <section className="space-y-3"><h2 className="text-xl font-medium">Email delivery</h2>
     <p className="text-sm text-muted-foreground">Provider acceptance does not confirm inbox delivery. Replies and proposals are handled outside the portal.</p>
-    <div className="grid gap-3 sm:grid-cols-2">{jobs.map(job => <div className="space-y-2 rounded-lg border p-4" key={job.id}>
+    <div className="grid gap-3 sm:grid-cols-2">{jobs.map(job => <div className="space-y-2 rounded-lg border bg-card shadow-xs p-4" key={job.id}>
       <h3 className="font-medium">{job.kind === CrmEmailKind.CorporateAcknowledgment ? "Customer acknowledgement" : job.kind === CrmEmailKind.CorporateOverdue ? "Overdue reply reminder" : "Staff notification"}</h3>
       <p>{emailStateLabels[job.state] ?? job.state}</p><p className="text-sm text-muted-foreground">Attempts: {job.attemptCount}<br />Last attempt: {formatCrmTime(job.lastAttemptAt)}{job.sentAt && <><br />Accepted: {formatCrmTime(job.sentAt)}</>}</p>
       {job.lastErrorCode && <p className="text-sm text-muted-foreground">Last result: {job.lastErrorCode.replaceAll("_", " ")}</p>}
