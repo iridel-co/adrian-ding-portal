@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { AppSidebar, readClosedSections } from "@/components/app-sidebar";
 import { ThemeSwitcher } from "@/components/theme";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { crmAccessQueryOptions } from "@/features/crm/queries";
 import { readCookie } from "@/lib/cookies";
 import { requireUser } from "@/lib/require-user";
 
@@ -11,13 +12,23 @@ import { requireUser } from "@/lib/require-user";
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context }) => {
     const user = await requireUser(context.queryClient);
-    return { user };
+    /*
+      CRM access is checked on the server with the page, so the sidebar shows the
+      CRM links on the first render. Null means no access. On later page changes
+      the sidebar already knows, so this reuses its answer instead of asking again.
+    */
+    const crmAccessQuery = crmAccessQueryOptions();
+    const crmAccess =
+      typeof window === "undefined"
+        ? await context.queryClient.ensureQueryData(crmAccessQuery).catch(() => null)
+        : (context.queryClient.getQueryData(crmAccessQuery.queryKey) ?? null);
+    return { user, crmAccess };
   },
   component: AppLayout
 });
 
 function AppLayout() {
-  const { user } = Route.useRouteContext();
+  const { user, crmAccess } = Route.useRouteContext();
 
   return (
     /* The sidebar opens the way it was left. Its own cookie remembers if it was narrowed to icons. */
@@ -25,7 +36,7 @@ function AppLayout() {
       defaultOpen={readCookie("sidebar_state") !== "false"}
       style={{ "--sidebar-width-icon": "4.5rem" } as CSSProperties}
     >
-      <AppSidebar user={user} closedSections={readClosedSections()} />
+      <AppSidebar user={user} crmAccess={crmAccess} closedSections={readClosedSections()} />
       <SidebarInset className="bg-transparent">
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/70 px-4 backdrop-blur-md">
           <SidebarTrigger />

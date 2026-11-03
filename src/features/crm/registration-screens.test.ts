@@ -210,7 +210,7 @@ describe("Registration access and reads", () => {
   });
   it("shows the sidebar link only with CRM access and keeps existing navigation", () => {
     const sidebar = () => renderToStaticMarkup(createElement(TooltipProvider, { children: createElement(SidebarProvider, {},
-      createElement(AppSidebar, { user: { name: "Test Staff", email: "staff@company.test" }, closedSections: [] })) }));
+      createElement(AppSidebar, { user: { name: "Test Staff", email: "staff@company.test" }, crmAccess: null, closedSections: [] })) }));
     for (const role of ["staff", "admin"]) {
       harness.result.data = { role }; harness.result.isError = false;
       harness.pathname = "/registrations";

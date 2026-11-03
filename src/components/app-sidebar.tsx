@@ -45,10 +45,10 @@ import {
   SidebarMenuSubItem,
   useSidebar
 } from "@/components/ui/sidebar";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { authClient } from "@/lib/auth-client";
 import { readCookie } from "@/lib/cookies";
+import type { $crmAccess } from "@/features/crm/functions";
 import { crmAccessQueryOptions } from "@/features/crm/queries";
 
 type SidebarUser = {
@@ -101,11 +101,13 @@ function Divider({ className }: { className?: string }) {
 
 type AppSidebarProps = {
   user: SidebarUser;
+  /* What the server found when it loaded the page. The sidebar keeps checking after that. */
+  crmAccess: Awaited<ReturnType<typeof $crmAccess>> | null;
   closedSections: readonly string[];
 };
 
-export function AppSidebar({ user, closedSections }: AppSidebarProps) {
-  const access = useQuery(crmAccessQueryOptions());
+export function AppSidebar({ user, crmAccess, closedSections }: AppSidebarProps) {
+  const access = useQuery({ ...crmAccessQueryOptions(), initialData: crmAccess ?? undefined });
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -123,7 +125,6 @@ export function AppSidebar({ user, closedSections }: AppSidebarProps) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {access.isPending && <NavGroupSkeleton />}
             {!access.isError && access.data && <>
               <NavGroup label="CRM" icon={Handshake} paths={["/inquiries", "/registrations"]} closedSections={closedSections}>
                 <NavItem title="Inquiries"><Link to="/inquiries" search={{ status: "all", search: "", offset: 0 }} activeProps={ACTIVE_PROPS}><MessagesSquare /><span>Inquiries</span></Link></NavItem>
@@ -212,20 +213,6 @@ function NavGroup({ label, icon: Icon, paths, closedSections, children }: NavGro
         </Collapsible.Content>
       </SidebarMenuItem>
     </Collapsible.Root>
-  );
-}
-
-/* Stands in for the CRM section while we check if the user can see it. */
-function NavGroupSkeleton() {
-  return (
-    <div aria-hidden="true" className="flex flex-col gap-3 px-2 py-2 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-0">
-      <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-        <Skeleton className="size-4" />
-        <Skeleton className="h-4 w-16" />
-      </div>
-      <Skeleton className="ml-8 h-4 w-24 group-data-[collapsible=icon]:ml-0 group-data-[collapsible=icon]:size-10" />
-      <Skeleton className="ml-8 h-4 w-28 group-data-[collapsible=icon]:ml-0 group-data-[collapsible=icon]:size-10" />
-    </div>
   );
 }
 
