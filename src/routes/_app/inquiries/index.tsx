@@ -36,7 +36,7 @@ function InquiriesPage() {
   useEffect(() => setText(search.search), [search.search]);
   const inquiries = useQuery(inquiriesQueryOptions(search));
   const selection = useRowSelection(inquiries.data?.items ?? []);
-  return <ContentListPage title="Corporate inquiries" description="Record replies, proposals and outcomes. All times are in Manila."
+  return <ContentListPage title="Corporate inquiries" description="Record replies, proposals and outcomes."
     action={<RefreshButton isRefreshing={inquiries.isFetching} onClick={() => void inquiries.refetch()} />}
     filters={<>
       <form onSubmit={event => { event.preventDefault(); void navigate({ search: { ...search, search: text, offset: 0 } }); }}>

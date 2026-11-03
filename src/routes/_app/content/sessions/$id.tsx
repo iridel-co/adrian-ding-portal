@@ -265,7 +265,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
         }
       >
         <fieldset disabled={isLocked} className="flex flex-col gap-6">
-          <FormSection icon={CalendarClock} title="Date and Time" description="All times are Manila time.">
+          <FormSection icon={CalendarClock} title="Date and Time">
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="First day" htmlFor="date" errors={fieldErrors.date}>
                 <Input

@@ -68,7 +68,7 @@ function RegistrationDetail({ id }: { id: string }) {
         <h2 className="text-xl font-medium">{registration.session.workshopTitle}</h2>
         <p className="text-sm text-muted-foreground">{registration.session.courseCode || "No course code"}</p>
         <StatusBadge display={SESSION_STATUS_DISPLAY[registration.session.status]} />
-        <p>{formatDateRange(registration.session.date, registration.session.endDate)} · {formatTimeRange(registration.session.startTime, registration.session.endTime)} Manila time</p>
+        <p>{formatDateRange(registration.session.date, registration.session.endDate)} · {formatTimeRange(registration.session.startTime, registration.session.endTime)}</p>
         <p>{registration.session.venueName || "Venue not set"}{registration.session.city && ` · ${registration.session.city}`}</p>
       </section>
       <section className="space-y-4 rounded-lg border bg-card shadow-xs p-5" aria-labelledby="registration-submitted">

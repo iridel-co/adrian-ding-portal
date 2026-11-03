@@ -96,7 +96,6 @@ function RegistrationWorkspace() {
           <Fact icon={CircleDot} label="Status"><StatusBadge display={SESSION_STATUS_DISPLAY[run.status]} /></Fact>
           <Fact icon={CalendarDays} label="Schedule">
             <span className="rounded-full border bg-muted px-3 py-0.5">{formatDateRange(run.date, run.endDate)} · {formatTimeRange(run.startTime, run.endTime)}</span>
-            <span className="font-normal text-muted-foreground">Manila time</span>
           </Fact>
           <Fact icon={MapPin} label="Venue">{run.venueName || "Venue not set"}{run.city && <span className="font-normal text-muted-foreground">· {run.city}</span>}</Fact>
         </>}
@@ -199,7 +198,7 @@ function DetailsCard({ run }: { run: Run }) {
       <InfoRow icon={BookOpen} label="Workshop">{run.workshopTitle}</InfoRow>
       <InfoRow icon={Hash} label="Course code">{run.courseCode ? displayCourseCode(run.courseCode) : "Not set"}</InfoRow>
       <InfoRow icon={CalendarDays} label="Dates">{formatDateRange(run.date, run.endDate)}</InfoRow>
-      <InfoRow icon={Clock} label="Time">{formatTimeRange(run.startTime, run.endTime)} <span className="font-normal text-muted-foreground">Manila time</span></InfoRow>
+      <InfoRow icon={Clock} label="Time">{formatTimeRange(run.startTime, run.endTime)}</InfoRow>
     </InfoList>
     <InfoList>
       <InfoRow icon={MapPin} label="Venue">{run.venueName || "Venue not set"}</InfoRow>

@@ -121,7 +121,7 @@ describe("Workshop workspace", () => {
   it("shows seats and workshop details on the overview without loading registrations", () => {
     const html = render();
     expect(harness.query.mock.calls[1][0]).toMatchObject({ enabled: false });
-    for (const value of ["Practical Selling", "AD-PSW", "Training Room", "Cebu", "Manila time", "18 / 20", "Reserved capacity",
+    for (const value of ["Practical Selling", "AD-PSW", "Training Room", "Cebu", "18 / 20", "Reserved capacity",
       "Paid", "Unpaid", "Cancelled", "Seats left", "2 seats left", "₱6,500", "20 seats", "Edit session", "/content/sessions/$id"])
       expect(html).toContain(value);
     expect(html).toContain("aria-valuenow=\"90\"");

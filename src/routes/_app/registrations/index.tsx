@@ -39,7 +39,7 @@ function RegistrationRunsPage() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const runs = useQuery(registrationSessionsQueryOptions(search));
-  return <ContentListPage title="Scheduled workshops" description="Reserved seats and payment counts for each scheduled workshop. All dates and times are in Manila."
+  return <ContentListPage title="Scheduled workshops" description="Reserved seats and payment counts for each scheduled workshop."
     action={<RefreshButton isRefreshing={runs.isFetching} onClick={() => void runs.refetch()} />}
     filters={<div className="flex flex-wrap items-center gap-3">
       <Tabs value={search.status} onValueChange={value => {

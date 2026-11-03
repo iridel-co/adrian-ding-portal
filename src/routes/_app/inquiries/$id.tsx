@@ -96,7 +96,7 @@ function InquiryDetail({ id }: { id: string }) {
           <span className="rounded-full bg-current/15 px-1.5 text-xs tabular-nums">{inquiry.history.length + inquiry.emailJobs.length}{inquiry.historyHasMore ? "+" : ""}</span>
         </TabsTrigger>
       </TabsList>
-      <p className="text-xs text-muted-foreground">All times are in Manila. The first reply is due two weekdays after the inquiry arrives.</p>
+      <p className="text-xs text-muted-foreground">The first reply is due two weekdays after the inquiry arrives.</p>
 
       <TabsContent value="details" forceMount className={TAB_PANEL}>
         {/* No items-start: the two cards stretch to the taller one, so they always match. */}

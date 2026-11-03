@@ -96,7 +96,7 @@ describe("Registration detail", () => {
   it("shows submitted information, run context and read-only email state with safe text", () => {
     const html = render();
     for (const text of ["AD-PSW-0001", "alice@example.invalid", "Sales manager", "Prefer not to say", "Consent recorded",
-      "Practical Selling", "Training Room", "Manila time", "₱6,500", "Payment has not been verified", "Payment information", "Attempt failed"])
+      "Practical Selling", "Training Room", "₱6,500", "Payment has not been verified", "Payment information", "Attempt failed"])
       expect(html).toContain(text);
     expect(html).toContain("&lt;script&gt;unsafe&lt;/script&gt;");
     expect(html).not.toContain("<script>unsafe</script>");

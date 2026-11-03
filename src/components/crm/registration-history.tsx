@@ -20,7 +20,7 @@ export function RegistrationHistory({ entries, offset, hasMore, pending, fetchin
   const page = (offset: number) => { setTransitionHeight(section.current?.offsetHeight); onPage(offset); };
   return <section ref={section} style={{ minHeight: pending ? transitionHeight : undefined }} className="space-y-4" aria-labelledby="registration-history">
     <h2 id="registration-history" className="text-xl font-medium">History</h2>
-    <p className="text-sm text-muted-foreground">Staff changes and email retry attempts. All times are in Manila. Check Email delivery for the current outcome of an attempt.</p>
+    <p className="text-sm text-muted-foreground">Staff changes and email retry attempts. Check Email delivery for the current outcome of an attempt.</p>
     <CrmReadState pending={pending} error={error} retry={retry} loadingMessage="Loading registration history…"
       accessTitle="Registration access unavailable" errorMessage={registrationErrorMessage} skeleton={<ListSkeleton />} />
     {!pending && !error && <>

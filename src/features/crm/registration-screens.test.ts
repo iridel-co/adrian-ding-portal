@@ -120,7 +120,7 @@ describe("Workshop run list", () => {
   it("shows run context, independent seat/payment counts and safely escaped titles", () => {
     const html = render();
     for (const value of ["Scheduled workshops", "PSW", "Jan 12, 2027", "Jan 13, 2027", "Training Room", "Cebu",
-      "Open", "Upcoming workshops", "18 / 20", "10 paid", "8 unpaid", "Manila", "Page 1"])
+      "Open", "Upcoming workshops", "18 / 20", "10 paid", "8 unpaid", "Page 1"])
       expect(html).toContain(value);
     expect(html).not.toContain("2 remaining");
     expect(html).not.toContain("</span> reserved");

@@ -56,7 +56,7 @@ export function RegistrationEmails({ registration, onChanged, onAccessError }: {
   const close = () => { if (!submitting.current && !retry.isPending) setSelected(null); };
   return <section ref={section} tabIndex={-1} className="space-y-4" aria-labelledby="registration-email">
     <h2 id="registration-email" className="text-xl font-medium">Email delivery</h2>
-    <p className="text-sm text-muted-foreground">Payment status is independent of email delivery. Accepted means the provider accepted the message, not confirmed inbox delivery. All times are in Manila.</p>
+    <p className="text-sm text-muted-foreground">Payment status is independent of email delivery. Accepted means the provider accepted the message, not confirmed inbox delivery.</p>
     {jobs.length === 0 && <EmptyState icon={Mail} className="py-6">No email jobs recorded.</EmptyState>}
     <div className="grid gap-4 sm:grid-cols-2">{jobs.map(job => <div key={job.id} className="space-y-3 rounded-lg border bg-card shadow-xs p-5">
       <h3 className="font-medium">{job.kind === CrmEmailKind.PaymentInstructions ? registrationEmailLabels[CrmEmailKind.PaymentInstructions] : registrationEmailLabels[CrmEmailKind.PaymentAcknowledgment]}</h3>

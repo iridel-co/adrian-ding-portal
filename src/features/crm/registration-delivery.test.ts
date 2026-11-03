@@ -84,7 +84,7 @@ describe("Workshop email retry eligibility", () => {
 describe("Registration email controls", () => {
   it("shows bounded delivery metadata and payment-aware controls without exposing job identifiers", () => {
     const markup = html();
-    for (const text of ["Payment information", "Attempt failed", "Attempts", "Last attempt", "Accepted by provider", "Retry payment information", "Manila"]) expect(markup).toContain(text);
+    for (const text of ["Payment information", "Attempt failed", "Attempts", "Last attempt", "Accepted by provider", "Retry payment information"]) expect(markup).toContain(text);
     expect(markup).not.toContain("email-1");
     expect(html({ ...owner, emailJobs: [] })).toContain("No email jobs recorded");
     expect(html({ ...owner, isPaid: true })).not.toContain(">Retry payment information<");
