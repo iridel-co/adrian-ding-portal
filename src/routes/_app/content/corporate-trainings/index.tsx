@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { cn } from "cn";
 import { Briefcase, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -8,10 +7,11 @@ import type { z } from "zod";
 
 import { ContentListPage, EmptyState, FilterTabs } from "@/components/cms/content-list-page";
 import { Field, FormErrorList } from "@/components/cms/form-section";
-import { SortableListSkeleton } from "@/components/cms/list-skeletons";
-import { SortableList } from "@/components/cms/sortable-list";
+import { SortableTableBody } from "@/components/cms/sortable-list";
 import { CONTENT_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { useFormErrors } from "@/components/cms/use-form-errors";
+import { ReadState } from "@/components/table/read-state";
+import { TableSkeleton } from "@/components/table/table-skeleton";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,7 +22,14 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { tableRowLinkClass } from "@/components/ui/table";
+import {
+  Table,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  tableRowLinkClass
+} from "@/components/ui/table";
 import {
   $createProgram,
   $reorderPrograms,
@@ -42,10 +49,16 @@ export const Route = createFileRoute("/_app/content/corporate-trainings/")({
 type StatusFilter = z.infer<typeof statusFilterSchema>;
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "active", label: "All but archived" },
+  { value: "active", label: "All" },
   { value: "draft", label: "Draft" },
   { value: "published", label: "Published" },
   { value: "archived", label: "Archived" }
+];
+
+const COLUMNS = [
+  { label: "Title" },
+  { label: "Status" },
+  { label: "Updated", className: "hidden sm:table-cell" }
 ];
 
 function ProgramsPage() {
@@ -54,6 +67,7 @@ function ProgramsPage() {
   const listOptions = programsQueryOptions({ status });
   const programs = useQuery(listOptions);
   const isOrderable = status === "active";
+  const columns = isOrderable ? [{ label: "", className: "w-10" }, ...COLUMNS] : COLUMNS;
 
   const reorderPrograms = useMutation({
     mutationFn: (ids: string[]) => $reorderPrograms({ data: { ids } }),
@@ -71,7 +85,7 @@ function ProgramsPage() {
       title="Corporate trainings"
       description={
         isOrderable
-          ? "The in-house programs on the corporate training page. Drag to set the card order."
+          ? "The in-house programs on the corporate training page. Drag rows to set the card order."
           : "The in-house programs on the corporate training page."
       }
       action={<NewProgramDialog />}
@@ -79,38 +93,62 @@ function ProgramsPage() {
         <FilterTabs label="Status" value={status} options={STATUS_OPTIONS} onChange={setStatus} />
       }
     >
-      {programs.isPending ? (
-        <SortableListSkeleton label="Loading programs…" />
-      ) : programs.data?.length === 0 ? (
-        <EmptyState icon={Briefcase}>No programs yet.</EmptyState>
-      ) : (
-        <SortableList
-          items={programs.data ?? []}
-          getId={(program) => program.id}
-          onReorder={handleReorder}
-          disabled={!isOrderable}
-          renderItem={(program) => <ProgramRow program={program} />}
-        />
-      )}
+      <ReadState
+        pending={programs.isPending}
+        error={programs.error}
+        retry={() => void programs.refetch()}
+        loadingMessage="Loading programs…"
+        skeleton={<TableSkeleton columns={columns} />}
+        errorMessage={errorMessage}
+      />
+      {programs.data &&
+        (programs.data.length === 0 ? (
+          <EmptyState icon={Briefcase}>
+            {isOrderable ? "No programs yet." : "No programs match this filter."}
+          </EmptyState>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {columns.map((column) => (
+                  <TableHead key={column.label} className={column.className}>
+                    {column.label}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <SortableTableBody
+              items={programs.data}
+              getId={(program) => program.id}
+              onReorder={handleReorder}
+              disabled={!isOrderable}
+              renderRow={(program) => <ProgramCells program={program} />}
+            />
+          </Table>
+        ))}
     </ContentListPage>
   );
 }
 
-function ProgramRow({ program }: { program: ProgramListItem }) {
+function ProgramCells({ program }: { program: ProgramListItem }) {
   return (
-    <div className="relative flex items-center gap-4 rounded-xl border bg-card px-4 py-3 shadow-xs transition-colors hover:bg-muted/40">
-      <Link
-        to="/content/corporate-trainings/$id"
-        params={{ id: program.id }}
-        className={cn("min-w-0 flex-1 truncate after:rounded-xl", tableRowLinkClass)}
-      >
-        {program.title}
-      </Link>
-      <StatusBadge display={CONTENT_STATUS_DISPLAY[program.status]} />
-      <span className="hidden w-24 text-right text-sm text-muted-foreground sm:inline">
+    <>
+      <TableCell className="whitespace-normal">
+        <Link
+          to="/content/corporate-trainings/$id"
+          params={{ id: program.id }}
+          className={tableRowLinkClass}
+        >
+          {program.title}
+        </Link>
+      </TableCell>
+      <TableCell>
+        <StatusBadge display={CONTENT_STATUS_DISPLAY[program.status]} />
+      </TableCell>
+      <TableCell className="hidden text-muted-foreground sm:table-cell">
         {new Date(program.updatedAt).toLocaleDateString()}
-      </span>
-    </div>
+      </TableCell>
+    </>
   );
 }
 

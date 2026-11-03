@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Tags } from "lucide-react";
 
 import { TermsManager } from "@/components/cms/terms-manager";
 
@@ -15,6 +16,7 @@ function TagsPage() {
       description="The topics used to filter workshops on the site."
       itemLabel="tag"
       placeholder="e.g. Leadership"
+      icon={Tags}
     />
   );
 }

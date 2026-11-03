@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Building2 } from "lucide-react";
 
 import { TermsManager } from "@/components/cms/terms-manager";
 
@@ -15,6 +16,7 @@ function IndustriesPage() {
       description="The groups used to filter the client logo wall."
       itemLabel="industry"
       placeholder="e.g. Finance"
+      icon={Building2}
     />
   );
 }

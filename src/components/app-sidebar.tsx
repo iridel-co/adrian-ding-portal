@@ -150,7 +150,7 @@ function NavGroup({ label, icon: Icon, paths, children }: { label: string; icon:
             <ChevronDown className="ml-auto text-muted-foreground transition-transform group-data-[state=open]/collapsible:rotate-180" />
           </SidebarMenuButton>
         </Collapsible.Trigger>
-        <Collapsible.Content>
+        <Collapsible.Content forceMount className="data-[state=closed]:hidden">
           <SidebarMenuSub className="mx-0 ml-5 py-1 pr-0 pl-3">{children}</SidebarMenuSub>
         </Collapsible.Content>
       </SidebarMenuItem>

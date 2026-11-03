@@ -1,19 +1,25 @@
-import { useMutation, useMutationState, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, ArchiveRestore } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Archive, ArchiveRestore, type LucideIcon, Pencil, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { EmptyState } from "@/components/cms/content-list-page";
-import { FieldErrors } from "@/components/cms/form-section";
-import { SortableListSkeleton } from "@/components/cms/list-skeletons";
-import { SortableList } from "@/components/cms/sortable-list";
+import { ContentListPage, EmptyState, FilterTabs } from "@/components/cms/content-list-page";
+import { Field, FieldErrors, FormErrorList } from "@/components/cms/form-section";
+import { SortableTableBody } from "@/components/cms/sortable-list";
 import { NO_FIELDS, useFormErrors } from "@/components/cms/use-form-errors";
-import { Badge } from "@/components/ui/badge";
+import { ReadState } from "@/components/table/read-state";
+import { TableSkeleton } from "@/components/table/table-skeleton";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Table, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   $archiveTerm,
   $createTerm,
@@ -26,167 +32,139 @@ import {
 } from "@/features/taxonomy/functions";
 import { errorMessage } from "@/features/shared/error-message";
 
+const NAME_FIELDS = ["name"];
+
+type View = "active" | "archived";
+
+const VIEW_OPTIONS: { value: View; label: string }[] = [
+  { value: "active", label: "Active" },
+  { value: "archived", label: "Archived" }
+];
+
+const ACTIVE_COLUMNS = [
+  { label: "", className: "w-10" },
+  { label: "Name" },
+  { label: "Added", className: "hidden sm:table-cell" },
+  { label: "Actions", className: "text-right" }
+];
+
+const ARCHIVED_COLUMNS = [
+  { label: "Name" },
+  { label: "Archived", className: "hidden sm:table-cell" },
+  { label: "Actions", className: "text-right" }
+];
+
 type TermsManagerProps = {
   kind: TaxonomyKind;
   title: string;
   description: string;
   itemLabel: string;
   placeholder: string;
+  icon: LucideIcon;
 };
 
+/* A list page for a set of filter terms, such as workshop tags: add, rename, archive and drag to order. */
 export function TermsManager({
   kind,
   title,
   description,
   itemLabel,
-  placeholder
+  placeholder,
+  icon
 }: TermsManagerProps) {
   const queryClient = useQueryClient();
-  const [includeArchived, setIncludeArchived] = useState(false);
-  const [name, setName] = useState("");
-  const createErrors = useFormErrors(NO_FIELDS);
+  const [view, setView] = useState<View>("active");
+  const isActive = view === "active";
+  const listOptions = termsQueryOptions({ kind, includeArchived: !isActive });
+  const terms = useQuery(listOptions);
+  const columns = isActive ? ACTIVE_COLUMNS : ARCHIVED_COLUMNS;
 
-  const terms = useQuery(termsQueryOptions({ kind, includeArchived }));
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["taxonomy", kind] });
-  const onError = (error: Error) => toast.error(errorMessage(error));
-
-  const activeTerms = terms.data?.filter((term) => term.archivedAt === null) ?? [];
-  const archivedTerms = terms.data?.filter((term) => term.archivedAt !== null) ?? [];
-
-  const createKey = ["taxonomy", kind, "create"];
-  const savingNames = useMutationState({
-    filters: { mutationKey: createKey, status: "pending" },
-    select: (mutation) => String(mutation.state.variables)
-  });
-
-  const create = useMutation({
-    mutationKey: createKey,
-    mutationFn: (termName: string) => $createTerm({ data: { kind, name: termName } }),
-    scope: { id: `taxonomy-create-${kind}` },
-    onSuccess: refresh,
-    onError: (error, termName) => {
-      setName((current) => current || termName);
-      createErrors.showErrors(error);
-    }
-  });
+  const shownTerms = terms.data?.filter((term) => (term.archivedAt === null) === isActive);
 
   const reorderTerms = useMutation({
     mutationFn: (ids: string[]) => $reorderTerms({ data: { kind, ids } }),
     onSettled: refresh,
-    onError
+    onError: (error) => toast.error(errorMessage(error))
   });
 
   const handleReorder = (ordered: TaxonomyTerm[]) => {
-    queryClient.setQueryData(termsQueryOptions({ kind, includeArchived }).queryKey, [
-      ...ordered,
-      ...archivedTerms
-    ]);
+    queryClient.setQueryData(listOptions.queryKey, ordered);
     reorderTerms.mutate(ordered.map((term) => term.id));
   };
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8">
-      <div>
-        <h1 className="font-display text-4xl">{title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardDescription>Drag to set the order they show on the site.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <form
-              className="flex gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const termName = name.trim();
-                if (!termName) return;
-
-                setName("");
-                createErrors.clearErrors();
-                create.mutate(termName);
-              }}
-            >
-              <Input
-                required
-                aria-label={`New ${itemLabel}`}
-                placeholder={placeholder}
-                value={name}
-                onChange={(event) => {
-                  setName(event.target.value);
-                  createErrors.clearErrors();
-                }}
-              />
-              <Button type="submit">
-                Add {itemLabel}
-              </Button>
-            </form>
-            {createErrors.generalErrors.length > 0 && (
-              <FieldErrors errors={createErrors.generalErrors} />
-            )}
-          </div>
-
-          {terms.isPending ? (
-            <SortableListSkeleton label={`Loading ${title.toLowerCase()}…`} />
-          ) : (
-            <SortableList
-              items={activeTerms}
+    <ContentListPage
+      title={title}
+      description={isActive ? `${description} Drag rows to set the order they show on the site.` : description}
+      action={
+        <NewTermDialog kind={kind} itemLabel={itemLabel} placeholder={placeholder} onCreated={refresh} />
+      }
+      filters={<FilterTabs label="Show" value={view} options={VIEW_OPTIONS} onChange={setView} />}
+    >
+      <ReadState
+        pending={terms.isPending}
+        error={terms.error}
+        retry={() => void terms.refetch()}
+        loadingMessage={`Loading ${title.toLowerCase()}…`}
+        skeleton={<TableSkeleton columns={columns} />}
+        errorMessage={errorMessage}
+      />
+      {shownTerms &&
+        (shownTerms.length === 0 ? (
+          <EmptyState icon={icon}>
+            {isActive ? `Nothing here yet. Add your first ${itemLabel}.` : "Nothing archived."}
+          </EmptyState>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {columns.map((column) => (
+                  <TableHead key={column.label} className={column.className}>
+                    {column.label}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <SortableTableBody
+              items={shownTerms}
               getId={(term) => term.id}
               onReorder={handleReorder}
-              renderItem={(term) => <TermRow term={term} onChanged={refresh} />}
+              disabled={!isActive}
+              renderRow={(term) => <TermCells term={term} onChanged={refresh} />}
             />
-          )}
-          {savingNames.length > 0 && (
-            <ul className="flex flex-col gap-2 pl-8">
-              {savingNames.map((savingName, index) => (
-                <li key={`${savingName}-${index}`}>
-                  <Input value={savingName} disabled aria-label={`Saving ${savingName}`} />
-                </li>
-              ))}
-            </ul>
-          )}
-          {!terms.isPending && activeTerms.length === 0 && savingNames.length === 0 && (
-            <EmptyState className="py-8 shadow-none">Nothing here yet.</EmptyState>
-          )}
-
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id={`${kind}-show-archived`}
-              checked={includeArchived}
-              onCheckedChange={(checked) => setIncludeArchived(checked === true)}
-            />
-            <Label htmlFor={`${kind}-show-archived`}>Show archived</Label>
-          </div>
-          {includeArchived && (
-            <ul className="flex flex-col gap-2">
-              {archivedTerms.map((term) => (
-                <li key={term.id}>
-                  <TermRow term={term} onChanged={refresh} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          </Table>
+        ))}
+    </ContentListPage>
   );
 }
 
-function TermRow({ term, onChanged }: { term: TaxonomyTerm; onChanged: () => Promise<void> }) {
+function TermCells({ term, onChanged }: { term: TaxonomyTerm; onChanged: () => Promise<void> }) {
+  const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(term.name);
   const isArchived = term.archivedAt !== null;
   const { generalErrors, showErrors, clearErrors } = useFormErrors(NO_FIELDS);
 
+  const stopEditing = () => {
+    setIsEditing(false);
+    setName(term.name);
+    clearErrors();
+  };
+
   const rename = useMutation({
-    mutationFn: () => $renameTerm({ data: { id: term.id, name } }),
-    onSuccess: onChanged,
-    onError: (error) => {
-      setName(term.name);
-      showErrors(error);
-    }
+    mutationFn: () => $renameTerm({ data: { id: term.id, name: name.trim() } }),
+    onSuccess: async () => {
+      setIsEditing(false);
+      await onChanged();
+    },
+    onError: showErrors
   });
+
+  const save = () => {
+    if (rename.isPending) return;
+    if (!name.trim() || name.trim() === term.name) stopEditing();
+    else rename.mutate();
+  };
 
   const toggleArchive = useMutation({
     mutationFn: () =>
@@ -198,34 +176,139 @@ function TermRow({ term, onChanged }: { term: TaxonomyTerm; onChanged: () => Pro
   });
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-2">
-        <Input
-          aria-label={`Name of ${term.name}`}
-          value={name}
-          disabled={isArchived}
-          onChange={(event) => {
-            setName(event.target.value);
-            clearErrors();
-          }}
-          onBlur={() => {
-            if (name.trim() && name.trim() !== term.name) rename.mutate();
-            else setName(term.name);
-          }}
-        />
-        {isArchived && <Badge variant="secondary">Archived</Badge>}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={isArchived ? `Restore ${term.name}` : `Archive ${term.name}`}
-          disabled={toggleArchive.isPending}
-          onClick={() => toggleArchive.mutate()}
-        >
-          {isArchived ? <ArchiveRestore /> : <Archive />}
+    <>
+      <TableCell className="whitespace-normal">
+        {isEditing ? (
+          <form
+            className="flex max-w-sm flex-col gap-1.5"
+            onSubmit={(event) => {
+              event.preventDefault();
+              save();
+            }}
+          >
+            <Input
+              autoFocus
+              aria-label={`New name for ${term.name}`}
+              value={name}
+              disabled={rename.isPending}
+              onChange={(event) => {
+                setName(event.target.value);
+                clearErrors();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") stopEditing();
+              }}
+              onBlur={save}
+            />
+            {generalErrors.length > 0 && <FieldErrors errors={generalErrors} />}
+          </form>
+        ) : (
+          <span className={isArchived ? "text-muted-foreground" : "font-medium"}>{term.name}</span>
+        )}
+      </TableCell>
+      <TableCell className="hidden text-muted-foreground sm:table-cell">
+        {new Date(term.archivedAt ?? term.createdAt).toLocaleDateString()}
+      </TableCell>
+      <TableCell>
+        <div className="flex justify-end gap-1">
+          {!isArchived && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label={`Rename ${term.name}`}
+              disabled={isEditing}
+              onClick={() => setIsEditing(true)}
+            >
+              <Pencil />
+              <span className="hidden sm:inline">Rename</span>
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label={isArchived ? `Restore ${term.name}` : `Archive ${term.name}`}
+            disabled={toggleArchive.isPending}
+            onClick={() => toggleArchive.mutate()}
+          >
+            {isArchived ? <ArchiveRestore /> : <Archive />}
+            <span className="hidden sm:inline">{isArchived ? "Restore" : "Archive"}</span>
+          </Button>
+        </div>
+      </TableCell>
+    </>
+  );
+}
+
+type NewTermDialogProps = {
+  kind: TaxonomyKind;
+  itemLabel: string;
+  placeholder: string;
+  onCreated: () => Promise<void>;
+};
+
+function NewTermDialog({ kind, itemLabel, placeholder, onCreated }: NewTermDialogProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [name, setName] = useState("");
+  const { fieldErrors, generalErrors, showErrors, clearFieldErrors, clearErrors } =
+    useFormErrors(NAME_FIELDS);
+
+  const create = useMutation({
+    mutationFn: () => $createTerm({ data: { kind, name: name.trim() } }),
+    onSuccess: async () => {
+      setIsOpen(false);
+      setName("");
+      await onCreated();
+    },
+    onError: showErrors
+  });
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        clearErrors();
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant="brand">
+          <Plus />
+          New {itemLabel}
         </Button>
-      </div>
-      {generalErrors.length > 0 && <FieldErrors errors={generalErrors} />}
-    </div>
+      </DialogTrigger>
+      <DialogContent>
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            create.mutate();
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>New {itemLabel}</DialogTitle>
+          </DialogHeader>
+          <Field label="Name" htmlFor={`new-${kind}-name`} errors={fieldErrors.name}>
+            <Input
+              id={`new-${kind}-name`}
+              required
+              placeholder={placeholder}
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+                clearFieldErrors("name");
+              }}
+            />
+          </Field>
+          <FormErrorList messages={generalErrors} />
+          <DialogFooter>
+            <Button type="submit" disabled={create.isPending}>
+              Add {itemLabel}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
