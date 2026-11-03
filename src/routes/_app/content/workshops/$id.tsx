@@ -35,6 +35,7 @@ import {
 } from "@/features/workshops/functions";
 import type { FieldAliases } from "@/features/shared/error-message";
 import { publishChecklist } from "@/features/shared/publish";
+import { displayCourseCode } from "@/features/workshops/course-number";
 import { WORKSHOP_FIELD_LABELS, workshopPublishSchema } from "@/features/workshops/schemas";
 
 export const Route = createFileRoute("/_app/content/workshops/$id")({
@@ -48,7 +49,6 @@ export const Route = createFileRoute("/_app/content/workshops/$id")({
 type WorkshopForm = {
   title: string;
   slug: string;
-  courseCode: string;
   summary: string;
   problem: string;
   intro: string;
@@ -80,7 +80,6 @@ function toForm(detail: WorkshopDetail): WorkshopForm {
   return {
     title: workshop.title,
     slug: workshop.slug,
-    courseCode: workshop.courseCode ?? "",
     summary: workshop.summary,
     problem: workshop.problem,
     intro: workshop.intro,
@@ -182,6 +181,15 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       statusActions={statusActions}
       isLive={workshop.status === "published"}
       lastEdited={{ name: detail.updatedByName, at: workshop.updatedAt }}
+      details={
+        workshop.courseCode ? (
+          <span>
+            Course code <span className="font-mono">{displayCourseCode(workshop.courseCode)}</span>
+          </span>
+        ) : (
+          <span>Course code assigned when published</span>
+        )
+      }
       isSaving={save.isPending}
       isDirty={isDirty}
       errors={generalErrors}
@@ -225,29 +233,14 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
             onChange={(event) => setField("title", event.target.value)}
           />
         </Field>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field
-            label="Slug"
-            htmlFor="slug"
-            errors={fieldErrors.slug}
-            hint="The page address, e.g. /workshops/coaching-for-managers"
-          >
-            <SlugField id="slug" title={values.title} value={values.slug} onChange={setSlug} />
-          </Field>
-          <Field
-            label="Course code"
-            htmlFor="courseCode"
-            errors={fieldErrors.courseCode}
-            hint="2 to 8 capital letters or digits. Used in reference IDs, e.g. AD-PSW-0042."
-          >
-            <Input
-              id="courseCode"
-              className="font-mono uppercase"
-              value={values.courseCode}
-              onChange={(event) => setField("courseCode", event.target.value.toUpperCase())}
-            />
-          </Field>
-        </div>
+        <Field
+          label="Slug"
+          htmlFor="slug"
+          errors={fieldErrors.slug}
+          hint="The page address, e.g. /workshops/coaching-for-managers"
+        >
+          <SlugField id="slug" title={values.title} value={values.slug} onChange={setSlug} />
+        </Field>
         <Field
           label="Summary"
           htmlFor="summary"

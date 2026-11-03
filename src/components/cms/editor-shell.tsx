@@ -32,6 +32,7 @@ type EditorShellProps = {
   isLive?: boolean;
   liveNote?: string;
   lastEdited?: LastEdited;
+  details?: ReactNode;
   isSaving: boolean;
   isDirty: boolean;
   errors?: string[];
@@ -51,6 +52,7 @@ export function EditorShell({
   isLive = false,
   liveNote = DEFAULT_LIVE_NOTE,
   lastEdited,
+  details,
   isSaving,
   isDirty,
   errors = [],
@@ -74,6 +76,7 @@ export function EditorShell({
             <h1 className="font-display text-4xl break-words">{title || "Untitled"}</h1>
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               {status && <StatusBadge display={status} />}
+              {details}
               {lastEdited && (
                 <span>
                   Last edited {lastEdited.name ? `by ${lastEdited.name} ` : ""}

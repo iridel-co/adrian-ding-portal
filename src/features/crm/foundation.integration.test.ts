@@ -24,8 +24,8 @@ import { readPaymentQr } from "@/features/media/r2";
 import { queueOverdueInquiries, runCorporateScheduler } from "./scheduler";
 import { relations, registration, workshop, workshopSession } from "@/db/schema";
 import { allocateRegistrationReference } from "./registration-reference";
-import { isCourseCodeLocked } from "@/features/workshops/course-code-lock";
-import { updateWorkshop } from "@/features/workshops/service";
+import { allocateCourseCode } from "@/features/workshops/course-code";
+import { createWorkshop, updateWorkshop } from "@/features/workshops/service";
 import { workshopSaveSchema } from "@/features/workshops/schemas";
 import { acceptRegistration as saveRegistrationIntake } from "./registration-service";
 import { registrationSchema } from "./schemas";
@@ -958,7 +958,7 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     expect(job.payload.text).not.toContain("2027-01-12");
   });
 
-  it("uses a CMS course-code edit before reservation and locks subsequent edits after intake commits", async () => {
+  it("keeps the course code through a CMS edit that runs during intake", async () => {
     const fixture = await intakeFixture();
     const [tag] = await sql`insert into taxonomy_term (kind, name) values ('workshop_tag', ${randomUUID()}) returning id`;
     const [course] = await db.select().from(workshop).where(eq(workshop.id, fixture.courseId));
@@ -966,16 +966,14 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
       heroMediaId: qrMediaId, defaultPriceCentavos: 10000, defaultCapacity: 20, tagIds: [tag.id],
       outcomes: ["Synthetic outcome"], curriculum: ["Synthetic curriculum"], defaultVenueMapUrl: "" });
     await updateWorkshop(db, actor, { id: fixture.courseId, values });
-    const nextCode = `C${fixture.courseCode.slice(1)}`;
     vi.mocked(readPaymentQr).mockImplementationOnce(async () => {
-      await updateWorkshop(db, actor, { id: fixture.courseId, values: { ...values, courseCode: nextCode } });
+      await updateWorkshop(db, actor, { id: fixture.courseId, values: { ...values, summary: "Edited during intake" } });
       return { filename: "payment-qr.png", content: "synthetic-base64", contentType: "image/png" };
     });
     const accepted = await saveRegistrationIntake(db, fixture.answers, randomUUID(), registrationConfig, now);
-    expect(accepted.response.reference).toBe(`AD-${nextCode}-0001`);
-    expect(await sql`select * from registration_reference_counter where course_code = ${fixture.courseCode}`).toHaveLength(0);
-    await expect(updateWorkshop(db, actor, { id: fixture.courseId, values })).rejects.toThrow("course code is locked");
-    expect((await sql`select reference from registration where email = ${fixture.answers.email}`)[0].reference).toBe(accepted.response.reference);
+    expect(accepted.response.reference).toBe(`AD-${fixture.courseCode}-0001`);
+    expect((await sql`select course_code, summary from workshop where id = ${fixture.courseId}`)[0])
+      .toEqual({ course_code: fixture.courseCode, summary: "Edited during intake" });
   });
 
   it("processes real registration HTTP requests through E1, staff verification and E2 without leaking duplicate or catalogue data", async () => {
@@ -1507,20 +1505,33 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
       .rejects.toMatchObject({ constraint_name: "registration_verified_by_user_id_fkey" });
   });
 
-  it("locks course-code edits while any run has an active registration", async () => {
+  it("numbers a course after the highest number code and ignores letter codes", async () => {
+    await expect(db.transaction(async (tx) => {
+      await tx.insert(workshop).values([
+        { slug: randomUUID(), title: "Synthetic numbered workshop", courseCode: "99999990" },
+        { slug: randomUUID(), title: "Synthetic lettered workshop", courseCode: "ZZZZZZZZ" }
+      ]);
+      expect(await allocateCourseCode(tx)).toBe("99999991");
+      throw new Error("Roll back the synthetic workshops.");
+    })).rejects.toThrow("Roll back the synthetic workshops.");
+  });
+
+  it("gives each new workshop the next course number", async () => {
+    const first = await createWorkshop(db, actor, { title: "Synthetic first workshop" });
+    const second = await createWorkshop(db, actor, { title: "Synthetic second workshop" });
+    const codes = await sql`select id, course_code from workshop where id in (${first.id}, ${second.id})`;
+    const codeOf = (id: string) => Number(codes.find(row => row.id === id)?.course_code);
+    expect(codeOf(second.id)).toBe(codeOf(first.id) + 1);
+  });
+
+  it("keeps the course code when the CMS saves a workshop with registrations", async () => {
     const fixture = await workshopFixture();
-    expect(await isCourseCodeLocked(db, fixture.courseId)).toBe(false);
     const row = await saveRegistration(fixture.sessions[1], fixture.courseCode);
-    expect(await isCourseCodeLocked(db, fixture.courseId)).toBe(true);
     const [course] = await db.select().from(workshop).where(eq(workshop.id, fixture.courseId));
-    const values = workshopSaveSchema.parse({ ...course, courseCode: `C${fixture.courseCode.slice(1)}`, tagIds: [],
+    const values = workshopSaveSchema.parse({ ...course, title: "Renamed synthetic workshop", tagIds: [],
       primerVideoUrl: course.primerVideoUrl ?? "", defaultVenueMapUrl: course.defaultVenueMapUrl ?? "" });
-    await expect(updateWorkshop(db, actor, { id: fixture.courseId, values })).rejects.toThrow("course code is locked");
-    await sql`update registration set cancelled_at = now(), cancelled_by = ${actor.id}, cancellation_reason = 'Requested'
-      where id = ${row.id}`;
-    expect(await isCourseCodeLocked(db, fixture.courseId)).toBe(false);
     await updateWorkshop(db, actor, { id: fixture.courseId, values });
-    expect((await sql`select course_code from workshop where id = ${fixture.courseId}`)[0].course_code).toBe(values.courseCode);
+    expect((await sql`select course_code from workshop where id = ${fixture.courseId}`)[0].course_code).toBe(fixture.courseCode);
     expect((await sql`select reference from registration where id = ${row.id}`)[0].reference).toBe(row.reference);
   });
 

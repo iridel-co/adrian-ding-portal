@@ -22,7 +22,7 @@ import { escapeLike, fetchPage, sortOrder } from "@/features/shared/list-query";
 import { assertPublishable } from "@/features/shared/publish";
 import { assertSlugAvailable, makeUniqueSlug } from "@/features/shared/slug";
 import { manilaToday } from "@/features/shared/time";
-import { isCourseCodeLocked } from "@/features/workshops/course-code-lock";
+import { allocateCourseCode, courseCodeSortKey } from "@/features/workshops/course-code";
 import {
   type createInput,
   type idInput,
@@ -73,22 +73,6 @@ async function findUpcomingActiveSessions(db: DbOrTx, workshopId: string) {
     .orderBy(asc(workshopSession.date));
 }
 
-async function assertCourseCodeFree(db: DbOrTx, courseCode: string | null, workshopId: string) {
-  if (!courseCode) return;
-
-  const [existing] = await db
-    .select({ title: workshop.title })
-    .from(workshop)
-    .where(and(eq(workshop.courseCode, courseCode), ne(workshop.id, workshopId)))
-    .limit(1);
-
-  if (existing) {
-    throw new CmsValidationError(
-      `Course code ${courseCode} is already used by "${existing.title}".`
-    );
-  }
-}
-
 export async function listWorkshops(db: DbOrTx, data: z.infer<typeof listInput>) {
   const today = manilaToday();
 
@@ -104,7 +88,7 @@ export async function listWorkshops(db: DbOrTx, data: z.infer<typeof listInput>)
 
   const sortColumns = {
     title: sql`lower(${workshop.title})`,
-    courseCode: workshop.courseCode,
+    courseCode: courseCodeSortKey,
     status: sql`${workshop.status}::text`,
     nextSessionDate: nextSessionDate.date,
     updatedAt: workshop.updatedAt
@@ -214,9 +198,11 @@ export async function createWorkshop(db: DbOrTx, actor: Actor, data: z.infer<typ
       fallback: "workshop"
     });
 
+    const courseCode = await allocateCourseCode(tx);
+
     const [row] = await tx
       .insert(workshop)
-      .values({ title: data.title, slug, ...createdByValues(actor.id) })
+      .values({ title: data.title, slug, courseCode, ...createdByValues(actor.id) })
       .returning({ id: workshop.id });
 
     await logActivity(tx, {
@@ -224,7 +210,10 @@ export async function createWorkshop(db: DbOrTx, actor: Actor, data: z.infer<typ
       action: "create",
       entityType: ENTITY_TYPE,
       entityId: row.id,
-      changes: { title: { from: null, to: data.title } }
+      changes: {
+        title: { from: null, to: data.title },
+        courseCode: { from: null, to: courseCode }
+      }
     });
 
     return row;
@@ -246,14 +235,6 @@ export async function updateWorkshop(db: DbOrTx, actor: Actor, data: z.infer<typ
       slug: values.slug,
       excludeId: data.id
     });
-    await assertCourseCodeFree(tx, values.courseCode, data.id);
-
-    const isCourseCodeChanged = values.courseCode !== before.courseCode;
-    if (isCourseCodeChanged && (await isCourseCodeLocked(tx, data.id))) {
-      throw new CmsValidationError(
-        "The course code is locked because this workshop has active registrations."
-      );
-    }
 
     const beforeTagIds = await getTagIds(tx, data.id);
     if (before.status === "published") {
@@ -309,9 +290,13 @@ export async function setWorkshopStatus(
       }
     }
 
+    // New workshops get a code on create. Older drafts without one get it here.
+    const isFirstPublish = data.status === "published" && !before.courseCode;
+    const courseCode = isFirstPublish ? await allocateCourseCode(tx) : before.courseCode;
+
     await tx
       .update(workshop)
-      .set({ status: data.status, ...updatedByValues(actor.id) })
+      .set({ status: data.status, courseCode, ...updatedByValues(actor.id) })
       .where(eq(workshop.id, data.id));
 
     await logActivity(tx, {
@@ -319,7 +304,10 @@ export async function setWorkshopStatus(
       action: contentStatusAction(from, data.status),
       entityType: ENTITY_TYPE,
       entityId: data.id,
-      changes: { status: { from, to: data.status } }
+      changes: {
+        status: { from, to: data.status },
+        ...(isFirstPublish && { courseCode: { from: null, to: courseCode } })
+      }
     });
   });
 }

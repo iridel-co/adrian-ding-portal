@@ -35,6 +35,7 @@ import {
 import { errorMessage } from "@/features/shared/error-message";
 import { formatDate } from "@/features/shared/format";
 import { paginationSearchSchema, sortDirection } from "@/features/shared/pagination";
+import { displayCourseCode } from "@/features/workshops/course-number";
 import { $createWorkshop, workshopsQueryOptions } from "@/features/workshops/functions";
 import { statusFilterSchema, workshopListSort } from "@/features/workshops/schemas";
 
@@ -159,7 +160,9 @@ function WorkshopsPage() {
                         {item.title}
                       </Link>
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{item.courseCode ?? "-"}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {item.courseCode ? displayCourseCode(item.courseCode) : "-"}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <div className="flex flex-wrap gap-1">
                         {item.tags.map((tag) => (
