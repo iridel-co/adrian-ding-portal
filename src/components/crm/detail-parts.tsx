@@ -17,11 +17,12 @@ export function DetailHeader({ crumb, title, subtitle, facts, actions }: {
 }) {
   return (
     <header className="flex flex-col gap-6 border-b pb-6 lg:flex-row lg:items-start lg:justify-between">
-      <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
         {crumb}
         <h1 className="font-display text-4xl break-words">{title}</h1>
         {subtitle && <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground [&_svg]:size-4">{subtitle}</div>}
-        {facts && <dl className="mt-4 grid grid-cols-[auto_1fr] items-center gap-x-8 gap-y-3 text-sm">{facts}</dl>}
+        {/* Two columns on wider screens: facts fill the left column first, then the right. */}
+        {facts && <dl className="mt-3 max-w-3xl text-sm sm:columns-2 sm:gap-x-12">{facts}</dl>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
     </header>
@@ -38,13 +39,13 @@ export function Crumb({ children }: { children: ReactNode }) {
   );
 }
 
-/* One key fact in the header: a quiet icon and label, then the value. */
+/* One key fact in the header: a quiet icon and label, then the value. Labels share a width so values line up. */
 export function Fact({ icon: Icon, label, children }: { icon: LucideIcon; label: string; children: ReactNode }) {
   return (
-    <>
-      <dt className="flex items-center gap-2 text-muted-foreground"><Icon className="size-4" />{label}</dt>
-      <dd className="flex flex-wrap items-center gap-2 font-medium">{children}</dd>
-    </>
+    <div className="flex break-inside-avoid items-center gap-4 py-1.5">
+      <dt className="flex w-36 shrink-0 items-center gap-2 text-muted-foreground"><Icon className="size-4 shrink-0" />{label}</dt>
+      <dd className="flex min-w-0 flex-wrap items-center gap-2 font-medium break-words">{children}</dd>
+    </div>
   );
 }
 
