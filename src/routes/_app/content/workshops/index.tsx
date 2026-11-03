@@ -11,6 +11,7 @@ import { useFormErrors } from "@/components/cms/use-form-errors";
 import { ReadState } from "@/components/table/read-state";
 import { nextSort } from "@/components/table/sort-search";
 import { SortableTableHead } from "@/components/table/sortable-table-head";
+import { TableSkeleton } from "@/components/table/table-skeleton";
 import { TablePagination } from "@/components/table/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -130,6 +131,7 @@ function WorkshopsPage() {
         error={workshops.error}
         retry={() => void workshops.refetch()}
         loadingMessage="Loading workshops…"
+        skeleton={<TableSkeleton columns={COLUMNS} />}
         errorMessage={errorMessage}
       />
       {workshops.data && (

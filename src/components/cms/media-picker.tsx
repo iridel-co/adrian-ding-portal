@@ -3,6 +3,7 @@ import { Check } from "lucide-react";
 import { useState } from "react";
 
 import { Field } from "@/components/cms/form-section";
+import { MediaGridSkeleton } from "@/components/cms/list-skeletons";
 import { MediaDropzone } from "@/components/cms/media-dropzone";
 import { NO_FIELDS, useFormErrors } from "@/components/cms/use-form-errors";
 import { useMediaUploads } from "@/components/cms/use-media-uploads";
@@ -31,6 +32,7 @@ type MediaPickerProps = {
   onPick: (media: PickedMedia) => void;
 };
 
+const PICKER_GRID_CLASS = "grid max-h-80 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4";
 const ALT_MISSING_MESSAGE = "Describe the image before you use it.";
 
 type PickerTab = "library" | "upload";
@@ -112,30 +114,38 @@ export function MediaPicker({ open, onOpenChange, onPick }: MediaPickerProps) {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
-            <div className="grid max-h-80 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
-              {library.data?.map((item) => {
-                const isSelected = selected?.id === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => select({ id: item.id, url: item.url, alt: item.alt })}
-                    data-selected={isSelected || undefined}
-                    className="relative aspect-square overflow-hidden rounded-md border bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring/50 data-selected:ring-2 data-selected:ring-primary"
-                  >
-                    <img src={item.url} alt={item.alt} className="size-full object-contain" />
-                    {isSelected && (
-                      <Check className="absolute top-1.5 right-1.5 size-5 rounded-full bg-primary p-0.5 text-primary-foreground" />
-                    )}
-                  </button>
-                );
-              })}
-              {library.data?.length === 0 && (
-                <p className="col-span-full py-8 text-center text-sm text-muted-foreground">
-                  No images found.
-                </p>
-              )}
-            </div>
+            {library.isPending ? (
+              <MediaGridSkeleton
+                label="Loading images…"
+                className={PICKER_GRID_CLASS}
+                cardClassName="aspect-square w-full"
+              />
+            ) : (
+              <div className={PICKER_GRID_CLASS}>
+                {library.data?.map((item) => {
+                  const isSelected = selected?.id === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => select({ id: item.id, url: item.url, alt: item.alt })}
+                      data-selected={isSelected || undefined}
+                      className="relative aspect-square overflow-hidden rounded-md border bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring/50 data-selected:ring-2 data-selected:ring-primary"
+                    >
+                      <img src={item.url} alt={item.alt} className="size-full object-contain" />
+                      {isSelected && (
+                        <Check className="absolute top-1.5 right-1.5 size-5 rounded-full bg-primary p-0.5 text-primary-foreground" />
+                      )}
+                    </button>
+                  );
+                })}
+                {library.data?.length === 0 && (
+                  <p className="col-span-full py-8 text-center text-sm text-muted-foreground">
+                    No images found.
+                  </p>
+                )}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="upload">

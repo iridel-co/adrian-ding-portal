@@ -13,6 +13,7 @@ import {
 import { ReadState } from "@/components/table/read-state";
 import { nextSort } from "@/components/table/sort-search";
 import { SortableTableHead } from "@/components/table/sortable-table-head";
+import { TableSkeleton } from "@/components/table/table-skeleton";
 import { TablePagination } from "@/components/table/table-pagination";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -157,6 +158,7 @@ function SessionList() {
         error={sessions.error}
         retry={() => void sessions.refetch()}
         loadingMessage="Loading sessions…"
+        skeleton={<TableSkeleton columns={COLUMNS} />}
         errorMessage={errorMessage}
       />
       {sessions.data && (

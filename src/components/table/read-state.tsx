@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { Button } from "@/components/ui/button";
 
 type ReadStateProps = {
@@ -5,6 +7,7 @@ type ReadStateProps = {
   error: unknown;
   retry: () => void;
   loadingMessage: string;
+  skeleton?: ReactNode;
   errorTitle?: string;
   errorMessage: (error: unknown) => string;
 };
@@ -15,9 +18,17 @@ export function ReadState({
   error,
   retry,
   loadingMessage,
+  skeleton,
   errorTitle = "Unable to load",
   errorMessage
 }: ReadStateProps) {
+  if (pending && skeleton) {
+    return (
+      <div role="status" aria-label={loadingMessage}>
+        {skeleton}
+      </div>
+    );
+  }
   if (pending) {
     return (
       <p role="status" className="py-8 text-muted-foreground">

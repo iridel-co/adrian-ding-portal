@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { FieldErrors } from "@/components/cms/form-section";
+import { SortableListSkeleton } from "@/components/cms/list-skeletons";
 import { SortableList } from "@/components/cms/sortable-list";
 import { NO_FIELDS, useFormErrors } from "@/components/cms/use-form-errors";
 import { Badge } from "@/components/ui/badge";
@@ -126,12 +127,16 @@ export function TermsManager({
             )}
           </div>
 
-          <SortableList
-            items={activeTerms}
-            getId={(term) => term.id}
-            onReorder={handleReorder}
-            renderItem={(term) => <TermRow term={term} onChanged={refresh} />}
-          />
+          {terms.isPending ? (
+            <SortableListSkeleton label={`Loading ${title.toLowerCase()}…`} />
+          ) : (
+            <SortableList
+              items={activeTerms}
+              getId={(term) => term.id}
+              onReorder={handleReorder}
+              renderItem={(term) => <TermRow term={term} onChanged={refresh} />}
+            />
+          )}
           {savingNames.length > 0 && (
             <ul className="flex flex-col gap-2 pl-8">
               {savingNames.map((savingName, index) => (
@@ -141,7 +146,7 @@ export function TermsManager({
               ))}
             </ul>
           )}
-          {activeTerms.length === 0 && savingNames.length === 0 && (
+          {!terms.isPending && activeTerms.length === 0 && savingNames.length === 0 && (
             <p className="py-4 text-center text-sm text-muted-foreground">Nothing here yet.</p>
           )}
 

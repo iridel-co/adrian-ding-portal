@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { FieldErrors } from "@/components/cms/form-section";
+import { MediaGridSkeleton } from "@/components/cms/list-skeletons";
 import { MediaDropzone } from "@/components/cms/media-dropzone";
 import { NO_FIELDS, useFormErrors } from "@/components/cms/use-form-errors";
 import { useMediaUploads } from "@/components/cms/use-media-uploads";
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/_app/content/media")({
 });
 
 const BYTES_PER_KB = 1024;
+const MEDIA_GRID_CLASS = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
 
 function formatSize(bytes: number) {
   const kilobytes = bytes / BYTES_PER_KB;
@@ -74,11 +76,19 @@ function MediaPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {library.data?.map((item) => (
-          <MediaCard key={item.id} item={item} onChanged={refresh} />
-        ))}
-      </div>
+      {library.isPending ? (
+        <MediaGridSkeleton
+          label="Loading images…"
+          className={MEDIA_GRID_CLASS}
+          cardClassName="h-72 w-full"
+        />
+      ) : (
+        <div className={MEDIA_GRID_CLASS}>
+          {library.data?.map((item) => (
+            <MediaCard key={item.id} item={item} onChanged={refresh} />
+          ))}
+        </div>
+      )}
       {library.data?.length === 0 && (
         <p className="py-12 text-center text-sm text-muted-foreground">No images yet.</p>
       )}

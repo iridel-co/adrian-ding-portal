@@ -7,6 +7,7 @@ import type { z } from "zod";
 
 import { ContentListPage, EmptyState, FilterSelect } from "@/components/cms/content-list-page";
 import { Field, FormErrorList } from "@/components/cms/form-section";
+import { SortableListSkeleton } from "@/components/cms/list-skeletons";
 import { SortableList } from "@/components/cms/sortable-list";
 import { CONTENT_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { useFormErrors } from "@/components/cms/use-form-errors";
@@ -76,7 +77,9 @@ function ProgramsPage() {
         <FilterSelect label="Status" value={status} options={STATUS_OPTIONS} onChange={setStatus} />
       }
     >
-      {programs.data?.length === 0 ? (
+      {programs.isPending ? (
+        <SortableListSkeleton label="Loading programs…" />
+      ) : programs.data?.length === 0 ? (
         <EmptyState>No programs yet.</EmptyState>
       ) : (
         <SortableList
