@@ -50,7 +50,7 @@ export const $restorePaymentAccount = createServerFn({ method: "POST" })
   .validator(paymentAccountIdInput)
   .handler(({ data, context }) => restorePaymentAccount(getDb(), context.actor, data));
 
-export type PaymentAccount = Awaited<ReturnType<typeof $listPaymentAccounts>>[number];
+export type PaymentAccount = Awaited<ReturnType<typeof $listPaymentAccounts>>["items"][number];
 
 export const paymentAccountsQueryOptions = (input: z.input<typeof paymentAccountListInput> = {}) =>
   queryOptions({

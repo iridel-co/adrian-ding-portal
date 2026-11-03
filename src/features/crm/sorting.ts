@@ -4,3 +4,4 @@ export { sortDirection } from "@/features/shared/pagination";
 export const inquirySort = z.enum(["company", "program", "status", "createdAt", "slaDueAt"]).default("createdAt");
 export const workshopSort = z.enum(["workshopTitle", "status", "date", "venueName", "reserved", "paid"]).default("status");
 export const registrantSort = z.enum(["fullName", "status", "priceCentavos", "createdAt"]).default("createdAt");
+export const paymentAccountSort = z.enum(["method", "providerName", "accountName", "isActive"]).default("isActive");

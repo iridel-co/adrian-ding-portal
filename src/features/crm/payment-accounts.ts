@@ -39,6 +39,13 @@ async function validateQr(db: DbOrTx, id: string) {
 }
 
 export async function listPaymentAccounts(db: DbOrTx, input: z.infer<typeof paymentAccountListInput>, fallbackId?: string) {
+  const order = input.direction === "asc" ? asc : desc;
+  const columns = {
+    method: paymentAccount.method,
+    providerName: paymentAccount.providerName,
+    accountName: paymentAccount.accountName,
+    isActive: paymentAccount.isActive
+  };
   const rows = await db.select({
     id: paymentAccount.id,
     method: paymentAccount.method,
@@ -53,11 +60,16 @@ export async function listPaymentAccounts(db: DbOrTx, input: z.infer<typeof paym
     qrFileName: media.fileName
   }).from(paymentAccount).leftJoin(media, eq(media.id, paymentAccount.qrMediaId))
     .where(input.includeArchived ? undefined : isNull(paymentAccount.archivedAt))
-    .orderBy(desc(paymentAccount.isActive), asc(paymentAccount.position), asc(paymentAccount.providerName));
+    .orderBy(order(columns[input.sort]), asc(paymentAccount.position), asc(paymentAccount.providerName), desc(paymentAccount.id))
+    .limit(input.limit + 1)
+    .offset(input.offset);
 
   const databaseActiveId = rows.find((row) => row.isActive)?.id;
   const selectedId = databaseActiveId ?? fallbackId;
-  return rows.map((row) => ({ ...row, selectedForNewRegistrations: row.id === selectedId, qrUrl: row.qrUrl ? publicMediaUrl(row.qrUrl) : null }));
+  return {
+    items: rows.slice(0, input.limit).map((row) => ({ ...row, selectedForNewRegistrations: row.id === selectedId, qrUrl: row.qrUrl ? publicMediaUrl(row.qrUrl) : null })),
+    hasMore: rows.length > input.limit
+  };
 }
 
 async function accountValues(db: DbOrTx, data: Pick<z.infer<typeof createPaymentAccountInput>, "method" | "providerName" | "accountName" | "accountNumber" | "qrMediaId">) {
