@@ -47,7 +47,7 @@ export function InquiryEmails({ inquiryId, jobs }: { inquiryId: string; jobs: Em
     {jobs.length === 0 ? <p className="px-6 pb-6 text-sm text-muted-foreground">No emails recorded.</p> : <Table>
       <TableHeader><TableRow>
         <TableHead>Email</TableHead><TableHead>Status</TableHead><TableHead>Attempts</TableHead>
-        <TableHead>Last Attempt</TableHead><TableHead>Accepted</TableHead><TableHead><span className="sr-only">Actions</span></TableHead>
+        <TableHead>Last Attempt</TableHead><TableHead>Accepted</TableHead><TableHead className="w-px text-right">Actions</TableHead>
       </TableRow></TableHeader>
       <TableBody>{jobs.map(job => {
         const kind = EMAIL_KINDS[job.kind] ?? EMAIL_KINDS[CrmEmailKind.CorporateNotification];

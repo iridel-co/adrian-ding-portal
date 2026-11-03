@@ -56,7 +56,7 @@ export function SelectCell({ checked, onChange, label, disabled }: {
 }
 
 export function ActionsHead() {
-  return <TableHead className="w-px"><span className="sr-only">Actions</span></TableHead>;
+  return <TableHead className="w-px text-right">Actions</TableHead>;
 }
 
 /* The last cell of a row, holding its quick actions. */

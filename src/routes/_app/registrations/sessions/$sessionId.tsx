@@ -230,7 +230,7 @@ function RegistrationRows({ items, search }: { items: RegistrationRow[]; search:
           <SortableTableHead key={key} active={search.sort === key} direction={search.direction}
             onClick={() => void navigate({ search: { ...search, tab: "registrations", sort: key,
               direction: search.sort === key && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>
-        )}<TableHead className="w-px"><span className="sr-only">Actions</span></TableHead>
+        )}<TableHead className="w-px text-right">Actions</TableHead>
       </TableRow></TableHeader>
       <TableBody>{items.map(item => <TableRow key={item.id} data-state={chosen.some(row => row.id === item.id) ? "selected" : undefined}>
         <TableCell className="relative z-10"><Checkbox aria-label={`Select ${item.reference}`} disabled={item.isPaid || !!item.cancelledAt}
