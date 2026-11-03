@@ -75,7 +75,7 @@ const METHOD_LABELS: Record<PaymentMethod, string> = { bank: "Bank", gcash: "GCa
 type PaymentAccountStatus = "active" | "available" | "archived";
 
 const PAYMENT_ACCOUNT_STATUS_DISPLAY = {
-  active: { label: "Used for new registrations", variant: "success" },
+  active: { label: "Active", variant: "success" },
   available: { label: "Available", variant: "info" },
   archived: { label: "Archived", variant: "neutral" }
 } as const satisfies Record<PaymentAccountStatus, StatusDisplay>;
