@@ -46,7 +46,7 @@ const searchSchema = z
   .object({
     status: statusFilterSchema.catch("active").default("active"),
     search: z.string().trim().catch("").default(""),
-    sort: workshopListSort.catch("updatedAt"),
+    sort: workshopListSort.catch("status"),
     direction: sortDirection.catch("desc")
   })
   .and(paginationSearchSchema);

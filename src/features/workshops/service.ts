@@ -102,7 +102,8 @@ export async function listWorkshops(db: DbOrTx, data: z.infer<typeof listInput>)
   const sortColumns = {
     title: sql`lower(${workshop.title})`,
     courseCode: courseCodeSortKey,
-    status: sql`${workshop.status}::text`,
+    /* Live workshops rank highest, so newest-first (descending) shows published, then drafts, then archived. */
+    status: sql`case ${workshop.status} when 'published' then 2 when 'draft' then 1 else 0 end`,
     nextSessionDate: nextSessionDate.date,
     updatedAt: workshop.updatedAt
   };
@@ -124,7 +125,12 @@ export async function listWorkshops(db: DbOrTx, data: z.infer<typeof listInput>)
         data.search ? ilike(workshop.title, `%${escapeLike(data.search)}%`) : undefined
       )
     )
-    .orderBy(sortOrder(sortColumns[data.sort], data.direction), desc(workshop.id))
+    .orderBy(
+      sortOrder(sortColumns[data.sort], data.direction),
+      /* Within one status, the most recently updated comes first. */
+      ...(data.sort === "status" ? [desc(workshop.updatedAt)] : []),
+      desc(workshop.id)
+    )
     .$dynamic();
 
   const { items: rows, hasMore } = await fetchPage(query, data);

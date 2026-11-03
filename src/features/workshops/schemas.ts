@@ -64,9 +64,10 @@ export const WORKSHOP_FIELD_LABELS: FieldLabels = {
 
 export const statusFilterSchema = z.enum(["active", ...contentStatus.enumValues]);
 
+/* By default: published first, then drafts, each with the most recently updated on top. */
 export const workshopListSort = z
   .enum(["title", "courseCode", "status", "nextSessionDate", "updatedAt"])
-  .default("updatedAt");
+  .default("status");
 
 /* Without a limit the list returns every match, e.g. for pickers. */
 export const listInput = z.object({
