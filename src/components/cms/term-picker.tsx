@@ -1,17 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
-import { Plus, X } from "lucide-react";
-import { useState } from "react";
+import { cn } from "cn";
+import { Check, ChevronDown, Plus, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
+  CommandGroup,
   CommandInput,
   CommandItem,
   CommandList
 } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -34,62 +35,80 @@ type TermMultiPickerProps = {
   addLabel: string;
 };
 
-/* Picks several active terms. Terms archived after they were picked stay, marked as archived. */
+/*
+  Picks several active terms. The chosen ones show as chips in a box like an
+  input; the list below ticks and unticks terms and stays open, so you can
+  pick a few in one go. Terms archived after they were picked stay, marked
+  as archived.
+*/
 export function TermMultiPicker({ kind, value, onChange, addLabel }: TermMultiPickerProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const terms = useQuery(termsQueryOptions({ kind }));
-
   const selectedIds = new Set(value.map((term) => term.id));
-  const available = terms.data?.filter((term) => !selectedIds.has(term.id)) ?? [];
+
+  const toggle = (term: { id: string; name: string }) =>
+    onChange(
+      selectedIds.has(term.id)
+        ? value.filter((current) => current.id !== term.id)
+        : [...value, { id: term.id, name: term.name, isArchived: false }]
+    );
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {value.map((term) => (
-        <Badge key={term.id} variant={term.isArchived ? "outline" : "secondary"} className="gap-1">
-          {term.name}
-          {term.isArchived && <span className="text-muted-foreground">(archived)</span>}
-          <button
-            type="button"
-            aria-label={`Remove ${term.name}`}
-            className="rounded-sm hover:text-destructive"
-            onClick={() => onChange(value.filter((current) => current.id !== term.id))}
-          >
-            <X className="size-3" />
-          </button>
-        </Badge>
-      ))}
-
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <Button type="button" variant="outline" size="sm">
-            <Plus />
-            {addLabel}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-56 p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Search" />
-            <CommandList>
-              <CommandEmpty>
-                {terms.isPending ? "Loading…" : "Nothing to add. Add new ones in Settings."}
-              </CommandEmpty>
-              {available.map((term) => (
-                <CommandItem
-                  key={term.id}
-                  value={term.name}
-                  onSelect={() => {
-                    onChange([...value, { id: term.id, name: term.name, isArchived: false }]);
-                    setIsOpen(false);
-                  }}
-                >
-                  {term.name}
-                </CommandItem>
-              ))}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-    </div>
+    <Popover>
+      <PopoverAnchor asChild>
+        <div className="flex min-h-10 w-full flex-wrap items-center gap-1.5 rounded-md border border-input bg-card px-2 py-1.5 shadow-xs">
+          {value.map((term) => (
+            <Badge key={term.id} variant={term.isArchived ? "outline" : "neutral"} className="gap-1 pr-1">
+              {term.name}
+              {term.isArchived && <span className="text-muted-foreground">(archived)</span>}
+              <button
+                type="button"
+                aria-label={`Remove ${term.name}`}
+                className="rounded-full p-0.5 hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => onChange(value.filter((current) => current.id !== term.id))}
+              >
+                <X className="size-3" />
+              </button>
+            </Badge>
+          ))}
+          <PopoverTrigger asChild>
+            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground">
+              <Plus />
+              {addLabel}
+              <ChevronDown className="opacity-60" />
+            </Button>
+          </PopoverTrigger>
+        </div>
+      </PopoverAnchor>
+      <PopoverContent className="w-(--radix-popover-trigger-width) min-w-56 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search" />
+          <CommandList>
+            <CommandEmpty>{terms.isPending ? "Loading…" : "No matches. Add new ones in Settings."}</CommandEmpty>
+            {/* The group's padding keeps the first option from touching the search box. */}
+            <CommandGroup>
+              {(terms.data ?? []).map((term) => {
+                const isPicked = selectedIds.has(term.id);
+                return (
+                  <CommandItem key={term.id} value={term.name} onSelect={() => toggle(term)}>
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "flex size-4 shrink-0 items-center justify-center rounded-[4px] border",
+                        isPicked ? "border-brand bg-brand text-brand-foreground" : "border-input"
+                      )}
+                    >
+                      {isPicked && <Check className="size-3" strokeWidth={3} />}
+                    </span>
+                    {term.name}
+                    {isPicked && <span className="sr-only">, picked</span>}
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 

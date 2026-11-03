@@ -223,7 +223,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
               kind="workshop_tag"
               value={values.tags}
               onChange={(tags) => setField("tags", tags)}
-              addLabel="Add tag"
+              addLabel="Choose tags"
             />
           </FormSection>
           <UpcomingSessions workshopId={workshop.id} sessions={detail.upcomingSessions} />
