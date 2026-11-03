@@ -173,6 +173,12 @@
     @apply border-border outline-ring/50;
   }
 
+  /* Anything clickable shows the hand cursor. Tailwind v4 no longer does this for buttons. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
   :root {
     color-scheme: light dark;
   }
