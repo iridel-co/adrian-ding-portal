@@ -2,7 +2,7 @@ import "@tanstack/react-start/server-only";
 import { and, asc, desc, eq, gt, ilike, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { user, workshop, workshopSession } from "@/db/schema";
+import { registration, user, workshop, workshopSession } from "@/db/schema";
 import {
   type createInput,
   type idInput,
@@ -121,7 +121,12 @@ export async function listSessions(db: DbOrTx, data: z.infer<typeof listInput>) 
       capacity: workshopSession.capacity,
       status: workshopSession.status,
       workshopId: workshop.id,
-      workshopTitle: workshop.title
+      workshopTitle: workshop.title,
+      /* Seats taken: Paid and Unpaid registrations. Cancelled ones free their seat. */
+      reservedCount: sql<number>`(
+        select count(*)::int from ${registration}
+        where ${registration.workshopSessionId} = ${workshopSession.id} and ${registration.cancelledAt} is null
+      )`
     })
     .from(workshopSession)
     .innerJoin(workshop, eq(workshop.id, workshopSession.workshopId))

@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Users, type LucideIcon } from "lucide-react";
 import { cn } from "cn";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
+import { SESSION_STATUS_DISPLAY } from "@/components/cms/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTime } from "@/features/shared/format";
@@ -11,6 +13,36 @@ import { sessionsQueryOptions } from "@/features/sessions/functions";
 import { manilaToday } from "@/features/shared/time";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+type SessionStatus = keyof typeof SESSION_STATUS_DISPLAY;
+
+/*
+  Tile colors match the status badges: amber draft, green open, gray closed,
+  red cancelled. The left edge carries the color so it shows even at a glance.
+*/
+const TILE_TONES: Record<SessionStatus, string> = {
+  draft: "border-amber-500 bg-amber-50 hover:bg-amber-100 dark:bg-amber-400/10 dark:hover:bg-amber-400/20",
+  open: "border-emerald-500 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-400/10 dark:hover:bg-emerald-400/20",
+  closed: "border-muted-foreground/40 bg-muted hover:bg-muted/70",
+  cancelled: "border-destructive bg-destructive/5 hover:bg-destructive/10"
+};
+
+const LEGEND_DOTS: Record<SessionStatus, string> = {
+  draft: "bg-amber-500",
+  open: "bg-emerald-500",
+  closed: "bg-muted-foreground/40",
+  cancelled: "bg-destructive"
+};
+
+/* A small white chip for one detail on a tile, like the start time. */
+function TileChip({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children: ReactNode }) {
+  return (
+    <span title={title} className="inline-flex items-center gap-0.5 rounded-full border bg-card px-1.5 text-[10px] leading-4 text-muted-foreground tabular-nums">
+      <Icon aria-hidden="true" className="size-2.5" />
+      {children}
+    </span>
+  );
+}
 const DAYS_PER_WEEK = 7;
 
 function shiftMonth(month: string, delta: number) {
@@ -49,8 +81,19 @@ export function SessionCalendar() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium">{monthLabel}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <h2 className="text-lg font-medium">{monthLabel}</h2>
+          <ul aria-label="Colors" className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            {(Object.keys(SESSION_STATUS_DISPLAY) as SessionStatus[]).map((status) => (
+              <li key={status} className="flex items-center gap-1.5">
+                <span aria-hidden="true" className={cn("size-2 rounded-full", LEGEND_DOTS[status])} />
+                {SESSION_STATUS_DISPLAY[status].label}
+              </li>
+            ))}
+            <li>Faded: already happened</li>
+          </ul>
+        </div>
         <div className="flex gap-1">
           <Button
             variant="outline"
@@ -111,12 +154,34 @@ export function SessionCalendar() {
                           key={session.id}
                           to="/content/sessions/$id"
                           params={{ id: session.id }}
-                          data-status={session.status}
-                          className="flex flex-col rounded bg-primary/10 px-1.5 py-0.5 text-xs hover:bg-primary/20 data-[status=cancelled]:line-through data-[status=draft]:bg-muted"
+                          className={cn(
+                            "flex flex-col gap-1 rounded-md border-l-[3px] px-1.5 py-1 text-xs transition-colors",
+                            TILE_TONES[session.status],
+                            session.isPast && "opacity-60"
+                          )}
                         >
-                          <span className="line-clamp-2">{session.workshopTitle}</span>
-                          <span className="text-muted-foreground">
-                            {formatTime(session.startTime)}
+                          <span
+                            className={cn(
+                              "line-clamp-2 font-medium",
+                              session.status === "cancelled" && "line-through"
+                            )}
+                          >
+                            {session.workshopTitle}
+                          </span>
+                          <Badge
+                            variant={SESSION_STATUS_DISPLAY[session.status].variant}
+                            className="h-4 bg-card px-1.5 text-[10px]"
+                          >
+                            {SESSION_STATUS_DISPLAY[session.status].label}
+                          </Badge>
+                          <span className="flex flex-wrap gap-1">
+                            <TileChip icon={Clock} title="Start time">{formatTime(session.startTime)}</TileChip>
+                            <TileChip
+                              icon={Users}
+                              title={`${session.reservedCount} of ${session.capacity} seats reserved`}
+                            >
+                              {session.reservedCount}/{session.capacity}
+                            </TileChip>
                           </span>
                         </Link>
                       ))}
