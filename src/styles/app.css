@@ -34,8 +34,8 @@
   --brand-foreground: #fafafa;
 
   /*
-    Light mode: the page and sidebar share one warm off-white, with a barely-there
-    brand-red warmth at the top. Cards and inputs stay white so they stand out.
+    Light mode: the page is a warm off-white with a barely-there brand-red
+    warmth at the top. Cards and inputs stay white so they stand out.
   */
   --background: oklch(0.978 0.0025 55);
   --canvas:
@@ -63,14 +63,18 @@
   --chart-3: var(--base-700);
   --chart-4: var(--base-400);
   --chart-5: var(--base-600);
-  --sidebar: var(--background);
-  --sidebar-foreground: var(--base-800);
-  --sidebar-primary: var(--base-950);
+  /*
+    The sidebar is a dark floating panel in both themes, like the public site's
+    black header. Light text on it, and brand red marks the current page.
+  */
+  --sidebar: oklch(0.2 0.006 55);
+  --sidebar-foreground: oklch(0.93 0.004 55);
+  --sidebar-primary: var(--brand);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.948 0.004 55);
-  --sidebar-accent-foreground: var(--base-800);
-  --sidebar-border: oklch(0.91 0.005 55);
-  --sidebar-ring: var(--base-950);
+  --sidebar-accent: oklch(1 0 0 / 0.08);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(1 0 0 / 0.1);
+  --sidebar-ring: oklch(1 0 0 / 0.4);
 }
 
 .dark {
@@ -101,14 +105,6 @@
   --chart-3: var(--base-200);
   --chart-4: var(--base-500);
   --chart-5: var(--base-300);
-  --sidebar: var(--base-1000);
-  --sidebar-foreground: var(--base-200);
-  --sidebar-primary: var(--base-50);
-  --sidebar-primary-foreground: var(--base-900);
-  --sidebar-accent: var(--base-900);
-  --sidebar-accent-foreground: var(--base-200);
-  --sidebar-border: var(--base-900);
-  --sidebar-ring: var(--base-500);
 }
 
 @theme inline {

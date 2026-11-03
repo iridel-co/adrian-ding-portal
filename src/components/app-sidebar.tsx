@@ -109,15 +109,15 @@ type AppSidebarProps = {
 export function AppSidebar({ user, crmAccess, closedSections }: AppSidebarProps) {
   const access = useQuery({ ...crmAccessQueryOptions(), initialData: crmAccess ?? undefined });
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar variant="floating" collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-3 px-2 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border bg-card shadow-xs">
-            <img src={logoUrl} alt="Adrian Ding" className="size-8 dark:invert" />
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand shadow-xs">
+            <img src={logoUrl} alt="Adrian Ding" className="size-8 invert" />
           </div>
           <div className="grid leading-tight group-data-[collapsible=icon]:hidden">
             <span className="truncate text-[15px] font-semibold">Adrian Ding</span>
-            <span className="truncate text-xs text-muted-foreground">Admin portal</span>
+            <span className="truncate text-xs text-sidebar-foreground/60">Admin portal</span>
           </div>
         </div>
       </SidebarHeader>
@@ -155,7 +155,7 @@ export function AppSidebar({ user, crmAccess, closedSections }: AppSidebarProps)
                 tooltip="Settings"
                 className={cn(
                   TOP_LEVEL_CLASS,
-                  "[&>svg]:text-muted-foreground data-active:bg-brand data-active:text-brand-foreground data-active:hover:bg-brand/90 data-active:hover:text-brand-foreground data-active:[&>svg]:text-brand-foreground",
+                  "[&>svg]:text-sidebar-foreground/60 data-active:bg-brand data-active:text-brand-foreground data-active:hover:bg-brand/90 data-active:hover:text-brand-foreground data-active:[&>svg]:text-brand-foreground",
                   ICON_ONLY_CLASS
                 )}
               >
@@ -168,7 +168,7 @@ export function AppSidebar({ user, crmAccess, closedSections }: AppSidebarProps)
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border">
+      <SidebarFooter className="rounded-b-2xl border-t border-sidebar-border bg-black/20">
         <UserMenu user={user} />
       </SidebarFooter>
     </Sidebar>
@@ -185,7 +185,7 @@ type NavGroupProps = {
 
 /*
   A section that opens and closes. It stays the way the user left it, even after
-  a reload, and its icon turns brand red when the current page is one of its links.
+  a reload, and its icon lights up when the current page is one of its links.
   When the sidebar shows only icons, the header hides and the links always show.
 */
 function NavGroup({ label, icon: Icon, paths, closedSections, children }: NavGroupProps) {
@@ -201,9 +201,9 @@ function NavGroup({ label, icon: Icon, paths, closedSections, children }: NavGro
       <SidebarMenuItem className="group/collapsible">
         <Collapsible.Trigger asChild>
           <SidebarMenuButton className={cn(TOP_LEVEL_CLASS, "group-data-[collapsible=icon]:hidden")}>
-            <Icon className={holdsCurrentPage ? "text-brand" : "text-muted-foreground"} />
+            <Icon className={holdsCurrentPage ? "text-sidebar-foreground" : "text-sidebar-foreground/60"} />
             <span>{label}</span>
-            <ChevronDown className="ml-auto text-muted-foreground transition-transform group-data-[state=open]/collapsible:rotate-180" />
+            <ChevronDown className="ml-auto text-sidebar-foreground/50 transition-transform group-data-[state=open]/collapsible:rotate-180" />
           </SidebarMenuButton>
         </Collapsible.Trigger>
         <Collapsible.Content forceMount className="data-[state=closed]:hidden group-data-[collapsible=icon]:block!">
@@ -217,8 +217,8 @@ function NavGroup({ label, icon: Icon, paths, closedSections, children }: NavGro
 }
 
 /*
-  One link inside a section. The current page gets a light red tint, or a solid
-  red fill when the sidebar shows only icons. The name shows on hover then.
+  One link inside a section. The current page gets a solid brand red fill.
+  When the sidebar shows only icons, the name shows on hover.
 */
 function NavItem({ title, children }: { title: string; children: ReactNode }) {
   const { state, isMobile } = useSidebar();
@@ -229,9 +229,9 @@ function NavItem({ title, children }: { title: string; children: ReactNode }) {
           <SidebarMenuSubButton
             asChild
             className={cn(
-              "h-9 gap-3 rounded-lg px-3 data-[size=md]:text-[15px] data-active:bg-brand/10 data-active:font-medium data-active:text-brand data-active:hover:bg-brand/15 data-active:hover:text-brand [&>svg]:text-muted-foreground data-active:[&>svg]:text-brand",
+              "h-9 gap-3 rounded-lg px-3 data-[size=md]:text-[15px] [&>svg]:text-sidebar-foreground/60 data-active:bg-brand data-active:font-medium data-active:text-brand-foreground data-active:hover:bg-brand/90 data-active:hover:text-brand-foreground data-active:[&>svg]:text-brand-foreground",
               ICON_ONLY_CLASS,
-              "group-data-[collapsible=icon]:translate-x-0 group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:data-active:bg-brand group-data-[collapsible=icon]:data-active:text-brand-foreground group-data-[collapsible=icon]:data-active:hover:bg-brand/90 group-data-[collapsible=icon]:data-active:[&>svg]:text-brand-foreground"
+              "group-data-[collapsible=icon]:translate-x-0 group-data-[collapsible=icon]:rounded-xl"
             )}
           >
             {children}
@@ -267,9 +267,9 @@ function UserMenu({ user }: { user: SidebarUser }) {
               <UserAvatar user={user} />
               <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                 <span className="truncate font-semibold">{user.name}</span>
-                <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+                <span className="truncate text-xs text-sidebar-foreground/60">{user.email}</span>
               </div>
-              <Ellipsis className="ml-auto text-muted-foreground group-data-[collapsible=icon]:hidden" />
+              <Ellipsis className="ml-auto text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="top" className="min-w-56">
