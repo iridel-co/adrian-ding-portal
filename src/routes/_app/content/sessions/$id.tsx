@@ -13,6 +13,7 @@ import {
   StatusBadge
 } from "@/components/cms/status-badge";
 import { VenueSuggestInput } from "@/components/cms/suggest-input";
+import { PublishChecklist } from "@/components/cms/publish-checklist";
 import { useEditorForm } from "@/components/cms/use-editor-form";
 import {
   AlertDialog,
@@ -39,7 +40,9 @@ import {
   type SessionDetail,
   sessionQueryOptions
 } from "@/features/sessions/functions";
-import { errorMessage, validationError } from "@/features/shared/error-message";
+import { validationError } from "@/features/shared/error-message";
+import { publishChecklist } from "@/features/shared/publish";
+import { SESSION_FIELD_LABELS, sessionOpenSchema } from "@/features/sessions/schemas";
 
 export const Route = createFileRoute("/_app/content/sessions/$id")({
   loader: ({ context, params }) =>
@@ -171,7 +174,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
       toast.success("Status updated.");
       await refresh();
     },
-    onError: (error) => toast.error(errorMessage(error))
+    onError: showErrors
   });
 
   const nextStatuses = allowedSessionTransitions(session.status, {
@@ -215,21 +218,29 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
         onSave={() => save.mutate()}
         preview={previewContent && <PreviewButton content={previewContent} />}
         aside={
-          <FormSection title="Workshop">
-            <Link
-              to="/content/workshops/$id"
-              params={{ id: detail.workshop.id }}
-              className="text-sm font-medium hover:underline"
-            >
-              {detail.workshop.title}
-            </Link>
-            {detail.workshop.status !== "published" && (
-              <p className="text-xs text-muted-foreground">
-                Publish this workshop before you open the session.
-              </p>
+          <>
+            {session.status === "draft" && (
+              <PublishChecklist
+                title="Ready to open"
+                checks={publishChecklist(sessionOpenSchema, values, SESSION_FIELD_LABELS)}
+              />
             )}
-            {detail.isPast && <StatusBadge display={PAST_DISPLAY} />}
-          </FormSection>
+            <FormSection title="Workshop">
+              <Link
+                to="/content/workshops/$id"
+                params={{ id: detail.workshop.id }}
+                className="text-sm font-medium hover:underline"
+              >
+                {detail.workshop.title}
+              </Link>
+              {detail.workshop.status !== "published" && (
+                <p className="text-xs text-muted-foreground">
+                  Publish this workshop before you open the session.
+                </p>
+              )}
+              {detail.isPast && <StatusBadge display={PAST_DISPLAY} />}
+            </FormSection>
+          </>
         }
       >
         <fieldset disabled={isLocked} className="flex flex-col gap-6">

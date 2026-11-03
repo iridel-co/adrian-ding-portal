@@ -18,6 +18,7 @@ import {
 } from "@/components/cms/status-badge";
 import { StringListField } from "@/components/cms/string-list-field";
 import { type PickedTerm, TermMultiPicker } from "@/components/cms/term-picker";
+import { PublishChecklist } from "@/components/cms/publish-checklist";
 import { useEditorForm } from "@/components/cms/use-editor-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,9 @@ import {
   type WorkshopDetail,
   workshopQueryOptions
 } from "@/features/workshops/functions";
-import { errorMessage } from "@/features/shared/error-message";
+import type { FieldAliases } from "@/features/shared/error-message";
+import { publishChecklist } from "@/features/shared/publish";
+import { WORKSHOP_FIELD_LABELS, workshopPublishSchema } from "@/features/workshops/schemas";
 
 export const Route = createFileRoute("/_app/content/workshops/$id")({
   loader: ({ context, params }) =>
@@ -63,6 +66,11 @@ type WorkshopForm = {
   inclusions: string[];
   whatToExpect: string[];
   tags: PickedTerm[];
+};
+
+const FIELD_ALIASES: FieldAliases = {
+  heroMediaId: "heroMedia",
+  tagIds: "tags"
 };
 
 function toForm(detail: WorkshopDetail): WorkshopForm {
@@ -111,7 +119,10 @@ function WorkshopEditorPage() {
 function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
   const queryClient = useQueryClient();
   const { workshop } = detail;
-  const { values, setField, isDirty, markSaved, errors } = useEditorForm(toForm(detail));
+  const { values, setField, isDirty, markSaved, errors } = useEditorForm(
+    toForm(detail),
+    FIELD_ALIASES
+  );
   const { fieldErrors, generalErrors, showErrors } = errors;
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["workshops"] });
 
@@ -132,7 +143,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       toast.success("Status updated.");
       await refresh();
     },
-    onError: (error) => toast.error(errorMessage(error))
+    onError: showErrors
   });
 
   const statusActions: StatusAction[] = CONTENT_STATUS_ACTIONS[workshop.status].map((action) => ({
@@ -176,13 +187,23 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       preview={<PreviewButton content={previewContent} />}
       aside={
         <>
-          <FormSection title="Hero image">
+          {workshop.status === "draft" && (
+            <PublishChecklist
+              title="Ready to publish"
+              checks={publishChecklist(
+                workshopPublishSchema,
+                toSaveInput(values),
+                WORKSHOP_FIELD_LABELS
+              )}
+            />
+          )}
+          <FormSection title="Hero image" errors={fieldErrors.heroMedia}>
             <MediaField
               value={values.heroMedia}
               onChange={(media) => setField("heroMedia", media)}
             />
           </FormSection>
-          <FormSection title="Tags">
+          <FormSection title="Tags" errors={fieldErrors.tags}>
             <TermMultiPicker
               kind="workshop_tag"
               value={values.tags}

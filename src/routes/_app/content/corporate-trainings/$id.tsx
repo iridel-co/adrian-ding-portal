@@ -11,6 +11,7 @@ import { PreviewButton } from "@/components/cms/preview-dialog";
 import { SlugField } from "@/components/cms/slug-field";
 import { CONTENT_STATUS_DISPLAY } from "@/components/cms/status-badge";
 import { StringListField } from "@/components/cms/string-list-field";
+import { PublishChecklist } from "@/components/cms/publish-checklist";
 import { useEditorForm } from "@/components/cms/use-editor-form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,10 +21,16 @@ import {
   type ProgramDetail,
   programQueryOptions
 } from "@/features/corporate-trainings/functions";
-import { SUMMARY_MAX_LENGTH, USEFUL_FOR_MAX_ITEMS } from "@/features/corporate-trainings/schemas";
+import {
+  PROGRAM_FIELD_LABELS,
+  programPublishSchema,
+  SUMMARY_MAX_LENGTH,
+  USEFUL_FOR_MAX_ITEMS
+} from "@/features/corporate-trainings/schemas";
 import { buildProgramRowPreview, type PreviewContent } from "@/features/preview/model";
 import { CONTENT_STATUS_ACTIONS, type ContentStatus } from "@/features/shared/content-status";
-import { errorMessage } from "@/features/shared/error-message";
+import type { FieldAliases } from "@/features/shared/error-message";
+import { publishChecklist } from "@/features/shared/publish";
 
 export const Route = createFileRoute("/_app/content/corporate-trainings/$id")({
   loader: ({ context, params }) =>
@@ -38,6 +45,10 @@ type ProgramForm = {
   summary: string;
   image: PickedMedia | null;
   usefulFor: string[];
+};
+
+const FIELD_ALIASES: FieldAliases = {
+  imageMediaId: "image"
 };
 
 function toForm(detail: ProgramDetail): ProgramForm {
@@ -68,7 +79,10 @@ function ProgramEditorPage() {
 function ProgramEditor({ detail }: { detail: ProgramDetail }) {
   const queryClient = useQueryClient();
   const { program } = detail;
-  const { values, setField, isDirty, markSaved, errors } = useEditorForm(toForm(detail));
+  const { values, setField, isDirty, markSaved, errors } = useEditorForm(
+    toForm(detail),
+    FIELD_ALIASES
+  );
   const { fieldErrors, generalErrors, showErrors } = errors;
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["programs"] });
 
@@ -88,7 +102,7 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
       toast.success("Status updated.");
       await refresh();
     },
-    onError: (error) => toast.error(errorMessage(error))
+    onError: showErrors
   });
 
   const statusActions: StatusAction[] = CONTENT_STATUS_ACTIONS[program.status].map((action) => ({
@@ -129,9 +143,21 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
       onSave={() => save.mutate()}
       preview={<PreviewButton content={previewContent} />}
       aside={
-        <FormSection title="Card image">
-          <MediaField value={values.image} onChange={(media) => setField("image", media)} />
-        </FormSection>
+        <>
+          {program.status === "draft" && (
+            <PublishChecklist
+              title="Ready to publish"
+              checks={publishChecklist(
+                programPublishSchema,
+                toSaveInput(values),
+                PROGRAM_FIELD_LABELS
+              )}
+            />
+          )}
+          <FormSection title="Card image" errors={fieldErrors.image}>
+            <MediaField value={values.image} onChange={(media) => setField("image", media)} />
+          </FormSection>
+        </>
       }
     >
       <FormSection title="Basics">
