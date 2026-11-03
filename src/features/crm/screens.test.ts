@@ -90,7 +90,7 @@ describe("Staff inquiry screens", () => {
   it("shows every submitted requirement, date range, and provider acceptance with escaped customer text", () => {
     harness.result.data = inquiry;
     const html = render(DetailRoute);
-    for (const text of ["HR manager", "maya@company.test", "Manila", "Jan 12, 2027", "Jan 14, 2027", "Coaching", "Customer acknowledgement", "Staff notification", "Accepted by email provider"]) expect(html).toContain(text);
+    for (const text of ["HR manager", "maya@company.test", "Manila", "Jan 12, 2027", "Jan 14, 2027", "Coaching", "Customer Acknowledgement", "Staff Notification", "Accepted by email provider"]) expect(html).toContain(text);
     expect(html).toContain("&lt;script&gt;untrusted&lt;/script&gt;");
     expect(html).not.toContain("<script>untrusted</script>");
     expect(html.match(/>Retry email</g)).toHaveLength(1);

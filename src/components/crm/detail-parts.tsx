@@ -2,7 +2,7 @@ import { cn } from "cn";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 /*
   The top of a detail page: a breadcrumb, the name, a short line under it and
@@ -38,22 +38,29 @@ export function Fact({ icon: Icon, label, children }: { icon: LucideIcon; label:
   );
 }
 
-/* A white card with an icon and title. Put InfoRows inside an InfoList. */
-export function InfoCard({ icon: Icon, title, className, children }: {
+/*
+  A white card with an icon and title. Put InfoRows inside an InfoList.
+  Write titles in Title Case, e.g. "Training Request", not "Training request".
+  Use flush to let a table run edge to edge under the header.
+*/
+export function InfoCard({ icon: Icon, title, description, flush = false, className, children }: {
   icon: LucideIcon;
   title: string;
+  description?: ReactNode;
+  flush?: boolean;
   className?: string;
   children: ReactNode;
 }) {
   return (
-    <Card className={className}>
+    <Card className={cn(flush && "pb-0", className)}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-semibold">
           <span className="flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground"><Icon className="size-4" /></span>
           {title}
         </CardTitle>
+        {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
-      <CardContent>{children}</CardContent>
+      <CardContent className={cn(flush && "px-0")}>{children}</CardContent>
     </Card>
   );
 }

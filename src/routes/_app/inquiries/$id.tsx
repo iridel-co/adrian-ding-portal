@@ -104,7 +104,8 @@ function InquiryDetail({ id }: { id: string }) {
       <p className="text-xs text-muted-foreground">All times are in Manila. The first reply is due two weekdays after the inquiry arrives.</p>
 
       <TabsContent value="details" forceMount className={TAB_PANEL}>
-        <div className="mt-3 grid items-start gap-6 lg:grid-cols-2">
+        {/* No items-start: the two cards stretch to the taller one, so they always match. */}
+        <div className="mt-3 grid gap-6 lg:grid-cols-2">
           <InfoCard icon={Contact} title="Contact">
             <InfoList>
               <InfoRow icon={UserRound} label="Name">{inquiry.fullName}</InfoRow>
@@ -113,7 +114,7 @@ function InquiryDetail({ id }: { id: string }) {
               <InfoRow icon={Phone} label="Phone"><a className="text-brand underline-offset-4 hover:underline" href={`tel:${inquiry.phone}`}>{inquiry.phone}</a></InfoRow>
             </InfoList>
           </InfoCard>
-          <InfoCard icon={GraduationCap} title="Training request">
+          <InfoCard icon={GraduationCap} title="Training Request">
             <InfoList>
               <InfoRow icon={Presentation} label="Programme"><ProgramChip program={inquiry.program} /></InfoRow>
               <InfoRow icon={Users} label="Attendees">{inquiry.attendees}</InfoRow>
@@ -133,8 +134,9 @@ function InquiryDetail({ id }: { id: string }) {
       </TabsContent>
 
       <TabsContent value="history" forceMount className={TAB_PANEL}>
-        <div className="mt-3 grid items-start gap-6 lg:grid-cols-[1fr_24rem]">
-          <InfoCard icon={HistoryIcon} title="Activity">
+        <div className="mt-3 flex flex-col gap-6">
+          <InquiryEmails inquiryId={inquiry.id} jobs={inquiry.emailJobs} />
+          <InfoCard icon={HistoryIcon} title="Activity" description="What staff recorded on this inquiry, newest first.">
             {inquiry.history.length === 0 && offset === 0 && <p className="mb-5 text-sm text-muted-foreground">No staff actions yet. Use the buttons at the top to record progress.</p>}
             <ol>
               {inquiry.history.map(entry => <HistoryEntry key={entry.id} entry={entry} />)}
@@ -146,7 +148,6 @@ function InquiryDetail({ id }: { id: string }) {
               <Button size="sm" variant="outline" disabled={!inquiry.historyHasMore || result.isFetching || offset >= 100000} onClick={() => setOffset(offset + 20)}>Older history</Button>
             </div>}
           </InfoCard>
-          <InquiryEmails inquiryId={inquiry.id} jobs={inquiry.emailJobs} />
         </div>
       </TabsContent>
     </Tabs>

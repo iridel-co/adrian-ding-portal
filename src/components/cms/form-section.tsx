@@ -15,6 +15,7 @@ export function FieldErrors({ errors }: { errors: string[] }) {
   );
 }
 
+/* A titled card for one group of form fields. Write titles in Title Case, e.g. "Date and Time". */
 export function FormSection({
   title,
   description,

@@ -147,7 +147,7 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
         <>
           {program.status === "draft" && (
             <PublishChecklist
-              title="Ready to publish"
+              title="Ready to Publish"
               checks={publishChecklist(
                 programPublishSchema,
                 toSaveInput(values),
@@ -155,7 +155,7 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
               )}
             />
           )}
-          <FormSection title="Card image" errors={fieldErrors.image}>
+          <FormSection title="Card Image" errors={fieldErrors.image}>
             <MediaField value={values.image} onChange={(media) => setField("image", media)} />
           </FormSection>
         </>

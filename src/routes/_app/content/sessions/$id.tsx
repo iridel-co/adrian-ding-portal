@@ -222,7 +222,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
           <>
             {session.status === "draft" && (
               <PublishChecklist
-                title="Ready to open"
+                title="Ready to Open"
                 checks={publishChecklist(sessionOpenSchema, values, SESSION_FIELD_LABELS)}
               />
             )}
@@ -245,7 +245,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
         }
       >
         <fieldset disabled={isLocked} className="flex flex-col gap-6">
-          <FormSection title="Date and time" description="All times are Manila time.">
+          <FormSection title="Date and Time" description="All times are Manila time.">
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="First day" htmlFor="date" errors={fieldErrors.date}>
                 <Input
@@ -338,7 +338,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
             </Field>
           </FormSection>
 
-          <FormSection title="Price and seats">
+          <FormSection title="Price and Seats">
             <div className="grid gap-5 sm:grid-cols-3">
               <Field label="Price" htmlFor="price" errors={fieldErrors.priceCentavos}>
                 <MoneyField

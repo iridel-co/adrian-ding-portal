@@ -156,7 +156,7 @@ function SeatsCard({ run }: { run: Run }) {
   const share = (count: number) => capacity > 0 ? Math.min(100, Math.max(0, count / capacity * 100)) : 0;
   const paidShare = share(counts.paid);
   const reservedShare = share(counts.reserved);
-  return <InfoCard icon={Armchair} title="Reserved seats"><div className="flex flex-col gap-6">
+  return <InfoCard icon={Armchair} title="Reserved Seats"><div className="flex flex-col gap-6">
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-4xl font-semibold tracking-tight tabular-nums">{counts.reserved} / {capacity} <span className="text-base font-normal tracking-normal text-muted-foreground">seats reserved</span></p>
@@ -192,7 +192,7 @@ function Stat({ icon: Icon, tone, label, value }: { icon: LucideIcon; tone: stri
 }
 
 function DetailsCard({ run }: { run: Run }) {
-  return <InfoCard icon={BookOpen} title="Workshop details"><InfoList>
+  return <InfoCard icon={BookOpen} title="Workshop Details"><InfoList>
     <InfoRow icon={BookOpen} label="Workshop">{run.workshopTitle}</InfoRow>
     <InfoRow icon={Hash} label="Course code">{run.courseCode ? displayCourseCode(run.courseCode) : "Not set"}</InfoRow>
     <InfoRow icon={CalendarDays} label="Dates">{formatDateRange(run.date, run.endDate)}</InfoRow>

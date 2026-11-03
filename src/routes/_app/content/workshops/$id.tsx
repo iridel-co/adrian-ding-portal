@@ -194,7 +194,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
         <>
           {workshop.status === "draft" && (
             <PublishChecklist
-              title="Ready to publish"
+              title="Ready to Publish"
               checks={publishChecklist(
                 workshopPublishSchema,
                 toSaveInput(values),
@@ -202,7 +202,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
               )}
             />
           )}
-          <FormSection title="Hero image" errors={fieldErrors.heroMedia}>
+          <FormSection title="Hero Image" errors={fieldErrors.heroMedia}>
             <MediaField
               value={values.heroMedia}
               onChange={(media) => setField("heroMedia", media)}
@@ -312,7 +312,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
         />
       </FormSection>
 
-      <FormSection title="Audience and format">
+      <FormSection title="Audience and Format">
         <Field label="Who it's for" htmlFor="audience" errors={fieldErrors.audience}>
           <Textarea
             id="audience"
@@ -331,7 +331,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
         </Field>
       </FormSection>
 
-      <FormSection title="Primer video">
+      <FormSection title="Primer Video">
         <Field
           label="Video link"
           htmlFor="primerVideoUrl"
@@ -437,7 +437,7 @@ type UpcomingSessionsProps = {
 
 function UpcomingSessions({ workshopId, sessions }: UpcomingSessionsProps) {
   return (
-    <FormSection title="Upcoming sessions">
+    <FormSection title="Upcoming Sessions">
       {sessions.length === 0 ? (
         <EmptyState icon={CalendarDays} className="py-6 shadow-none">
           No upcoming sessions.
