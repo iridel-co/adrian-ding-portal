@@ -85,7 +85,7 @@ export function RegistrationPaymentEmail({ registrant, course, session, account,
       <EmailAmount label="Amount to pay" amount={formatPesos(registrant.priceCentavos)} />
       <EmailDetails rows={[["Pay to", account.providerName], ["Account name", account.accountName],
         ["Account number", account.accountNumber], ["Payment reference", registrant.reference]]} />
-      <Img src={qrUrl} alt="Payment QR code" width="180" style={{ display: "block", margin: "0 auto 18px", maxWidth: "100%", height: "auto" }} />
+      <Img src={qrUrl} alt="Payment QR code" width="512" style={{ display: "block", margin: "0 auto 18px", width: "100%", maxWidth: "360px", height: "auto" }} />
       <EmailParagraph>The payment QR is also attached. Reply to this email with your registration reference and a photo or screenshot of your payment proof.</EmailParagraph>
       <EmailParagraph>Our staff will check the payment and send an acknowledgment once it is marked Paid.</EmailParagraph>
       <EmailButton href={course.primerVideoUrl!}>Watch the workshop primer</EmailButton>
