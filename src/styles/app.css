@@ -64,16 +64,16 @@
   --chart-4: var(--base-400);
   --chart-5: var(--base-600);
   /*
-    The sidebar is a dark floating panel in both themes, like the public site's
-    black header. Light text on it, and brand red marks the current page.
+    The sidebar is a deep red floating panel in both themes, darker than the
+    brand red buttons. Light text on it, and a white pill marks the current page.
   */
-  --sidebar: oklch(0.2 0.006 55);
-  --sidebar-foreground: oklch(0.93 0.004 55);
+  --sidebar: oklch(0.28 0.09 24);
+  --sidebar-foreground: oklch(0.95 0.012 24);
   --sidebar-primary: var(--brand);
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(1 0 0 / 0.08);
   --sidebar-accent-foreground: oklch(1 0 0);
-  --sidebar-border: oklch(1 0 0 / 0.1);
+  --sidebar-border: oklch(1 0 0 / 0.12);
   --sidebar-ring: oklch(1 0 0 / 0.4);
 }
 

@@ -112,7 +112,7 @@ export function AppSidebar({ user, crmAccess, closedSections }: AppSidebarProps)
     <Sidebar variant="floating" collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-3 px-2 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand shadow-xs">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/10 shadow-xs ring-1 ring-white/15">
             <img src={logoUrl} alt="Adrian Ding" className="size-8 invert" />
           </div>
           <div className="grid leading-tight group-data-[collapsible=icon]:hidden">
@@ -148,14 +148,14 @@ export function AppSidebar({ user, crmAccess, closedSections }: AppSidebarProps)
         <Divider className="mt-auto" />
         <SidebarGroup>
           <SidebarMenu>
-            {/* A link on its own gets a solid brand red fill when it's the current page. */}
+            {/* A link on its own gets a white fill when it's the current page. */}
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
                 tooltip="Settings"
                 className={cn(
                   TOP_LEVEL_CLASS,
-                  "[&>svg]:text-sidebar-foreground/60 data-active:bg-brand data-active:text-brand-foreground data-active:hover:bg-brand/90 data-active:hover:text-brand-foreground data-active:[&>svg]:text-brand-foreground",
+                  "[&>svg]:text-sidebar-foreground/60 data-active:bg-white data-active:text-brand data-active:hover:bg-white/90 data-active:hover:text-brand data-active:[&>svg]:text-brand",
                   ICON_ONLY_CLASS
                 )}
               >
@@ -217,7 +217,7 @@ function NavGroup({ label, icon: Icon, paths, closedSections, children }: NavGro
 }
 
 /*
-  One link inside a section. The current page gets a solid brand red fill.
+  One link inside a section. The current page gets a white fill with red text.
   When the sidebar shows only icons, the name shows on hover.
 */
 function NavItem({ title, children }: { title: string; children: ReactNode }) {
@@ -229,7 +229,7 @@ function NavItem({ title, children }: { title: string; children: ReactNode }) {
           <SidebarMenuSubButton
             asChild
             className={cn(
-              "h-9 gap-3 rounded-lg px-3 data-[size=md]:text-[15px] [&>svg]:text-sidebar-foreground/60 data-active:bg-brand data-active:font-medium data-active:text-brand-foreground data-active:hover:bg-brand/90 data-active:hover:text-brand-foreground data-active:[&>svg]:text-brand-foreground",
+              "h-9 gap-3 rounded-lg px-3 data-[size=md]:text-[15px] [&>svg]:text-sidebar-foreground/60 data-active:bg-white data-active:font-medium data-active:text-brand data-active:hover:bg-white/90 data-active:hover:text-brand data-active:[&>svg]:text-brand",
               ICON_ONLY_CLASS,
               "group-data-[collapsible=icon]:translate-x-0 group-data-[collapsible=icon]:rounded-xl"
             )}
