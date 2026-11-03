@@ -29,6 +29,10 @@
 
   --radius: 0.375rem;
 
+  /* Brand red, used for main actions and "you are here" states. */
+  --brand: #980f09;
+  --brand-foreground: #fafafa;
+
   --background: oklch(1 0 0);
   --foreground: var(--base-800);
   --card: oklch(1 0 0);
@@ -63,6 +67,9 @@
 }
 
 .dark {
+  /* The deep brand red is too dark to read on a dark background. */
+  --brand: #d6372b;
+
   --background: var(--base-950);
   --foreground: var(--base-200);
   --card: var(--base-950);

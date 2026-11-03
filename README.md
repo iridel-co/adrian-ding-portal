@@ -181,7 +181,7 @@ With Workers Builds (Git integration), use build command `pnpm build:cf` and dep
 ## Adding pages
 
 1. Add a route file in `src/routes/_app/` (everything in there requires sign-in)
-2. Add it to `NAV_ITEMS` in `src/components/app-sidebar.tsx`
+2. Add it to a group in `src/components/app-sidebar.tsx`
 
 Add shadcn components with `pnpm dlx shadcn@latest add <name>`.
 

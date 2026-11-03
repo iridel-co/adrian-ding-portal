@@ -27,7 +27,9 @@ vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: object) => ({ options, useSearch: () => harness.search, useNavigate: () => harness.navigate }),
   Link: ({ children, to }: { children: ReactNode; to: string }) => createElement("a", { href: to }, children),
   Outlet: () => null,
-  useRouter: () => ({ navigate: harness.navigate })
+  useRouter: () => ({ navigate: harness.navigate }),
+  useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => unknown }) =>
+    select({ location: { pathname: "/" } })
 }));
 vi.mock("@/lib/auth-client", () => ({ authClient: { signOut: vi.fn() } }));
 import { Route as GuardRoute } from "@/routes/_app/registrations";
