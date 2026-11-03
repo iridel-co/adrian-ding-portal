@@ -30,7 +30,8 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
+  tableRowLinkClass
 } from "@/components/ui/table";
 import { errorMessage } from "@/features/shared/error-message";
 import { formatDate } from "@/features/shared/format";
@@ -151,7 +152,7 @@ function WorkshopsPage() {
                       <Link
                         to="/content/workshops/$id"
                         params={{ id: item.id }}
-                        className="font-semibold hover:text-brand"
+                        className={tableRowLinkClass}
                       >
                         {item.title}
                       </Link>

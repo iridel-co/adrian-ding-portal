@@ -18,7 +18,7 @@ import { RegistrationAction } from "@/features/crm/registration-staff-schemas";
 import { RegistrationStatus } from "@/components/crm/registration-status";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, tableRowLinkClass } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { $listRegistrations } from "@/features/crm/functions";
 import { formatCrmTime, isCrmAccessError } from "@/features/crm/presentation";
@@ -174,12 +174,12 @@ function RegistrationRows({ items, search }: { items: RegistrationRow[]; search:
       )}<TableHead>Actions</TableHead>
     </TableRow></TableHeader>
     <TableBody>{items.map(item => <TableRow key={item.id}>
-      <TableCell><Checkbox aria-label={`Select ${item.reference}`} disabled={item.isPaid || !!item.cancelledAt}
+      <TableCell className="relative z-10"><Checkbox aria-label={`Select ${item.reference}`} disabled={item.isPaid || !!item.cancelledAt}
         checked={chosen.some(row => row.id === item.id)} onCheckedChange={checked => toggle(item.id, checked === true)} /></TableCell>
-      <TableCell className="whitespace-normal"><Link to="/registrations/$id" params={{ id: item.id }} search={search} className="font-semibold hover:text-brand">{item.fullName}</Link><p className="mt-0.5 break-all text-muted-foreground">{item.email}</p><p className="text-xs text-muted-foreground">{item.phone}</p></TableCell>
+      <TableCell className="whitespace-normal"><Link to="/registrations/$id" params={{ id: item.id }} search={search} className={tableRowLinkClass}>{item.fullName}</Link><p className="mt-0.5 break-all text-muted-foreground">{item.email}</p><p className="text-xs text-muted-foreground">{item.phone}</p></TableCell>
       <TableCell><RegistrationStatus isPaid={item.isPaid} cancelledAt={item.cancelledAt} /></TableCell>
       <TableCell className="tabular-nums">{formatPesos(item.priceCentavos)}</TableCell><TableCell className="text-muted-foreground">{formatCrmTime(item.createdAt)}</TableCell>
-      <TableCell>{!item.isPaid && !item.cancelledAt && <div className="flex gap-2">
+      <TableCell className="relative z-10">{!item.isPaid && !item.cancelledAt && <div className="flex gap-2">
         <Button size="sm" variant="outline" aria-label={`Mark ${item.reference} Paid`}
           onClick={() => setBatch({ items: [item], action: RegistrationAction.MarkPaid })}>Mark Paid</Button>
         <Button size="sm" variant="outline" aria-label={`Cancel ${item.reference}`}

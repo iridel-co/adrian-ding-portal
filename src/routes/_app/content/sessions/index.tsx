@@ -16,7 +16,7 @@ import { nextSort } from "@/components/table/sort-search";
 import { SortableTableHead } from "@/components/table/sortable-table-head";
 import { TableSkeleton } from "@/components/table/table-skeleton";
 import { TablePagination } from "@/components/table/table-pagination";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow, tableRowLinkClass } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sessionStatus } from "@/db/schema";
 import { errorMessage } from "@/features/shared/error-message";
@@ -195,7 +195,7 @@ function SessionList() {
                       <Link
                         to="/content/sessions/$id"
                         params={{ id: session.id }}
-                        className="font-semibold hover:text-brand"
+                        className={tableRowLinkClass}
                       >
                         {formatDateRange(session.date, session.endDate)}
                       </Link>

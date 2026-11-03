@@ -50,12 +50,20 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
   )
 }
 
+/*
+  Put this on the main link in a row. The link stretches over the whole row,
+  so a click anywhere in the row opens it (and Cmd-click still opens a new tab).
+  Buttons or checkboxes in the same row need "relative z-10" to stay clickable.
+*/
+const tableRowLinkClass =
+  "font-semibold after:absolute after:inset-0 hover:text-brand focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring/50 focus-visible:after:ring-inset"
+
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b transition-colors hover:bg-muted/40 has-aria-expanded:bg-muted/40 data-[state=selected]:bg-muted",
+        "relative border-b transition-colors hover:bg-muted/40 has-aria-expanded:bg-muted/40 data-[state=selected]:bg-muted",
         className
       )}
       {...props}
@@ -111,4 +119,5 @@ export {
   TableRow,
   TableCell,
   TableCaption,
+  tableRowLinkClass,
 }

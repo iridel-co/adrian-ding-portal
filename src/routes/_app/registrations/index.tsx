@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow, tableRowLinkClass } from "@/components/ui/table";
 import { paginationSearchSchema } from "@/features/shared/pagination";
 import { registrationErrorMessage } from "@/features/crm/registration-presentation";
 import { registrationSessionsQueryOptions } from "@/features/crm/registration-queries";
@@ -79,7 +79,7 @@ function RegistrationRunsPage() {
             <TableCell className="whitespace-normal">
               <Link to="/registrations/sessions/$sessionId" params={{ sessionId: run.id }}
                 search={{ tab: "overview", filter: "active", search: "", offset: 0, runWhen: search.when, runStatus: search.status, runOffset: search.offset, runLimit: search.limit, runSort: search.sort, runDirection: search.direction }}
-                className="font-semibold hover:text-brand">{run.workshopTitle}</Link>
+                className={tableRowLinkClass}>{run.workshopTitle}</Link>
               <p className="mt-0.5 text-muted-foreground">{run.courseCode || "No course code"}</p>
             </TableCell>
             <TableCell>

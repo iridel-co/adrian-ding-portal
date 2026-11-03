@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { cn } from "cn";
 import { Briefcase, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -21,6 +22,7 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { tableRowLinkClass } from "@/components/ui/table";
 import {
   $createProgram,
   $reorderPrograms,
@@ -96,11 +98,11 @@ function ProgramsPage() {
 
 function ProgramRow({ program }: { program: ProgramListItem }) {
   return (
-    <div className="flex items-center gap-4 rounded-xl border bg-card px-4 py-3 shadow-xs">
+    <div className="relative flex items-center gap-4 rounded-xl border bg-card px-4 py-3 shadow-xs transition-colors hover:bg-muted/40">
       <Link
         to="/content/corporate-trainings/$id"
         params={{ id: program.id }}
-        className="min-w-0 flex-1 truncate font-semibold hover:text-brand"
+        className={cn("min-w-0 flex-1 truncate after:rounded-xl", tableRowLinkClass)}
       >
         {program.title}
       </Link>
