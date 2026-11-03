@@ -11,8 +11,8 @@ vi.mock("@tanstack/react-query", async original => ({
   useQueryClient: () => ({ invalidateQueries: harness.invalidate }),
   useMutation: () => ({ isPending: false, error: harness.mutationError, reset: vi.fn(), mutate: harness.mutate })
 }));
-vi.mock("@/components/crm/sortable-table-head", async original => {
-  const actual = await original<typeof import("@/components/crm/sortable-table-head")>();
+vi.mock("@/components/table/sortable-table-head", async original => {
+  const actual = await original<typeof import("@/components/table/sortable-table-head")>();
   return { SortableTableHead: (props: Parameters<typeof actual.SortableTableHead>[0]) => {
     harness.headers.push(props);
     return actual.SortableTableHead(props);

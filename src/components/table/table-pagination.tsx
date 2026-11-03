@@ -1,22 +1,22 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { crmPageSizes } from "@/features/crm/pagination";
+import { pageSizes } from "@/features/shared/pagination";
 
-type CrmTablePaginationProps = {
+type TablePaginationProps = {
   limit: number; offset: number; count: number; hasMore: boolean; fetching: boolean;
   onChange: (page: { limit: number; offset: number }) => void;
 };
 
-export function CrmTablePagination({ limit, offset, count, hasMore, fetching, onChange }: CrmTablePaginationProps) {
+export function TablePagination({ limit, offset, count, hasMore, fetching, onChange }: TablePaginationProps) {
   return <nav aria-label="Table pagination" className="flex flex-wrap items-center justify-end gap-3 border-t pt-4 text-sm">
     <span className="text-muted-foreground">Rows per page:</span>
     <Select value={String(limit)} disabled={fetching} onValueChange={value => {
-      const size = crmPageSizes.find(size => String(size) === value);
+      const size = pageSizes.find(size => String(size) === value);
       if (size) onChange({ limit: size, offset: 0 });
     }}>
       <SelectTrigger aria-label="Rows per page" className="w-20" size="sm"><SelectValue /></SelectTrigger>
-      <SelectContent>{crmPageSizes.map(size => <SelectItem key={size} value={String(size)}>{size}</SelectItem>)}</SelectContent>
+      <SelectContent>{pageSizes.map(size => <SelectItem key={size} value={String(size)}>{size}</SelectItem>)}</SelectContent>
     </Select>
     <p className="min-w-20 text-center tabular-nums text-muted-foreground" aria-live="polite" aria-label={`Page ${Math.floor(offset / limit) + 1}`}>
       {count ? `${offset + 1}–${offset + count}` : "0 results"}

@@ -1,9 +1,9 @@
-import { SortableTableHead } from "@/components/crm/sortable-table-head";
+import { SortableTableHead } from "@/components/table/sortable-table-head";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ContentListPage, EmptyState, FilterSelect } from "@/components/cms/content-list-page";
-import { CrmTablePagination } from "@/components/crm/table-pagination";
+import { TablePagination } from "@/components/table/table-pagination";
 import { CrmReadState } from "@/components/crm/read-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,7 +51,7 @@ function InquiriesPage() {
           <TableCell>{formatCrmTime(item.slaDueAt)}{isInquiryOverdue(item) && <p className="mt-1 font-medium text-destructive">Overdue</p>}</TableCell>
         </TableRow>)}</TableBody>
       </Table>}
-      <CrmTablePagination limit={search.limit} offset={search.offset} count={inquiries.data.items.length}
+      <TablePagination limit={search.limit} offset={search.offset} count={inquiries.data.items.length}
         hasMore={inquiries.data.hasMore} fetching={inquiries.isFetching}
         onChange={page => void navigate({ search: { ...search, ...page } })} />
     </>}

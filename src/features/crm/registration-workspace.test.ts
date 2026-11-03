@@ -19,8 +19,8 @@ vi.mock("@tanstack/react-query", async original => ({
     return options.queryKey[1] === "session" ? harness.summary : harness.list;
   }
 }));
-vi.mock("@/components/crm/sortable-table-head", async original => {
-  const actual = await original<typeof import("@/components/crm/sortable-table-head")>();
+vi.mock("@/components/table/sortable-table-head", async original => {
+  const actual = await original<typeof import("@/components/table/sortable-table-head")>();
   return { SortableTableHead: (props: Parameters<typeof actual.SortableTableHead>[0]) => {
     harness.headers.push(props);
     return actual.SortableTableHead(props);
@@ -32,7 +32,7 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: ReactNode; to: string }) => createElement("a", { href: to }, children)
 }));
 import { Route } from "@/routes/_app/registrations/sessions/$sessionId";
-import { CrmTablePagination } from "@/components/crm/table-pagination";
+import { TablePagination } from "@/components/table/table-pagination";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/tabs";
 import { registrationSessionQueryOptions, registrationsQueryOptions } from "./registration-queries";
@@ -60,8 +60,8 @@ function find(node: ReactNode, type: unknown, label?: string): ReactElement<Reco
   for (const child of Children.toArray(node)) {
     if (!isValidElement<Record<string, unknown>>(child)) continue;
     if (child.type === type && (!label || child.props.children === label || child.props["aria-label"] === `${label} page`)) return child;
-    if (child.type === CrmTablePagination) {
-      const found = find(CrmTablePagination(child.props as Parameters<typeof CrmTablePagination>[0]), type, label);
+    if (child.type === TablePagination) {
+      const found = find(TablePagination(child.props as Parameters<typeof TablePagination>[0]), type, label);
       if (found) return found;
     }
     const result = find(child.props.children as ReactNode, type, label);
@@ -213,7 +213,7 @@ describe("Workshop workspace", () => {
     expect(harness.query.mock.calls[1][0].queryKey[2]).toEqual({
       workshopSessionId: sessionId, filter: "paid", search: "Alice", offset: 20, limit: 10
     });
-    const controls = find(page, CrmTablePagination)!;
+    const controls = find(page, TablePagination)!;
     (controls.props.onChange as (value: object) => void)({ limit: 25, offset: 0 });
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, limit: 25, offset: 0 } });
   });

@@ -16,8 +16,8 @@ vi.mock("@tanstack/react-query", async original => ({
   useQuery: (options: unknown) => { harness.query(options); return harness.result; },
   useQueryClient: () => ({ clear: vi.fn() })
 }));
-vi.mock("@/components/crm/sortable-table-head", async original => {
-  const actual = await original<typeof import("@/components/crm/sortable-table-head")>();
+vi.mock("@/components/table/sortable-table-head", async original => {
+  const actual = await original<typeof import("@/components/table/sortable-table-head")>();
   return { SortableTableHead: (props: Parameters<typeof actual.SortableTableHead>[0]) => {
     harness.headers.push(props);
     return actual.SortableTableHead(props);
@@ -34,7 +34,7 @@ import { Route as GuardRoute } from "@/routes/_app/registrations";
 import { Route as ListRoute } from "@/routes/_app/registrations/index";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { CrmTablePagination } from "@/components/crm/table-pagination";
+import { TablePagination } from "@/components/table/table-pagination";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Tabs } from "@/components/ui/tabs";
@@ -63,8 +63,8 @@ function findButton(node: ReactNode, label: string): ReactElement<Record<string,
   for (const child of Children.toArray(node)) {
     if (!isValidElement<Record<string, unknown>>(child)) continue;
     if (child.type === Button && (child.props.children === label || child.props["aria-label"] === `${label} page`)) return child;
-    if (child.type === CrmTablePagination) {
-      const found = findButton(CrmTablePagination(child.props as Parameters<typeof CrmTablePagination>[0]), label);
+    if (child.type === TablePagination) {
+      const found = findButton(TablePagination(child.props as Parameters<typeof TablePagination>[0]), label);
       if (found) return found;
     }
     const found = findButton(child.props.children as ReactNode, label);

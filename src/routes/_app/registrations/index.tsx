@@ -1,8 +1,8 @@
-import { SortableTableHead } from "@/components/crm/sortable-table-head";
+import { SortableTableHead } from "@/components/table/sortable-table-head";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
-import { CrmTablePagination } from "@/components/crm/table-pagination";
+import { TablePagination } from "@/components/table/table-pagination";
 import { ContentListPage, EmptyState } from "@/components/cms/content-list-page";
 import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { CrmReadState } from "@/components/crm/read-state";
@@ -11,14 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import { crmPaginationSearchSchema } from "@/features/crm/pagination";
+import { paginationSearchSchema } from "@/features/shared/pagination";
 import { registrationErrorMessage } from "@/features/crm/registration-presentation";
 import { registrationSessionsQueryOptions } from "@/features/crm/registration-queries";
 import { registrationSessionListSchema } from "@/features/crm/registration-staff-schemas";
 import { formatDateRange, formatTimeRange } from "@/features/shared/format";
 import { hasSessionEnded } from "@/features/shared/time";
 
-const searchSchema = registrationSessionListSchema.pick({ when: true, status: true, sort: true, direction: true }).and(crmPaginationSearchSchema);
+const searchSchema = registrationSessionListSchema.pick({ when: true, status: true, sort: true, direction: true }).and(paginationSearchSchema);
 const whenOptions: { value: z.output<typeof searchSchema>["when"]; label: string }[] = [
   { value: "upcoming", label: "Upcoming" }, { value: "past", label: "Past" }, { value: "all", label: "All dates" }
 ];
@@ -90,7 +90,7 @@ function RegistrationRunsPage() {
           </TableRow>)}</TableBody>
         </Table>
       </>}
-      <CrmTablePagination limit={search.limit} offset={search.offset} count={runs.data.items.length}
+      <TablePagination limit={search.limit} offset={search.offset} count={runs.data.items.length}
         hasMore={runs.data.hasMore} fetching={runs.isFetching}
         onChange={page => void navigate({ search: { ...search, ...page } })} />
     </>}

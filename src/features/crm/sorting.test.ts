@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it, vi } from "vitest";
-import { SortableTableHead } from "@/components/crm/sortable-table-head";
+import { SortableTableHead } from "@/components/table/sortable-table-head";
 import { inquiryListSchema } from "./schemas";
 import { registrationListSchema, registrationSessionListSchema } from "./registration-staff-schemas";
 import { registrationWorkspaceSearchSchema } from "./registration-navigation";

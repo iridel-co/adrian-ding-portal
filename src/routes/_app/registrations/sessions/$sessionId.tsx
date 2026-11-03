@@ -1,10 +1,10 @@
-import { SortableTableHead } from "@/components/crm/sortable-table-head";
+import { SortableTableHead } from "@/components/table/sortable-table-head";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { z } from "zod";
 import { BackLink } from "@/components/cms/editor-shell";
-import { CrmTablePagination } from "@/components/crm/table-pagination";
+import { TablePagination } from "@/components/table/table-pagination";
 import { EmptyState } from "@/components/cms/content-list-page";
 import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { CrmReadState } from "@/components/crm/read-state";
@@ -127,7 +127,7 @@ function RegistrationWorkspace() {
           </div>
           <p className="text-sm text-muted-foreground">Search covers registrations for this scheduled workshop only.</p>
           {listState}{rows}
-          {!registrations.isError && registrations.data && <CrmTablePagination
+          {!registrations.isError && registrations.data && <TablePagination
             limit={search.limit} offset={search.offset} count={registrations.data.items.length}
             hasMore={registrations.data.hasMore} fetching={registrations.isFetching}
             onChange={page => void navigate({ search: { ...search, ...page } })} />}
