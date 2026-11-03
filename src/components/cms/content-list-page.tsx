@@ -1,7 +1,8 @@
 import { cn } from "cn";
-import { Inbox, type LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { Inbox, Search, type LucideIcon } from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
 
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import {
   Select,
   SelectContent,
@@ -9,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type ContentListPageProps = {
   title: string;
@@ -18,6 +20,10 @@ type ContentListPageProps = {
   children: ReactNode;
 };
 
+/*
+  The frame every list page shares: title and action on top, then one toolbar
+  row (filter tabs on the left, search and dropdowns after), then the table.
+*/
 export function ContentListPage({
   title,
   description,
@@ -34,7 +40,7 @@ export function ContentListPage({
         </div>
         {action}
       </div>
-      {filters && <div className="flex flex-col gap-3 sm:flex-row sm:items-center">{filters}</div>}
+      {filters && <div className="flex flex-wrap items-center gap-3">{filters}</div>}
       {children}
     </div>
   );
@@ -60,7 +66,7 @@ export function FilterSelect<T extends string>({
 }: FilterSelectProps<T>) {
   return (
     <Select value={value} onValueChange={(next) => onChange(next as T)}>
-      <SelectTrigger aria-label={label} className="sm:w-44">
+      <SelectTrigger aria-label={label} className="bg-card data-[size=default]:h-10 sm:w-44">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -71,6 +77,38 @@ export function FilterSelect<T extends string>({
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+/* The main filter of a list page (usually status), shown as a row of pill tabs. */
+export function FilterTabs<T extends string>({
+  label,
+  value,
+  options,
+  onChange
+}: FilterSelectProps<T>) {
+  return (
+    <Tabs value={value} onValueChange={(next) => onChange(next as T)}>
+      <TabsList aria-label={label}>
+        {options.map((option) => (
+          <TabsTrigger key={option.value} value={option.value}>
+            {option.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
+  );
+}
+
+/* A search box with a magnifier icon. Put it in a form; Enter submits. */
+export function SearchInput(props: ComponentProps<typeof InputGroupInput>) {
+  return (
+    <InputGroup className="h-10 bg-card sm:w-72">
+      <InputGroupAddon>
+        <Search />
+      </InputGroupAddon>
+      <InputGroupInput {...props} />
+    </InputGroup>
   );
 }
 

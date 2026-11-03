@@ -45,9 +45,9 @@ function RegistrationRunsPage() {
         const status = registrationSessionListSchema.shape.status.parse(value);
         void navigate({ search: { ...search, status, ...(status === "all" ? { sort: "status", direction: "asc" } as const : {}), offset: 0 } });
       }}>
-        <TabsList aria-label="Workshop status" className="p-0">
-          <TabsTrigger value="all" className="h-9 px-3 py-2">All</TabsTrigger>
-          {statusOptions.map(status => <TabsTrigger key={status} value={status} className="h-9 px-3 py-2">
+        <TabsList aria-label="Workshop status">
+          <TabsTrigger value="all">All</TabsTrigger>
+          {statusOptions.map(status => <TabsTrigger key={status} value={status}>
             {SESSION_STATUS_DISPLAY[status].label}
           </TabsTrigger>)}
         </TabsList>
@@ -56,7 +56,7 @@ function RegistrationRunsPage() {
         const option = whenOptions.find(option => option.value === value);
         if (option) void navigate({ search: { ...search, when: option.value, offset: 0 } });
       }}>
-        <SelectTrigger aria-label="Workshop dates" className="w-32 px-3 py-2"><SelectValue /></SelectTrigger>
+        <SelectTrigger aria-label="Workshop dates" className="w-36 bg-card data-[size=default]:h-10"><SelectValue /></SelectTrigger>
         <SelectContent>{whenOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
       </Select>
     </div>}>
@@ -76,22 +76,22 @@ function RegistrationRunsPage() {
                 direction: search.sort === key && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>
           )}</TableRow></TableHeader>
           <TableBody>{runs.data.items.map(run => <TableRow key={run.id}>
-            <TableCell className="whitespace-normal py-5">
+            <TableCell className="whitespace-normal">
               <Link to="/registrations/sessions/$sessionId" params={{ sessionId: run.id }}
                 search={{ tab: "overview", filter: "active", search: "", offset: 0, runWhen: search.when, runStatus: search.status, runOffset: search.offset, runLimit: search.limit, runSort: search.sort, runDirection: search.direction }}
-                className="font-medium underline underline-offset-4">{run.workshopTitle}</Link>
-              <p className="mt-1 text-xs text-muted-foreground">{run.courseCode || "No course code"}</p>
+                className="font-semibold hover:text-brand">{run.workshopTitle}</Link>
+              <p className="mt-0.5 text-muted-foreground">{run.courseCode || "No course code"}</p>
             </TableCell>
-            <TableCell className="py-5">
+            <TableCell>
               <div className="flex items-center gap-2">
                 <StatusBadge display={SESSION_STATUS_DISPLAY[run.status]} />
-                {search.when === "all" && <Badge variant="outline">{hasSessionEnded(run) ? "Past" : "Upcoming"}</Badge>}
+                {search.when === "all" && <Badge variant="neutral">{hasSessionEnded(run) ? "Past" : "Upcoming"}</Badge>}
               </div>
             </TableCell>
-            <TableCell className="whitespace-normal py-5">{formatDateRange(run.date, run.endDate)}<p className="mt-1 text-xs text-muted-foreground">{formatTimeRange(run.startTime, run.endTime)}</p></TableCell>
-            <TableCell className="whitespace-normal py-5">{run.venueName || "Venue not set"}<p className="mt-1 text-xs text-muted-foreground">{run.city}</p></TableCell>
-            <TableCell className="py-5 font-medium tabular-nums">{run.counts.reserved} / {run.capacity}</TableCell>
-            <TableCell className="py-5"><p className="tabular-nums">{run.counts.paid} paid</p><p className="mt-1 text-xs text-destructive tabular-nums">{run.counts.unpaid} unpaid</p></TableCell>
+            <TableCell className="whitespace-normal">{formatDateRange(run.date, run.endDate)}<p className="mt-1 text-xs text-muted-foreground">{formatTimeRange(run.startTime, run.endTime)}</p></TableCell>
+            <TableCell className="whitespace-normal">{run.venueName || "Venue not set"}<p className="mt-1 text-xs text-muted-foreground">{run.city}</p></TableCell>
+            <TableCell className="font-medium tabular-nums">{run.counts.reserved} / {run.capacity}</TableCell>
+            <TableCell><p className="tabular-nums">{run.counts.paid} paid</p><p className="mt-1 text-xs text-destructive tabular-nums">{run.counts.unpaid} unpaid</p></TableCell>
           </TableRow>)}</TableBody>
         </Table>
       </>}

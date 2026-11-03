@@ -1,12 +1,13 @@
 import { SortableTableHead } from "@/components/table/sortable-table-head";
 import { useQuery } from "@tanstack/react-query";
+import { cn } from "cn";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Users } from "lucide-react";
 import { useRef, useState } from "react";
 import { z } from "zod";
 import { BackLink } from "@/components/cms/editor-shell";
 import { TablePagination } from "@/components/table/table-pagination";
-import { EmptyState } from "@/components/cms/content-list-page";
+import { EmptyState, SearchInput } from "@/components/cms/content-list-page";
 import { SESSION_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { CrmReadState } from "@/components/crm/read-state";
 import { DetailSkeleton } from "@/components/table/detail-skeleton";
@@ -16,7 +17,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RegistrationAction } from "@/features/crm/registration-staff-schemas";
 import { RegistrationStatus } from "@/components/crm/registration-status";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -113,18 +113,19 @@ function RegistrationWorkspace() {
           </section>
         </TabsContent> : <TabsContent value="registrations" className="space-y-5 pt-4">
           <div className="flex flex-wrap items-center gap-3">
-            <form className="flex gap-2" onSubmit={event => {
+            <form onSubmit={event => {
               event.preventDefault();
               const text = String(new FormData(event.currentTarget).get("search") ?? "");
               void navigate({ search: { ...search, search: text.trim(), offset: 0 } });
             }}>
-              <Input key={search.search} name="search" defaultValue={search.search} maxLength={200}
+              <SearchInput key={search.search} name="search" defaultValue={search.search} maxLength={200}
                 aria-label="Search this scheduled workshop by reference, name or email" placeholder="Reference, name or email" />
-              <Button variant="outline" type="submit">Search</Button>
             </form>
-            <div role="group" aria-label="Registration status" className="flex flex-wrap gap-2">
-              {filterOptions.map(option => <Button key={option.value} size="sm" className="rounded-full"
-                variant={search.filter === option.value ? "default" : "outline"}
+            {/* Toggle chips styled like the shared pill tabs. Picking the selected chip again shows everyone. */}
+            <div role="group" aria-label="Registration status" className="flex h-10 items-center gap-1 rounded-full border bg-card p-1 shadow-xs">
+              {filterOptions.map(option => <Button key={option.value} variant="ghost"
+                className={cn("h-full rounded-full px-4 text-muted-foreground",
+                  search.filter === option.value && "bg-brand text-brand-foreground shadow-sm hover:bg-brand hover:text-brand-foreground")}
                 aria-pressed={search.filter === option.value}
                 onClick={() => void navigate({ search: { ...search,
                   filter: search.filter === option.value ? "all" : option.value, offset: 0 } })}>
@@ -175,9 +176,9 @@ function RegistrationRows({ items, search }: { items: RegistrationRow[]; search:
     <TableBody>{items.map(item => <TableRow key={item.id}>
       <TableCell><Checkbox aria-label={`Select ${item.reference}`} disabled={item.isPaid || !!item.cancelledAt}
         checked={chosen.some(row => row.id === item.id)} onCheckedChange={checked => toggle(item.id, checked === true)} /></TableCell>
-      <TableCell className="whitespace-normal py-4"><Link to="/registrations/$id" params={{ id: item.id }} search={search} className="font-medium underline underline-offset-4">{item.fullName}</Link><p className="mt-1 break-all text-xs text-muted-foreground">{item.email}</p><p className="mt-1 text-xs text-muted-foreground">{item.phone}</p></TableCell>
+      <TableCell className="whitespace-normal"><Link to="/registrations/$id" params={{ id: item.id }} search={search} className="font-semibold hover:text-brand">{item.fullName}</Link><p className="mt-0.5 break-all text-muted-foreground">{item.email}</p><p className="text-xs text-muted-foreground">{item.phone}</p></TableCell>
       <TableCell><RegistrationStatus isPaid={item.isPaid} cancelledAt={item.cancelledAt} /></TableCell>
-      <TableCell>{formatPesos(item.priceCentavos)}</TableCell><TableCell>{formatCrmTime(item.createdAt)}</TableCell>
+      <TableCell className="tabular-nums">{formatPesos(item.priceCentavos)}</TableCell><TableCell className="text-muted-foreground">{formatCrmTime(item.createdAt)}</TableCell>
       <TableCell>{!item.isPaid && !item.cancelledAt && <div className="flex gap-2">
         <Button size="sm" variant="outline" aria-label={`Mark ${item.reference} Paid`}
           onClick={() => setBatch({ items: [item], action: RegistrationAction.MarkPaid })}>Mark Paid</Button>

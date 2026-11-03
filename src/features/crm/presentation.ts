@@ -7,6 +7,10 @@ import type { InquiryStatus } from "./lifecycle";
 export const inquiryStatusLabels: Record<InquiryStatus, string> = {
   NEW: "New", CONTACTED: "Contacted", PROPOSAL_SENT: "Proposal sent", WON: "Won", LOST: "Lost", SPAM: "Spam"
 };
+/* Badge colors: amber still needs a first reply, blue is in progress, green is won, gray is closed. */
+export const inquiryStatusVariants: Record<InquiryStatus, "warning" | "info" | "success" | "neutral"> = {
+  NEW: "warning", CONTACTED: "info", PROPOSAL_SENT: "info", WON: "success", LOST: "neutral", SPAM: "neutral"
+};
 export const inquiryActionLabels: Partial<Record<InquiryStatus, string>> = {
   CONTACTED: "Record first reply", PROPOSAL_SENT: "Record sent proposal", WON: "Mark won", LOST: "Mark lost", SPAM: "Mark spam"
 };

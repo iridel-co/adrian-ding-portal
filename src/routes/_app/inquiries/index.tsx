@@ -3,17 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MessagesSquare } from "lucide-react";
 import { useEffect, useState } from "react";
-import { ContentListPage, EmptyState, FilterSelect } from "@/components/cms/content-list-page";
+import { ContentListPage, EmptyState, FilterTabs, SearchInput } from "@/components/cms/content-list-page";
 import { TablePagination } from "@/components/table/table-pagination";
 import { CrmReadState } from "@/components/crm/read-state";
 import { TableSkeleton } from "@/components/table/table-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { inquiriesQueryOptions } from "@/features/crm/queries";
 import { inquirySearchSchema as searchSchema } from "@/features/crm/inquiry-navigation";
-import { formatCrmTime, inquiryStatusLabels, inquiryStatusOptions, isInquiryOverdue } from "@/features/crm/presentation";
+import { formatCrmTime, inquiryStatusLabels, inquiryStatusOptions, inquiryStatusVariants, isInquiryOverdue } from "@/features/crm/presentation";
 
 export const Route = createFileRoute("/_app/inquiries/")({
   validateSearch: searchSchema,
@@ -32,12 +31,11 @@ function InquiriesPage() {
   return <ContentListPage title="Corporate inquiries" description="Record replies, proposals and outcomes. All times are in Manila."
     action={<Button variant="outline" onClick={() => void inquiries.refetch()} disabled={inquiries.isFetching}>Refresh</Button>}
     filters={<>
-      <form className="flex gap-2" onSubmit={event => { event.preventDefault(); void navigate({ search: { ...search, search: text, offset: 0 } }); }}>
-        <Input aria-label="Search inquiries by company, name or email" placeholder="Company, name or email" maxLength={200} value={text} onChange={event => setText(event.target.value)} />
-        <Button variant="outline" type="submit">Search</Button>
-      </form>
-      <FilterSelect label="Inquiry status" options={inquiryStatusOptions} value={search.status}
+      <FilterTabs label="Inquiry status" options={inquiryStatusOptions} value={search.status}
         onChange={status => void navigate({ search: { ...search, status, offset: 0 } })} />
+      <form className="sm:ml-auto" onSubmit={event => { event.preventDefault(); void navigate({ search: { ...search, search: text, offset: 0 } }); }}>
+        <SearchInput aria-label="Search inquiries by company, name or email" placeholder="Company, name or email" maxLength={200} value={text} onChange={event => setText(event.target.value)} />
+      </form>
     </>}>
     <CrmReadState pending={inquiries.isPending} error={inquiries.error} retry={() => void inquiries.refetch()}
       skeleton={<TableSkeleton columns={columns.map(([, label]) => ({ label }))} />} />
@@ -49,11 +47,11 @@ function InquiriesPage() {
                 direction: search.sort === key && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>
           )}</TableRow></TableHeader>
         <TableBody>{inquiries.data.items.map(item => <TableRow key={item.id}>
-          <TableCell className="whitespace-normal"><Link to="/inquiries/$id" params={{ id: item.id }} search={search} className="font-medium underline underline-offset-4">{item.company}</Link><p>{item.fullName}</p><p className="text-xs text-muted-foreground break-all">{item.email}</p></TableCell>
-          <TableCell className="max-w-64 whitespace-normal">{item.program}</TableCell>
-          <TableCell><Badge variant="secondary">{inquiryStatusLabels[item.status]}</Badge></TableCell>
+          <TableCell className="whitespace-normal"><Link to="/inquiries/$id" params={{ id: item.id }} search={search} className="font-semibold hover:text-brand">{item.company}</Link><p className="mt-0.5 text-muted-foreground">{item.fullName}</p><p className="text-xs text-muted-foreground break-all">{item.email}</p></TableCell>
+          <TableCell className="max-w-64 whitespace-normal text-muted-foreground">{item.program}</TableCell>
+          <TableCell><Badge variant={inquiryStatusVariants[item.status]}>{inquiryStatusLabels[item.status]}</Badge></TableCell>
           <TableCell>{formatCrmTime(item.createdAt)}</TableCell>
-          <TableCell>{formatCrmTime(item.slaDueAt)}{isInquiryOverdue(item) && <p className="mt-1 font-medium text-destructive">Overdue</p>}</TableCell>
+          <TableCell>{formatCrmTime(item.slaDueAt)}{isInquiryOverdue(item) && <Badge variant="destructive" className="mt-1 flex">Overdue</Badge>}</TableCell>
         </TableRow>)}</TableBody>
       </Table>}
       <TablePagination limit={search.limit} offset={search.offset} count={inquiries.data.items.length}

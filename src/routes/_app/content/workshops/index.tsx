@@ -4,7 +4,7 @@ import { BookOpen, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 
-import { ContentListPage, EmptyState, FilterSelect } from "@/components/cms/content-list-page";
+import { ContentListPage, EmptyState, FilterTabs, SearchInput } from "@/components/cms/content-list-page";
 import { Field, FormErrorList } from "@/components/cms/form-section";
 import { CONTENT_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { useFormErrors } from "@/components/cms/use-form-errors";
@@ -100,30 +100,26 @@ function WorkshopsPage() {
       action={<NewWorkshopDialog />}
       filters={
         <>
-          <form
-            className="flex gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              updateSearch({ search: text, offset: 0 });
-            }}
-          >
-            <Input
-              className="sm:max-w-xs"
-              placeholder="Search by title"
-              aria-label="Search workshops"
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-            />
-            <Button variant="outline" type="submit">
-              Search
-            </Button>
-          </form>
-          <FilterSelect
+          <FilterTabs
             label="Status"
             value={search.status}
             options={STATUS_OPTIONS}
             onChange={(status) => updateSearch({ status, offset: 0 })}
           />
+          <form
+            className="sm:ml-auto"
+            onSubmit={(event) => {
+              event.preventDefault();
+              updateSearch({ search: text, offset: 0 });
+            }}
+          >
+            <SearchInput
+              placeholder="Search by title"
+              aria-label="Search workshops"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+            />
+          </form>
         </>
       }
     >
@@ -155,18 +151,18 @@ function WorkshopsPage() {
                       <Link
                         to="/content/workshops/$id"
                         params={{ id: item.id }}
-                        className="font-medium underline underline-offset-4"
+                        className="font-semibold hover:text-brand"
                       >
                         {item.title}
                       </Link>
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className="font-mono text-xs text-muted-foreground">
                       {item.courseCode ? displayCourseCode(item.courseCode) : "-"}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <div className="flex flex-wrap gap-1">
                         {item.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary">
+                          <Badge key={tag} variant="neutral">
                             {tag}
                           </Badge>
                         ))}

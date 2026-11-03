@@ -1,28 +1,28 @@
 import { Badge } from "@/components/ui/badge";
 
-type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
+type BadgeVariant = "success" | "warning" | "info" | "neutral" | "destructive";
 
 export type StatusDisplay = {
   label: string;
   variant: BadgeVariant;
-  className?: string;
 };
 
+/* Amber means "not live yet", green means live, gray means done or off. */
 export const CONTENT_STATUS_DISPLAY = {
-  draft: { label: "Draft", variant: "outline" },
-  published: { label: "Published", variant: "default" },
-  archived: { label: "Archived", variant: "secondary" }
+  draft: { label: "Draft", variant: "warning" },
+  published: { label: "Published", variant: "success" },
+  archived: { label: "Archived", variant: "neutral" }
 } as const satisfies Record<string, StatusDisplay>;
 
 export const SESSION_STATUS_DISPLAY = {
-  draft: { label: "Draft", variant: "outline" },
-  open: { label: "Open", variant: "default", className: "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" },
-  closed: { label: "Closed", variant: "secondary" },
+  draft: { label: "Draft", variant: "warning" },
+  open: { label: "Open", variant: "success" },
+  closed: { label: "Closed", variant: "neutral" },
   cancelled: { label: "Cancelled", variant: "destructive" }
 } as const satisfies Record<string, StatusDisplay>;
 
-export const PAST_DISPLAY: StatusDisplay = { label: "Past", variant: "secondary" };
+export const PAST_DISPLAY: StatusDisplay = { label: "Past", variant: "neutral" };
 
 export function StatusBadge({ display }: { display: StatusDisplay }) {
-  return <Badge variant={display.variant} className={display.className}>{display.label}</Badge>;
+  return <Badge variant={display.variant}>{display.label}</Badge>;
 }

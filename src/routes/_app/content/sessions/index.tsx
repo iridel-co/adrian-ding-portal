@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarDays } from "lucide-react";
 import { z } from "zod";
 
-import { ContentListPage, EmptyState, FilterSelect } from "@/components/cms/content-list-page";
+import { ContentListPage, EmptyState, FilterSelect, FilterTabs } from "@/components/cms/content-list-page";
 import { NewSessionDialog } from "@/components/cms/new-session-dialog";
 import { SessionCalendar } from "@/components/cms/session-calendar";
 import {
@@ -57,7 +57,7 @@ const WHEN_OPTIONS: { value: WhenFilter; label: string }[] = [
 ];
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "any", label: "Any status" },
+  { value: "any", label: "All" },
   { value: "draft", label: "Draft" },
   { value: "open", label: "Open" },
   { value: "closed", label: "Closed" },
@@ -78,27 +78,30 @@ const COLUMNS: { key: SessionSort; label: string; className?: string }[] = [
 function SessionsPage() {
   const search = Route.useSearch();
 
+  /* The List/Calendar switch sits next to the main action, so the status tabs are the only filter row. */
   return (
-    <ContentListPage
-      title="Sessions"
-      description="The dates each workshop runs. A session can last one day or several days in a row."
-      action={
-        <NewSessionDialog defaultWorkshopId={search.workshopId} defaultOpen={search.create} />
-      }
-    >
-      <Tabs defaultValue="list">
-        <TabsList>
-          <TabsTrigger value="list">List</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar</TabsTrigger>
-        </TabsList>
+    <Tabs defaultValue="list" className="block">
+      <ContentListPage
+        title="Sessions"
+        description="The dates each workshop runs. A session can last one day or several days in a row."
+        action={
+          <div className="flex items-center gap-3">
+            <TabsList aria-label="View">
+              <TabsTrigger value="list">List</TabsTrigger>
+              <TabsTrigger value="calendar">Calendar</TabsTrigger>
+            </TabsList>
+            <NewSessionDialog defaultWorkshopId={search.workshopId} defaultOpen={search.create} />
+          </div>
+        }
+      >
         <TabsContent value="list">
           <SessionList />
         </TabsContent>
         <TabsContent value="calendar">
           <SessionCalendar />
         </TabsContent>
-      </Tabs>
-    </ContentListPage>
+      </ContentListPage>
+    </Tabs>
   );
 }
 
@@ -128,30 +131,32 @@ function SessionList() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <FilterSelect
-          label="When"
-          value={search.when}
-          options={WHEN_OPTIONS}
-          onChange={(when) => updateSearch({ when, offset: 0 })}
-        />
-        <FilterSelect
+      <div className="flex flex-wrap items-center gap-3">
+        <FilterTabs
           label="Status"
           value={search.status}
           options={STATUS_OPTIONS}
           onChange={(status) => updateSearch({ status, offset: 0 })}
         />
-        <FilterSelect
-          label="Workshop"
-          value={search.workshopId ?? ALL_WORKSHOPS}
-          options={workshopOptions}
-          onChange={(workshopId) =>
-            updateSearch({
-              workshopId: workshopId === ALL_WORKSHOPS ? undefined : workshopId,
-              offset: 0
-            })
-          }
-        />
+        <div className="flex flex-wrap gap-3 sm:ml-auto">
+          <FilterSelect
+            label="When"
+            value={search.when}
+            options={WHEN_OPTIONS}
+            onChange={(when) => updateSearch({ when, offset: 0 })}
+          />
+          <FilterSelect
+            label="Workshop"
+            value={search.workshopId ?? ALL_WORKSHOPS}
+            options={workshopOptions}
+            onChange={(workshopId) =>
+              updateSearch({
+                workshopId: workshopId === ALL_WORKSHOPS ? undefined : workshopId,
+                offset: 0
+              })
+            }
+          />
+        </div>
       </div>
 
       <ReadState
@@ -190,11 +195,11 @@ function SessionList() {
                       <Link
                         to="/content/sessions/$id"
                         params={{ id: session.id }}
-                        className="font-medium underline underline-offset-4"
+                        className="font-semibold hover:text-brand"
                       >
                         {formatDateRange(session.date, session.endDate)}
                       </Link>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="mt-0.5 text-muted-foreground">
                         {formatTimeRange(session.startTime, session.endTime)}
                       </div>
                       <div className="text-sm sm:hidden">{session.workshopTitle}</div>
@@ -203,10 +208,10 @@ function SessionList() {
                     <TableCell className="hidden text-muted-foreground md:table-cell">
                       {[session.venueName, session.city].filter(Boolean).join(", ") || "-"}
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell className="hidden tabular-nums lg:table-cell">
                       {formatPesos(session.priceCentavos)}
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">{session.capacity}</TableCell>
+                    <TableCell className="hidden tabular-nums lg:table-cell">{session.capacity}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         <StatusBadge display={SESSION_STATUS_DISPLAY[session.status]} />

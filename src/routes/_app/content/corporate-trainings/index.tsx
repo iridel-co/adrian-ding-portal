@@ -5,7 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import type { z } from "zod";
 
-import { ContentListPage, EmptyState, FilterSelect } from "@/components/cms/content-list-page";
+import { ContentListPage, EmptyState, FilterTabs } from "@/components/cms/content-list-page";
 import { Field, FormErrorList } from "@/components/cms/form-section";
 import { SortableListSkeleton } from "@/components/cms/list-skeletons";
 import { SortableList } from "@/components/cms/sortable-list";
@@ -74,7 +74,7 @@ function ProgramsPage() {
       }
       action={<NewProgramDialog />}
       filters={
-        <FilterSelect label="Status" value={status} options={STATUS_OPTIONS} onChange={setStatus} />
+        <FilterTabs label="Status" value={status} options={STATUS_OPTIONS} onChange={setStatus} />
       }
     >
       {programs.isPending ? (
@@ -96,11 +96,11 @@ function ProgramsPage() {
 
 function ProgramRow({ program }: { program: ProgramListItem }) {
   return (
-    <div className="flex items-center gap-4 rounded-md border bg-card shadow-xs px-4 py-3">
+    <div className="flex items-center gap-4 rounded-xl border bg-card px-4 py-3 shadow-xs">
       <Link
         to="/content/corporate-trainings/$id"
         params={{ id: program.id }}
-        className="min-w-0 flex-1 truncate font-medium hover:underline"
+        className="min-w-0 flex-1 truncate font-semibold hover:text-brand"
       >
         {program.title}
       </Link>

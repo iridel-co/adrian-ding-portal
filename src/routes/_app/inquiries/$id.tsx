@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { inquirySearchSchema } from "@/features/crm/inquiry-navigation";
 import { inquiryQueryOptions } from "@/features/crm/queries";
-import { formatCrmTime, inquiryStatusLabels, isInquiryOverdue } from "@/features/crm/presentation";
+import { formatCrmTime, inquiryStatusLabels, inquiryStatusVariants, isInquiryOverdue } from "@/features/crm/presentation";
 import { formatDate, formatDateRange } from "@/features/shared/format";
 import { formatPesos } from "@/features/shared/money";
 import type { $getInquiry } from "@/features/crm/functions";
@@ -40,7 +40,7 @@ function InquiryDetail({ id }: { id: string }) {
     <CrmReadState pending={result.isPending} error={result.error} retry={() => void result.refetch()}
       loadingMessage="Loading inquiry…" skeleton={<DetailSkeleton />} />
     {!result.isError && inquiry && <>
-      <header><h1 className="font-display text-4xl break-words">{inquiry.company}</h1><p className="mt-2">{inquiry.program}</p><div className="mt-3 flex flex-wrap gap-2"><Badge variant="secondary">{inquiryStatusLabels[inquiry.status]}</Badge>{isInquiryOverdue(inquiry) && <Badge variant="destructive">First reply overdue</Badge>}</div><p className="mt-2 text-xs text-muted-foreground break-all">Inquiry ID: {inquiry.id}</p></header>
+      <header><h1 className="font-display text-4xl break-words">{inquiry.company}</h1><p className="mt-2">{inquiry.program}</p><div className="mt-3 flex flex-wrap gap-2"><Badge variant={inquiryStatusVariants[inquiry.status]}>{inquiryStatusLabels[inquiry.status]}</Badge>{isInquiryOverdue(inquiry) && <Badge variant="destructive">First reply overdue</Badge>}</div><p className="mt-2 text-xs text-muted-foreground break-all">Inquiry ID: {inquiry.id}</p></header>
       <section className="rounded-lg border bg-card shadow-xs p-5"><h2 className="mb-4 text-xl font-medium">Submitted requirements</h2><dl className="grid gap-4 sm:grid-cols-2">
         <Field label="Contact">{inquiry.fullName}</Field><Field label="Role">{inquiry.role}</Field>
         <Field label="Email"><a className="underline break-all" href={`mailto:${inquiry.email}`}>{inquiry.email}</a></Field><Field label="Phone">{inquiry.phone}</Field>
