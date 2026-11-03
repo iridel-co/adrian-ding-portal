@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
+import { Field } from "@/components/cms/form-section";
 import { MediaDropzone } from "@/components/cms/media-dropzone";
+import { NO_FIELDS, useFormErrors } from "@/components/cms/use-form-errors";
 import { useMediaUploads } from "@/components/cms/use-media-uploads";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,10 +16,8 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { $updateMediaAlt, mediaListQueryOptions } from "@/features/media/functions";
-import { errorMessage } from "@/features/shared/error-message";
 
 export type PickedMedia = {
   id: string;
@@ -32,6 +31,8 @@ type MediaPickerProps = {
   onPick: (media: PickedMedia) => void;
 };
 
+const ALT_MISSING_MESSAGE = "Describe the image before you use it.";
+
 type PickerTab = "library" | "upload";
 
 export function MediaPicker({ open, onOpenChange, onPick }: MediaPickerProps) {
@@ -41,12 +42,14 @@ export function MediaPicker({ open, onOpenChange, onPick }: MediaPickerProps) {
   const [selected, setSelected] = useState<PickedMedia | null>(null);
   const [alt, setAlt] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const { generalErrors, showErrors, clearErrors } = useFormErrors(NO_FIELDS);
 
   const library = useQuery({ ...mediaListQueryOptions({ search }), enabled: open });
 
   const select = (media: PickedMedia) => {
     setSelected(media);
     setAlt(media.alt);
+    clearErrors();
   };
 
   const { uploads, addFiles, retry } = useMediaUploads({
@@ -60,6 +63,7 @@ export function MediaPicker({ open, onOpenChange, onPick }: MediaPickerProps) {
   const close = () => {
     setSelected(null);
     setAlt("");
+    clearErrors();
     onOpenChange(false);
   };
 
@@ -68,7 +72,7 @@ export function MediaPicker({ open, onOpenChange, onPick }: MediaPickerProps) {
 
     const trimmedAlt = alt.trim();
     if (!trimmedAlt) {
-      toast.error("Describe the image before you use it.");
+      showErrors(new Error(ALT_MISSING_MESSAGE));
       return;
     }
 
@@ -81,7 +85,7 @@ export function MediaPicker({ open, onOpenChange, onPick }: MediaPickerProps) {
       onPick({ ...selected, alt: trimmedAlt });
       close();
     } catch (error) {
-      toast.error(errorMessage(error));
+      showErrors(error);
     } finally {
       setIsSaving(false);
     }
@@ -140,15 +144,21 @@ export function MediaPicker({ open, onOpenChange, onPick }: MediaPickerProps) {
         </Tabs>
 
         {selected && (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="media-picker-alt">Image description (alt text)</Label>
+          <Field
+            label="Image description (alt text)"
+            htmlFor="media-picker-alt"
+            errors={generalErrors}
+          >
             <Input
               id="media-picker-alt"
               placeholder="e.g. Adrian leading a workshop in Cebu"
               value={alt}
-              onChange={(event) => setAlt(event.target.value)}
+              onChange={(event) => {
+                setAlt(event.target.value);
+                clearErrors();
+              }}
             />
-          </div>
+          </Field>
         )}
 
         <DialogFooter>

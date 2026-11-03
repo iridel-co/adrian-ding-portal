@@ -4,7 +4,9 @@ import { Archive, ArchiveRestore } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { FieldErrors } from "@/components/cms/form-section";
 import { MediaDropzone } from "@/components/cms/media-dropzone";
+import { NO_FIELDS, useFormErrors } from "@/components/cms/use-form-errors";
 import { useMediaUploads } from "@/components/cms/use-media-uploads";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -87,6 +89,7 @@ function MediaPage() {
 function MediaCard({ item, onChanged }: { item: MediaItem; onChanged: () => Promise<void> }) {
   const [alt, setAlt] = useState(item.alt);
   const isArchived = item.archivedAt !== null;
+  const { generalErrors, showErrors, clearErrors } = useFormErrors(NO_FIELDS);
 
   const saveAlt = useMutation({
     mutationFn: () => $updateMediaAlt({ data: { id: item.id, alt } }),
@@ -94,7 +97,7 @@ function MediaCard({ item, onChanged }: { item: MediaItem; onChanged: () => Prom
       toast.success("Description saved.");
       await onChanged();
     },
-    onError: (error) => toast.error(errorMessage(error))
+    onError: showErrors
   });
 
   const toggleArchive = useMutation({
@@ -139,11 +142,15 @@ function MediaCard({ item, onChanged }: { item: MediaItem; onChanged: () => Prom
           placeholder="Add a description"
           aria-invalid={!alt.trim() || undefined}
           value={alt}
-          onChange={(event) => setAlt(event.target.value)}
+          onChange={(event) => {
+            setAlt(event.target.value);
+            clearErrors();
+          }}
           onBlur={() => {
             if (alt.trim() !== item.alt) saveAlt.mutate();
           }}
         />
+        {generalErrors.length > 0 && <FieldErrors errors={generalErrors} />}
         {item.usages.length > 0 && (
           <p className="text-xs text-muted-foreground">
             In: {item.usages.map((usage) => usage.label).join(", ")}

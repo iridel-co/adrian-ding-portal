@@ -3,7 +3,9 @@ import { Archive, ArchiveRestore } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { FieldErrors } from "@/components/cms/form-section";
 import { SortableList } from "@/components/cms/sortable-list";
+import { NO_FIELDS, useFormErrors } from "@/components/cms/use-form-errors";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
@@ -40,6 +42,7 @@ export function TermsManager({
   const queryClient = useQueryClient();
   const [includeArchived, setIncludeArchived] = useState(false);
   const [name, setName] = useState("");
+  const createErrors = useFormErrors(NO_FIELDS);
 
   const terms = useQuery(termsQueryOptions({ kind, includeArchived }));
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["taxonomy", kind] });
@@ -61,7 +64,7 @@ export function TermsManager({
     onSuccess: refresh,
     onError: (error, termName) => {
       setName((current) => current || termName);
-      onError(error);
+      createErrors.showErrors(error);
     }
   });
 
@@ -91,28 +94,37 @@ export function TermsManager({
           <CardDescription>Drag to set the order they show on the site.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <form
-            className="flex gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const termName = name.trim();
-              if (!termName) return;
+          <div className="flex flex-col gap-1.5">
+            <form
+              className="flex gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const termName = name.trim();
+                if (!termName) return;
 
-              setName("");
-              create.mutate(termName);
-            }}
-          >
-            <Input
-              required
-              aria-label={`New ${itemLabel}`}
-              placeholder={placeholder}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-            <Button type="submit">
-              Add {itemLabel}
-            </Button>
-          </form>
+                setName("");
+                createErrors.clearErrors();
+                create.mutate(termName);
+              }}
+            >
+              <Input
+                required
+                aria-label={`New ${itemLabel}`}
+                placeholder={placeholder}
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  createErrors.clearErrors();
+                }}
+              />
+              <Button type="submit">
+                Add {itemLabel}
+              </Button>
+            </form>
+            {createErrors.generalErrors.length > 0 && (
+              <FieldErrors errors={createErrors.generalErrors} />
+            )}
+          </div>
 
           <SortableList
             items={activeTerms}
@@ -159,15 +171,15 @@ export function TermsManager({
 function TermRow({ term, onChanged }: { term: TaxonomyTerm; onChanged: () => Promise<void> }) {
   const [name, setName] = useState(term.name);
   const isArchived = term.archivedAt !== null;
-  const onError = (error: Error) => {
-    setName(term.name);
-    toast.error(errorMessage(error));
-  };
+  const { generalErrors, showErrors, clearErrors } = useFormErrors(NO_FIELDS);
 
   const rename = useMutation({
     mutationFn: () => $renameTerm({ data: { id: term.id, name } }),
     onSuccess: onChanged,
-    onError
+    onError: (error) => {
+      setName(term.name);
+      showErrors(error);
+    }
   });
 
   const toggleArchive = useMutation({
@@ -180,28 +192,34 @@ function TermRow({ term, onChanged }: { term: TaxonomyTerm; onChanged: () => Pro
   });
 
   return (
-    <div className="flex items-center gap-2">
-      <Input
-        aria-label={`Name of ${term.name}`}
-        value={name}
-        disabled={isArchived}
-        onChange={(event) => setName(event.target.value)}
-        onBlur={() => {
-          if (name.trim() && name.trim() !== term.name) rename.mutate();
-          else setName(term.name);
-        }}
-      />
-      {isArchived && <Badge variant="secondary">Archived</Badge>}
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label={isArchived ? `Restore ${term.name}` : `Archive ${term.name}`}
-        disabled={toggleArchive.isPending}
-        onClick={() => toggleArchive.mutate()}
-      >
-        {isArchived ? <ArchiveRestore /> : <Archive />}
-      </Button>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <Input
+          aria-label={`Name of ${term.name}`}
+          value={name}
+          disabled={isArchived}
+          onChange={(event) => {
+            setName(event.target.value);
+            clearErrors();
+          }}
+          onBlur={() => {
+            if (name.trim() && name.trim() !== term.name) rename.mutate();
+            else setName(term.name);
+          }}
+        />
+        {isArchived && <Badge variant="secondary">Archived</Badge>}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={isArchived ? `Restore ${term.name}` : `Archive ${term.name}`}
+          disabled={toggleArchive.isPending}
+          onClick={() => toggleArchive.mutate()}
+        >
+          {isArchived ? <ArchiveRestore /> : <Archive />}
+        </Button>
+      </div>
+      {generalErrors.length > 0 && <FieldErrors errors={generalErrors} />}
     </div>
   );
 }
