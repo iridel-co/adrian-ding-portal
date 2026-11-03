@@ -33,14 +33,18 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 import { Route } from "@/routes/_app/registrations/sessions/$sessionId";
 import { TablePagination } from "@/components/table/table-pagination";
+import { SelectionBar } from "@/components/table/selection-bar";
+import { FilterSelect } from "@/components/cms/content-list-page";
+import { QuickAction } from "@/components/quick-action";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/tabs";
+import { Link } from "@tanstack/react-router";
 import { registrationSessionQueryOptions, registrationsQueryOptions } from "./registration-queries";
 
 const sessionId = "12345678-abcd-4000-8000-123456789abc";
 const run = {
   id: sessionId, workshopTitle: "Practical Selling", courseCode: "PSW", date: "2027-01-12", endDate: "2027-01-13",
-  startTime: "09:00:00", endTime: "17:00:00", venueName: "Training Room", city: "Cebu", status: "open", capacity: 20,
+  startTime: "09:00:00", endTime: "17:00:00", venueName: "Training Room", city: "Cebu", status: "open", capacity: 20, priceCentavos: 650000,
   counts: { reserved: 18, remaining: 2, paid: 10, unpaid: 8, cancelled: 1 }
 };
 const item = { id: sessionId, fullName: "Alice <script>unsafe</script>", email: "alice@example.invalid", phone: "+630000000000",
@@ -64,8 +68,12 @@ function find(node: ReactNode, type: unknown, label?: string): ReactElement<Reco
       const found = find(TablePagination(child.props as Parameters<typeof TablePagination>[0]), type, label);
       if (found) return found;
     }
-    const result = find(child.props.children as ReactNode, type, label);
-    if (result) return result;
+    // Look in children and in any prop holding elements, like DetailHeader's crumb and actions.
+    const nested = Object.entries(child.props).filter(([key, value]) => key === "children" || isValidElement(value));
+    for (const [, value] of nested) {
+      const result = find(value as ReactNode, type, label);
+      if (result) return result;
+    }
   }
 }
 beforeEach(() => {
@@ -100,26 +108,39 @@ describe("Workshop workspace", () => {
     ], hasMore: false };
     const html = render();
     expect(html).toContain("Select all unpaid registrations on this page");
-    expect(html).toContain("Mark selected Paid");
-    expect(html).toContain("Cancel selected");
+    // The bulk bar only appears once a row is picked.
+    expect(html).not.toContain(">Clear</button>");
+    expect(html).not.toContain(" selected</p><button");
     expect(html).toContain('aria-label="Mark AD-PSW-0001 Paid"');
     expect(html).toContain('aria-label="Cancel AD-PSW-0001"');
     expect(html).not.toContain('aria-label="Mark AD-PSW-0002 Paid"');
     expect(html).not.toContain('aria-label="Cancel AD-PSW-0003"');
   });
-  it("loads a bounded unfiltered preview, shows summary totals and gives cancellation precedence", () => {
+  it("shows seats and workshop details on the overview without loading registrations", () => {
     const html = render();
-    expect(harness.query.mock.calls[1][0]).toMatchObject({ enabled: true,
-      queryKey: ["workshop-registrations", "list", { workshopSessionId: sessionId, filter: "all", search: "", offset: 0, limit: 5 }] });
-    for (const value of ["Practical Selling", "Training Room", "Cebu", "Manila time", "Recent registrations", "18 / 20",
-      "Reserved capacity", "Cancelled", "₱6,500", "alice@example.invalid"])
+    expect(harness.query.mock.calls[1][0]).toMatchObject({ enabled: false });
+    for (const value of ["Practical Selling", "AD-PSW", "Training Room", "Cebu", "Manila time", "18 / 20", "Reserved capacity",
+      "Paid", "Unpaid", "Cancelled", "Seats left", "2 seats left", "₱6,500", "20 seats", "Edit session", "/content/sessions/$id"])
       expect(html).toContain(value);
     expect(html).toContain("aria-valuenow=\"90\"");
+    expect(html).not.toContain("alice@example.invalid");
+    expect(html).not.toContain("Recent registrations");
+    expect(html).not.toContain("Page 2");
+  });
+  it("shows registrant rows with escaped names and cancellation precedence", () => {
+    harness.search.tab = "registrations";
+    const html = render();
+    expect(harness.query.mock.calls[1][0]).toMatchObject({ enabled: true });
+    for (const value of ["alice@example.invalid", "Cancelled", "₱6,500", "/registrations/$id"]) expect(html).toContain(value);
     expect(html).toContain("&lt;script&gt;unsafe&lt;/script&gt;");
-    expect(html).toContain("/registrations/$id");
     expect(html).not.toContain(">Reference</th>");
     expect(html).not.toContain(">AD-PSW-0001</td>");
-    expect(html).not.toContain("Page 2");
+  });
+  it("shows the picked count, select all and clear on the selection bar", () => {
+    const html = renderToStaticMarkup(createElement(SelectionBar, { count: 1, total: 3, onSelectAll: vi.fn(), onClear: vi.fn(), children: "Actions" }));
+    for (const value of ["1 of 3 selected", "Select all 3", "Clear", "Actions"]) expect(html).toContain(value);
+    expect(renderToStaticMarkup(createElement(SelectionBar, { count: 3, total: 3, onSelectAll: vi.fn(), onClear: vi.fn(), children: "Actions" })))
+      .not.toContain("Select all");
   });
   it("clamps empty, full and over-capacity bars while retaining actual counts", () => {
     for (const [reserved, value] of [[0, 0], [20, 100], [24, 100]]) {
@@ -130,13 +151,12 @@ describe("Workshop workspace", () => {
       expect(html.includes("Reservations exceed")).toBe(reserved > 20);
     }
   });
-  it("keeps preview failures separate from the summary and does not render cached failed rows", () => {
+  it("keeps list failures separate from the summary and does not render cached failed rows", () => {
+    harness.search.tab = "registrations";
     harness.list.isError = true; harness.list.error = new Error("crm_unavailable");
     let html = render();
-    expect(html).toContain("18 / 20"); expect(html).toContain("Try again");
-    expect(html).not.toContain("alice@example.invalid"); expect(html).not.toContain("No registrations for this scheduled workshop yet");
-    harness.list.isError = false; harness.list.error = null; harness.list.data = { items: [], hasMore: false };
-    expect(render()).toContain("No registrations for this scheduled workshop yet");
+    expect(html).toContain("Practical Selling"); expect(html).toContain("Try again");
+    expect(html).not.toContain("alice@example.invalid");
     harness.summary.isError = true; harness.summary.error = new Error("registration_session_not_found");
     html = render();
     expect(html).toContain("This scheduled workshop could not be found"); expect(html).not.toContain("Practical Selling");
@@ -160,12 +180,13 @@ describe("Workshop workspace", () => {
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, tab: "registrations" }, resetScroll: false });
     (tabs.props.onValueChange as (value: string) => void)("overview");
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, tab: "overview" }, resetScroll: false });
-    (find(page, Button, "View all registrations")!.props.onClick as () => void)();
-    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, tab: "registrations" }, resetScroll: false });
-    (find(page, Button, "Refresh")!.props.onClick as () => void)();
-    expect(harness.summaryRefresh).toHaveBeenCalledOnce(); expect(harness.listRefresh).toHaveBeenCalledOnce();
-    const top = Children.toArray(page.props.children as ReactNode)[0] as ReactElement<{ children: ReactNode }>;
-    const back = Children.toArray(top.props.children)[0] as ReactElement<{ search: unknown }>;
+    // The overview has no list, so Refresh only reloads the summary there.
+    (find(page, QuickAction, "Refresh")!.props.onClick as () => void)();
+    expect(harness.summaryRefresh).toHaveBeenCalledOnce(); expect(harness.listRefresh).not.toHaveBeenCalled();
+    harness.search.tab = "registrations";
+    (find(tree(), QuickAction, "Refresh")!.props.onClick as () => void)();
+    expect(harness.summaryRefresh).toHaveBeenCalledTimes(2); expect(harness.listRefresh).toHaveBeenCalledOnce();
+    const back = find(page, Link)!;
     expect(back.props.search).toEqual({ when: "past", offset: 100, limit: 50 });
   });
   it("uses the scoped full-list query and resets page on search and filter changes", () => {
@@ -173,8 +194,8 @@ describe("Workshop workspace", () => {
     const page = tree();
     expect(harness.query.mock.calls[1][0].queryKey[2]).toEqual({ workshopSessionId: sessionId, filter: "paid", search: "Alice", offset: 50, limit: 50 });
     expect(render()).toContain("Page 2");
-    expect(render()).toContain("Search covers registrations for this scheduled workshop only");
-    (find(page, Button, "Cancelled")!.props.onClick as () => void)();
+    expect(render()).not.toContain("Search covers registrations");
+    (find(page, FilterSelect)!.props.onChange as (value: string) => void)("cancelled");
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, filter: "cancelled", offset: 0 } });
     const formData = class { get() { return "  Bob  "; } };
     vi.stubGlobal("FormData", formData);
@@ -189,21 +210,19 @@ describe("Workshop workspace", () => {
     (find(page, Button, "Previous")!.props.onClick as () => void)();
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, offset: 0 } });
   });
-  it("toggles status chips and leaves none selected when showing all registrants", () => {
+  it("filters registrants with a status dropdown that includes all registrations", () => {
     harness.search.tab = "registrations";
     harness.search.filter = "active";
     let page = tree();
-    expect(find(page, Button, "Active")!.props["aria-pressed"]).toBe(true);
-    (find(page, Button, "Active")!.props.onClick as () => void)();
+    const filter = find(page, FilterSelect)!;
+    expect(filter.props.value).toBe("active");
+    expect((filter.props.options as { value: string }[]).map(option => option.value)).toEqual(["active", "unpaid", "paid", "cancelled", "all"]);
+    (filter.props.onChange as (value: string) => void)("all");
     expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, filter: "all", offset: 0 } });
     harness.search.filter = "all";
     page = tree();
     expect(harness.query.mock.calls.at(-1)?.[0].queryKey[2].filter).toBe("all");
-    for (const label of ["Active", "Unpaid", "Paid", "Cancelled"])
-      expect(find(page, Button, label)!.props["aria-pressed"]).toBe(false);
-    expect(render()).not.toContain('role="combobox" aria-label="Registration status"');
-    (find(page, Button, "Unpaid")!.props.onClick as () => void)();
-    expect(harness.navigate).toHaveBeenLastCalledWith({ search: { ...harness.search, filter: "unpaid", offset: 0 } });
+    expect(render()).toContain('aria-label="Registration status"');
   });
   it("queries the selected page size and keeps filters when the pagination changes", () => {
     harness.search.tab = "registrations";
@@ -228,7 +247,7 @@ describe("Workshop workspace", () => {
     harness.search.offset = 50; harness.list.isFetching = true;
     expect(find(tree(), Button, "Previous")!.props.disabled).toBe(true);
     expect(find(tree(), Button, "Next")!.props.disabled).toBe(true);
-    expect(find(tree(), Button, "Refresh")!.props.disabled).toBe(true);
+    expect(find(tree(), QuickAction, "Refresh")!.props.disabled).toBe(true);
   });
   it("validates direct-link defaults and URL state without arbitrary tabs or filters", () => {
     const schema = Route.options.validateSearch as z.ZodType;
