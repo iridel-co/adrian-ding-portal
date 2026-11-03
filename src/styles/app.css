@@ -39,7 +39,7 @@
   */
   --background: oklch(0.978 0.0025 55);
   --canvas:
-    radial-gradient(60rem 28rem at 50% -8rem, oklch(0.965 0.014 25 / 0.5), transparent 70%),
+    radial-gradient(60rem 28rem at 50% -8rem, oklch(0.965 0.014 25 / 0.55), transparent 70%),
     var(--background);
   --foreground: var(--base-800);
   --card: oklch(1 0 0);
