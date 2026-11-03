@@ -20,9 +20,10 @@ import type { DbOrTx } from "@/features/shared/db-types";
 import { CmsValidationError } from "@/features/shared/errors";
 import { escapeLike, fetchPage, sortOrder } from "@/features/shared/list-query";
 import { assertPublishable } from "@/features/shared/publish";
-import { assertSlugAvailable, makeUniqueSlug } from "@/features/shared/slug";
+import { assertSlugAvailable } from "@/features/shared/slug";
 import { manilaToday } from "@/features/shared/time";
 import { allocateCourseCode, courseCodeSortKey } from "@/features/workshops/course-code";
+import { workshopSlug } from "@/features/workshops/course-number";
 import {
   type createInput,
   type idInput,
@@ -71,6 +72,18 @@ async function findUpcomingActiveSessions(db: DbOrTx, workshopId: string) {
       )
     )
     .orderBy(asc(workshopSession.date));
+}
+
+type SlugSource = {
+  status: ContentStatus;
+  slug: string;
+  courseCode: string | null;
+};
+
+/* A draft's slug follows its title. Once published or archived, the page address stays fixed. */
+function draftSlug(current: SlugSource, title: string) {
+  if (current.status !== "draft" || !current.courseCode) return current.slug;
+  return workshopSlug(title, current.courseCode);
 }
 
 export async function listWorkshops(db: DbOrTx, data: z.infer<typeof listInput>) {
@@ -191,14 +204,14 @@ export async function getWorkshop(db: DbOrTx, data: z.infer<typeof idInput>) {
 
 export async function createWorkshop(db: DbOrTx, actor: Actor, data: z.infer<typeof createInput>) {
   return db.transaction(async (tx) => {
-    const slug = await makeUniqueSlug(tx, {
-      table: workshop,
-      slugColumn: workshop.slug,
-      title: data.title,
-      fallback: "workshop"
-    });
-
     const courseCode = await allocateCourseCode(tx);
+    const slug = workshopSlug(data.title, courseCode);
+    await assertSlugAvailable(tx, {
+      table: workshop,
+      idColumn: workshop.id,
+      slugColumn: workshop.slug,
+      slug
+    });
 
     const [row] = await tx
       .insert(workshop)
@@ -212,6 +225,7 @@ export async function createWorkshop(db: DbOrTx, actor: Actor, data: z.infer<typ
       entityId: row.id,
       changes: {
         title: { from: null, to: data.title },
+        slug: { from: null, to: slug },
         courseCode: { from: null, to: courseCode }
       }
     });
@@ -221,20 +235,22 @@ export async function createWorkshop(db: DbOrTx, actor: Actor, data: z.infer<typ
 }
 
 export async function updateWorkshop(db: DbOrTx, actor: Actor, data: z.infer<typeof updateInput>) {
-  const { tagIds, ...values } = data.values;
+  const { tagIds, ...content } = data.values;
 
   await db.transaction(async (tx) => {
     // Registration intake locks the workshop before its session and counter.
     const [before] = await tx.select().from(workshop).where(eq(workshop.id, data.id)).for("update");
     if (!before) throw new CmsValidationError("This workshop no longer exists.");
 
+    const slug = draftSlug(before, content.title);
     await assertSlugAvailable(tx, {
       table: workshop,
       idColumn: workshop.id,
       slugColumn: workshop.slug,
-      slug: values.slug,
+      slug,
       excludeId: data.id
     });
+    const values = { ...content, slug };
 
     const beforeTagIds = await getTagIds(tx, data.id);
     if (before.status === "published") {
@@ -293,10 +309,20 @@ export async function setWorkshopStatus(
     // New workshops get a code on create. Older drafts without one get it here.
     const isFirstPublish = data.status === "published" && !before.courseCode;
     const courseCode = isFirstPublish ? await allocateCourseCode(tx) : before.courseCode;
+    const slug = draftSlug({ ...before, courseCode }, before.title);
+    if (slug !== before.slug) {
+      await assertSlugAvailable(tx, {
+        table: workshop,
+        idColumn: workshop.id,
+        slugColumn: workshop.slug,
+        slug,
+        excludeId: data.id
+      });
+    }
 
     await tx
       .update(workshop)
-      .set({ status: data.status, courseCode, ...updatedByValues(actor.id) })
+      .set({ status: data.status, courseCode, slug, ...updatedByValues(actor.id) })
       .where(eq(workshop.id, data.id));
 
     await logActivity(tx, {
@@ -306,7 +332,8 @@ export async function setWorkshopStatus(
       entityId: data.id,
       changes: {
         status: { from, to: data.status },
-        ...(isFirstPublish && { courseCode: { from: null, to: courseCode } })
+        ...(isFirstPublish && { courseCode: { from: null, to: courseCode } }),
+        ...(slug !== before.slug && { slug: { from: before.slug, to: slug } })
       }
     });
   });

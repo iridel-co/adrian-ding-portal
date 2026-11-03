@@ -1522,6 +1522,8 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     const codes = await sql`select id, course_code from workshop where id in (${first.id}, ${second.id})`;
     const codeOf = (id: string) => Number(codes.find(row => row.id === id)?.course_code);
     expect(codeOf(second.id)).toBe(codeOf(first.id) + 1);
+    const [firstRow] = await sql`select slug, course_code from workshop where id = ${first.id}`;
+    expect(firstRow.slug).toBe(`synthetic-first-workshop-${firstRow.course_code}`);
   });
 
   it("keeps the course code when the CMS saves a workshop with registrations", async () => {

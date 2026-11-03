@@ -11,10 +11,9 @@ import {
 import { listPageLimit, listPageOffset, sortDirection } from "@/features/shared/pagination";
 import type { FieldLabels } from "@/features/shared/publish";
 
-/* What the editor saves. A draft needs only a title and a valid slug. */
+/* What the editor saves. A draft needs only a title. The server sets the slug. */
 export const workshopSaveSchema = z.object({
   title: z.string().trim().min(1, "Enter a title."),
-  slug: z.string().trim(),
   summary: z.string().trim(),
   problem: z.string().trim(),
   intro: z.string().trim(),
@@ -41,7 +40,6 @@ export type WorkshopSaveInput = z.input<typeof workshopSaveSchema>;
 /* What a workshop needs before it can be published. */
 export const workshopPublishSchema = z.object({
   title: z.string().min(1),
-  slug: z.string().min(1),
   summary: z.string().min(1),
   intro: z.string().min(1),
   heroMediaId: z.string().min(1),
@@ -54,7 +52,6 @@ export const workshopPublishSchema = z.object({
 
 export const WORKSHOP_FIELD_LABELS: FieldLabels = {
   title: "Title",
-  slug: "Slug",
   summary: "Summary",
   intro: "Intro",
   heroMediaId: "Hero image",

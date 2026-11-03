@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { displayCourseCode, nextCourseCode } from "@/features/workshops/course-number";
+import { displayCourseCode, nextCourseCode, workshopSlug } from "@/features/workshops/course-number";
 
 describe("nextCourseCode", () => {
   it("starts at 001 when no course has a number", () => {
@@ -19,5 +19,19 @@ describe("nextCourseCode", () => {
 describe("displayCourseCode", () => {
   it("adds the reference prefix", () => {
     expect(displayCourseCode("001")).toBe("AD-001");
+  });
+});
+
+describe("workshopSlug", () => {
+  it("joins the title and the course code", () => {
+    expect(workshopSlug("Coaching for Managers", "001")).toBe("coaching-for-managers-001");
+  });
+
+  it("lowercases a letter code", () => {
+    expect(workshopSlug("Coaching for Managers", "CFM")).toBe("coaching-for-managers-cfm");
+  });
+
+  it("falls back when the title has no letters or digits", () => {
+    expect(workshopSlug("!!!", "002")).toBe("workshop-002");
   });
 });

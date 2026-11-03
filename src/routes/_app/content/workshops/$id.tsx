@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarDays, Plus } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/cms/content-list-page";
@@ -11,7 +11,6 @@ import { MediaField } from "@/components/cms/media-field";
 import type { PickedMedia } from "@/components/cms/media-picker";
 import { MoneyField } from "@/components/cms/money-field";
 import { PreviewButton } from "@/components/cms/preview-dialog";
-import { SlugField } from "@/components/cms/slug-field";
 import {
   CONTENT_STATUS_DISPLAY,
   SESSION_STATUS_DISPLAY,
@@ -48,7 +47,6 @@ export const Route = createFileRoute("/_app/content/workshops/$id")({
 
 type WorkshopForm = {
   title: string;
-  slug: string;
   summary: string;
   problem: string;
   intro: string;
@@ -79,7 +77,6 @@ function toForm(detail: WorkshopDetail): WorkshopForm {
   const { workshop } = detail;
   return {
     title: workshop.title,
-    slug: workshop.slug,
     summary: workshop.summary,
     problem: workshop.problem,
     intro: workshop.intro,
@@ -159,8 +156,6 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
     }
   }));
 
-  const setSlug = useCallback((slug: string) => setField("slug", slug), [setField]);
-
   const previewContent = useMemo((): PreviewContent => {
     const nextSession = detail.upcomingSessions.find((session) => session.status !== "cancelled");
     return {
@@ -232,14 +227,6 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
             value={values.title}
             onChange={(event) => setField("title", event.target.value)}
           />
-        </Field>
-        <Field
-          label="Slug"
-          htmlFor="slug"
-          errors={fieldErrors.slug}
-          hint="The page address, e.g. /workshops/coaching-for-managers"
-        >
-          <SlugField id="slug" title={values.title} value={values.slug} onChange={setSlug} />
         </Field>
         <Field
           label="Summary"
