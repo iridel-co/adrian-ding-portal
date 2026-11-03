@@ -34,13 +34,13 @@
   --brand-foreground: #fafafa;
 
   /*
-    Light mode: the page is a soft blue-gray wash with a faint glow in the top
-    corners, and cards, inputs and the sidebar stay white so they stand out.
+    Light mode: the page is a soft warm gray with a faint brand-red glow in the
+    top corners, and cards, inputs and the sidebar stay white so they stand out.
   */
-  --background: oklch(0.972 0.006 255);
+  --background: oklch(0.973 0.006 30);
   --canvas:
-    radial-gradient(70rem 40rem at 0% 0%, oklch(0.93 0.035 265 / 0.8), transparent 70%),
-    radial-gradient(50rem 35rem at 100% 0%, oklch(0.95 0.025 230 / 0.6), transparent 70%),
+    radial-gradient(70rem 40rem at 0% 0%, oklch(0.94 0.035 25 / 0.7), transparent 70%),
+    radial-gradient(50rem 35rem at 100% 0%, oklch(0.96 0.02 45 / 0.6), transparent 70%),
     var(--background);
   --foreground: var(--base-800);
   --card: oklch(1 0 0);
@@ -49,15 +49,15 @@
   --popover-foreground: var(--base-800);
   --primary: var(--base-950);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.955 0.008 255);
+  --secondary: oklch(0.955 0.006 30);
   --secondary-foreground: var(--base-800);
-  --muted: oklch(0.965 0.006 255);
+  --muted: oklch(0.965 0.005 30);
   --muted-foreground: var(--base-600);
-  --accent: oklch(0.95 0.01 255);
+  --accent: oklch(0.95 0.008 30);
   --accent-foreground: var(--base-800);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.91 0.01 255);
-  --input: oklch(0.87 0.012 255);
+  --border: oklch(0.91 0.008 30);
+  --input: oklch(0.87 0.01 30);
   --ring: var(--base-950);
   --chart-1: var(--base-950);
   --chart-2: var(--base-500);
@@ -68,9 +68,9 @@
   --sidebar-foreground: var(--base-800);
   --sidebar-primary: var(--base-950);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.96 0.008 255);
+  --sidebar-accent: oklch(0.96 0.006 30);
   --sidebar-accent-foreground: var(--base-800);
-  --sidebar-border: oklch(0.92 0.01 255);
+  --sidebar-border: oklch(0.92 0.008 30);
   --sidebar-ring: var(--base-950);
 }
 
