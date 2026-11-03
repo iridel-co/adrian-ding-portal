@@ -1,20 +1,13 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
 import { useState } from "react";
 
-import { Field, FormErrorList } from "@/components/cms/form-section";
+import { CreateDialogContent } from "@/components/cms/create-dialog";
+import { Field } from "@/components/cms/form-section";
 import { useFormErrors } from "@/components/cms/use-form-errors";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -75,109 +68,98 @@ export function NewSessionDialog({
           New session
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            create.mutate();
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>New session</DialogTitle>
-            <DialogDescription>
-              Venue, price and capacity start from the workshop defaults.
-            </DialogDescription>
-          </DialogHeader>
-          <Field label="Workshop" htmlFor="new-session-workshop" errors={fieldErrors.workshopId}>
-            <Select
-              value={workshopId}
-              onValueChange={(value) => {
-                setWorkshopId(value);
-                clearFieldErrors("workshopId");
+      <CreateDialogContent
+        icon={CalendarDays}
+        title="New session"
+        description="Venue, price and capacity start from the workshop defaults."
+        submitLabel="Create draft"
+        isPending={create.isPending}
+        canSubmit={workshopId !== ""}
+        errors={generalErrors}
+        onSubmit={() => create.mutate()}
+      >
+        <Field label="Workshop" htmlFor="new-session-workshop" errors={fieldErrors.workshopId}>
+          <Select
+            value={workshopId}
+            onValueChange={(value) => {
+              setWorkshopId(value);
+              clearFieldErrors("workshopId");
+            }}
+          >
+            <SelectTrigger id="new-session-workshop" className="w-full">
+              <SelectValue placeholder={workshops.isPending ? "Loading workshops…" : "Pick a workshop"} />
+            </SelectTrigger>
+            <SelectContent>
+              {workshops.data?.items.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="First day" htmlFor="new-session-date" errors={fieldErrors.date}>
+            <Input
+              id="new-session-date"
+              type="date"
+              required
+              value={date}
+              onChange={(event) => {
+                setDate(event.target.value);
+                clearFieldErrors("date");
               }}
-            >
-              <SelectTrigger id="new-session-workshop" className="w-full">
-                <SelectValue placeholder={workshops.isPending ? "Loading workshops…" : "Pick a workshop"} />
-              </SelectTrigger>
-              <SelectContent>
-                {workshops.data?.items.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {item.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </Field>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="First day" htmlFor="new-session-date" errors={fieldErrors.date}>
-              <Input
-                id="new-session-date"
-                type="date"
-                required
-                value={date}
-                onChange={(event) => {
-                  setDate(event.target.value);
-                  clearFieldErrors("date");
-                }}
-              />
-            </Field>
-            <Field
-              label="Last day"
-              htmlFor="new-session-end-date"
-              errors={fieldErrors.endDate}
-              hint="Empty for one day."
-            >
-              <Input
-                id="new-session-end-date"
-                type="date"
-                min={date || undefined}
-                value={endDate}
-                onChange={(event) => {
-                  setEndDate(event.target.value);
-                  clearFieldErrors("endDate");
-                }}
-              />
-            </Field>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Field
-              label="Starts each day"
-              htmlFor="new-session-start"
-              errors={fieldErrors.startTime}
-            >
-              <Input
-                id="new-session-start"
-                type="time"
-                required
-                value={startTime}
-                onChange={(event) => {
-                  setStartTime(event.target.value);
-                  clearFieldErrors("startTime");
-                }}
-              />
-            </Field>
-            <Field label="Ends each day" htmlFor="new-session-end" errors={fieldErrors.endTime}>
-              <Input
-                id="new-session-end"
-                type="time"
-                required
-                value={endTime}
-                onChange={(event) => {
-                  setEndTime(event.target.value);
-                  clearFieldErrors("endTime");
-                }}
-              />
-            </Field>
-          </div>
-          <FormErrorList messages={generalErrors} />
-          <DialogFooter>
-            <Button type="submit" disabled={!workshopId || create.isPending}>
-              Create draft
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+          <Field
+            label="Last day"
+            htmlFor="new-session-end-date"
+            errors={fieldErrors.endDate}
+            hint="Empty for one day."
+          >
+            <Input
+              id="new-session-end-date"
+              type="date"
+              min={date || undefined}
+              value={endDate}
+              onChange={(event) => {
+                setEndDate(event.target.value);
+                clearFieldErrors("endDate");
+              }}
+            />
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Field
+            label="Starts each day"
+            htmlFor="new-session-start"
+            errors={fieldErrors.startTime}
+          >
+            <Input
+              id="new-session-start"
+              type="time"
+              required
+              value={startTime}
+              onChange={(event) => {
+                setStartTime(event.target.value);
+                clearFieldErrors("startTime");
+              }}
+            />
+          </Field>
+          <Field label="Ends each day" htmlFor="new-session-end" errors={fieldErrors.endTime}>
+            <Input
+              id="new-session-end"
+              type="time"
+              required
+              value={endTime}
+              onChange={(event) => {
+                setEndTime(event.target.value);
+                clearFieldErrors("endTime");
+              }}
+            />
+          </Field>
+        </div>
+      </CreateDialogContent>
     </Dialog>
   );
 }

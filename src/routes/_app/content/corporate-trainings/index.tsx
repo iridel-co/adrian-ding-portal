@@ -7,7 +7,8 @@ import type { z } from "zod";
 
 import { ContentListPage, EmptyState, FilterTabs } from "@/components/cms/content-list-page";
 import { ContentBulkActions, ContentRowActions } from "@/components/cms/content-status-actions";
-import { Field, FormErrorList } from "@/components/cms/form-section";
+import { CreateDialogContent } from "@/components/cms/create-dialog";
+import { Field } from "@/components/cms/form-section";
 import { SortableTableBody } from "@/components/cms/sortable-list";
 import { CONTENT_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { useFormErrors } from "@/components/cms/use-form-errors";
@@ -17,14 +18,7 @@ import { SelectionBar } from "@/components/table/selection-bar";
 import { TableCard } from "@/components/table/table-card";
 import { TableSkeleton } from "@/components/table/table-skeleton";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -215,37 +209,28 @@ function NewProgramDialog() {
           New program
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            create.mutate();
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>New program</DialogTitle>
-          </DialogHeader>
-          <Field label="Title" htmlFor="new-program-title" errors={fieldErrors.title}>
-            <Input
-              id="new-program-title"
-              required
-              placeholder="e.g. Leadership Training & Development"
-              value={title}
-              onChange={(event) => {
-                setTitle(event.target.value);
-                clearFieldErrors("title");
-              }}
-            />
-          </Field>
-          <FormErrorList messages={generalErrors} />
-          <DialogFooter>
-            <Button type="submit" disabled={create.isPending}>
-              Create draft
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+      <CreateDialogContent
+        icon={Briefcase}
+        title="New program"
+        description="Start with a title. You can fill in the rest before you publish."
+        submitLabel="Create draft"
+        isPending={create.isPending}
+        errors={generalErrors}
+        onSubmit={() => create.mutate()}
+      >
+        <Field label="Title" htmlFor="new-program-title" errors={fieldErrors.title}>
+          <Input
+            id="new-program-title"
+            required
+            placeholder="e.g. Leadership Training & Development"
+            value={title}
+            onChange={(event) => {
+              setTitle(event.target.value);
+              clearFieldErrors("title");
+            }}
+          />
+        </Field>
+      </CreateDialogContent>
     </Dialog>
   );
 }

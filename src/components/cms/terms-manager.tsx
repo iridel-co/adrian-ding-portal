@@ -4,20 +4,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { ContentListPage, EmptyState, FilterTabs } from "@/components/cms/content-list-page";
-import { Field, FieldErrors, FormErrorList } from "@/components/cms/form-section";
+import { CreateDialogContent } from "@/components/cms/create-dialog";
+import { Field, FieldErrors } from "@/components/cms/form-section";
 import { SortableTableBody } from "@/components/cms/sortable-list";
 import { NO_FIELDS, useFormErrors } from "@/components/cms/use-form-errors";
 import { ReadState } from "@/components/table/read-state";
 import { TableSkeleton } from "@/components/table/table-skeleton";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -98,7 +92,14 @@ export function TermsManager({
       title={title}
       description={isActive ? `${description} Drag rows to set the order they show on the site.` : description}
       action={
-        <NewTermDialog kind={kind} itemLabel={itemLabel} placeholder={placeholder} onCreated={refresh} />
+        <NewTermDialog
+          kind={kind}
+          itemLabel={itemLabel}
+          placeholder={placeholder}
+          icon={icon}
+          description={description}
+          onCreated={refresh}
+        />
       }
       filters={<FilterTabs label="Show" value={view} options={VIEW_OPTIONS} onChange={setView} />}
     >
@@ -245,10 +246,12 @@ type NewTermDialogProps = {
   kind: TaxonomyKind;
   itemLabel: string;
   placeholder: string;
+  icon: LucideIcon;
+  description: string;
   onCreated: () => Promise<void>;
 };
 
-function NewTermDialog({ kind, itemLabel, placeholder, onCreated }: NewTermDialogProps) {
+function NewTermDialog({ kind, itemLabel, placeholder, icon, description, onCreated }: NewTermDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState("");
   const { fieldErrors, generalErrors, showErrors, clearFieldErrors, clearErrors } =
@@ -278,37 +281,28 @@ function NewTermDialog({ kind, itemLabel, placeholder, onCreated }: NewTermDialo
           New {itemLabel}
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            create.mutate();
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>New {itemLabel}</DialogTitle>
-          </DialogHeader>
-          <Field label="Name" htmlFor={`new-${kind}-name`} errors={fieldErrors.name}>
-            <Input
-              id={`new-${kind}-name`}
-              required
-              placeholder={placeholder}
-              value={name}
-              onChange={(event) => {
-                setName(event.target.value);
-                clearFieldErrors("name");
-              }}
-            />
-          </Field>
-          <FormErrorList messages={generalErrors} />
-          <DialogFooter>
-            <Button type="submit" disabled={create.isPending}>
-              Add {itemLabel}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+      <CreateDialogContent
+        icon={icon}
+        title={`New ${itemLabel}`}
+        description={description}
+        submitLabel={`Add ${itemLabel}`}
+        isPending={create.isPending}
+        errors={generalErrors}
+        onSubmit={() => create.mutate()}
+      >
+        <Field label="Name" htmlFor={`new-${kind}-name`} errors={fieldErrors.name}>
+          <Input
+            id={`new-${kind}-name`}
+            required
+            placeholder={placeholder}
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value);
+              clearFieldErrors("name");
+            }}
+          />
+        </Field>
+      </CreateDialogContent>
     </Dialog>
   );
 }
