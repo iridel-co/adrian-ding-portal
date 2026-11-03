@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { Archive, FileText, Globe, ImageIcon, Undo2, UsersRound } from "lucide-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 
-import { BackLink, EditorShell, EditorSkeleton, type StatusAction } from "@/components/cms/editor-shell";
+import { EditorShell, EditorSkeleton, type StatusAction } from "@/components/cms/editor-shell";
+import { Crumb } from "@/components/crm/detail-parts";
 import { Field, FormSection } from "@/components/cms/form-section";
 import { MediaField } from "@/components/cms/media-field";
 import type { PickedMedia } from "@/components/cms/media-picker";
@@ -77,6 +79,9 @@ function ProgramEditorPage() {
   return <ProgramEditor key={data.program.updatedAt.toString()} detail={data} />;
 }
 
+/* Publish shows a globe, Archive a box, and moving back to draft an undo arrow. */
+const CONTENT_ACTION_ICONS = { published: Globe, archived: Archive, draft: Undo2 } as const;
+
 function ProgramEditor({ detail }: { detail: ProgramDetail }) {
   const queryClient = useQueryClient();
   const { program } = detail;
@@ -108,6 +113,7 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
 
   const statusActions: StatusAction[] = CONTENT_STATUS_ACTIONS[program.status].map((action) => ({
     label: action.label,
+    icon: CONTENT_ACTION_ICONS[action.to],
     isDestructive: action.to === "archived",
     onSelect: () => {
       if (isDirty) {
@@ -131,13 +137,12 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
       title={values.title}
       back={
         <Link to="/content/corporate-trainings">
-          <BackLink>All programs</BackLink>
+          <Crumb>Corporate trainings</Crumb>
         </Link>
       }
       status={CONTENT_STATUS_DISPLAY[program.status]}
       statusActions={statusActions}
       isLive={program.status === "published"}
-      lastEdited={{ name: detail.updatedByName, at: program.updatedAt }}
       isSaving={save.isPending}
       isDirty={isDirty}
       errors={generalErrors}
@@ -155,13 +160,13 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
               )}
             />
           )}
-          <FormSection title="Card Image" errors={fieldErrors.image}>
+          <FormSection icon={ImageIcon} title="Card Image" errors={fieldErrors.image}>
             <MediaField value={values.image} onChange={(media) => setField("image", media)} />
           </FormSection>
         </>
       }
     >
-      <FormSection title="Basics">
+      <FormSection icon={FileText} title="Basics">
         <Field label="Title" htmlFor="title" errors={fieldErrors.title}>
           <Input
             id="title"
@@ -194,7 +199,8 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
       </FormSection>
 
       <FormSection
-        title="Useful for"
+        icon={UsersRound}
+        title="Useful For"
         errors={fieldErrors.usefulFor}
         description="Who the program is for. Shows on the card."
       >

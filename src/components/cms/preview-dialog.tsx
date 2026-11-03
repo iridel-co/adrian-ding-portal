@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   type PreviewContent,
   type PreviewPayload,
@@ -172,10 +173,14 @@ export function PreviewButton({ content }: { content: PreviewContent }) {
 
   return (
     <>
-      <Button type="button" variant="outline" onClick={() => setIsOpen(true)}>
-        <Eye />
-        Preview
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button type="button" variant="outline" size="icon" aria-label="Preview" onClick={() => setIsOpen(true)}>
+            <Eye />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Preview</TooltipContent>
+      </Tooltip>
       <PreviewDialog open={isOpen} onOpenChange={setIsOpen} content={content} />
     </>
   );

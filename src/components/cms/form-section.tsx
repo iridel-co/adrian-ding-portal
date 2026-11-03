@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,13 +16,18 @@ export function FieldErrors({ errors }: { errors: string[] }) {
   );
 }
 
-/* A titled card for one group of form fields. Write titles in Title Case, e.g. "Date and Time". */
+/*
+  A titled card for one group of form fields, with an icon that hints at what's inside.
+  Write titles in Title Case, e.g. "Date and Time".
+*/
 export function FormSection({
+  icon: Icon,
   title,
   description,
   errors = [],
   children
 }: {
+  icon: LucideIcon;
   title: string;
   description?: string;
   errors?: string[];
@@ -30,7 +36,10 @@ export function FormSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <CardTitle className="flex items-center gap-2 font-semibold">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"><Icon className="size-4" /></span>
+          {title}
+        </CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent className="flex flex-col gap-5">

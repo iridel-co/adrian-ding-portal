@@ -1,11 +1,28 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CalendarDays, Plus } from "lucide-react";
+import {
+  Archive,
+  Backpack,
+  CalendarDays,
+  FileText,
+  Globe,
+  ImageIcon,
+  ListOrdered,
+  PackageCheck,
+  Plus,
+  SlidersHorizontal,
+  Tags,
+  Target,
+  Undo2,
+  Users,
+  Video
+} from "lucide-react";
 import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/cms/content-list-page";
-import { BackLink, EditorShell, EditorSkeleton, type StatusAction } from "@/components/cms/editor-shell";
+import { EditorShell, EditorSkeleton, type StatusAction } from "@/components/cms/editor-shell";
+import { Crumb } from "@/components/crm/detail-parts";
 import { Field, FormSection } from "@/components/cms/form-section";
 import { MediaField } from "@/components/cms/media-field";
 import type { PickedMedia } from "@/components/cms/media-picker";
@@ -34,7 +51,6 @@ import {
 } from "@/features/workshops/functions";
 import type { FieldAliases } from "@/features/shared/error-message";
 import { publishChecklist } from "@/features/shared/publish";
-import { displayCourseCode } from "@/features/workshops/course-number";
 import { WORKSHOP_FIELD_LABELS, workshopPublishSchema } from "@/features/workshops/schemas";
 
 export const Route = createFileRoute("/_app/content/workshops/$id")({
@@ -114,6 +130,9 @@ function WorkshopEditorPage() {
   return <WorkshopEditor key={data.workshop.updatedAt.toString()} detail={data} />;
 }
 
+/* Publish shows a globe, Archive a box, and moving back to draft an undo arrow. */
+const CONTENT_ACTION_ICONS = { published: Globe, archived: Archive, draft: Undo2 } as const;
+
 function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
   const queryClient = useQueryClient();
   const { workshop } = detail;
@@ -146,6 +165,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
 
   const statusActions: StatusAction[] = CONTENT_STATUS_ACTIONS[workshop.status].map((action) => ({
     label: action.label,
+    icon: CONTENT_ACTION_ICONS[action.to],
     isDestructive: action.to === "archived",
     onSelect: () => {
       if (isDirty) {
@@ -169,22 +189,12 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       title={values.title}
       back={
         <Link to="/content/workshops">
-          <BackLink>All workshops</BackLink>
+          <Crumb>Workshops</Crumb>
         </Link>
       }
       status={CONTENT_STATUS_DISPLAY[workshop.status]}
       statusActions={statusActions}
       isLive={workshop.status === "published"}
-      lastEdited={{ name: detail.updatedByName, at: workshop.updatedAt }}
-      details={
-        workshop.courseCode ? (
-          <span>
-            Course code <span className="font-mono">{displayCourseCode(workshop.courseCode)}</span>
-          </span>
-        ) : (
-          <span>Course code assigned when published</span>
-        )
-      }
       isSaving={save.isPending}
       isDirty={isDirty}
       errors={generalErrors}
@@ -202,13 +212,13 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
               )}
             />
           )}
-          <FormSection title="Hero Image" errors={fieldErrors.heroMedia}>
+          <FormSection icon={ImageIcon} title="Hero Image" errors={fieldErrors.heroMedia}>
             <MediaField
               value={values.heroMedia}
               onChange={(media) => setField("heroMedia", media)}
             />
           </FormSection>
-          <FormSection title="Tags" errors={fieldErrors.tags}>
+          <FormSection icon={Tags} title="Tags" errors={fieldErrors.tags}>
             <TermMultiPicker
               kind="workshop_tag"
               value={values.tags}
@@ -220,7 +230,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
         </>
       }
     >
-      <FormSection title="Basics">
+      <FormSection icon={FileText} title="Basics">
         <Field label="Title" htmlFor="title" errors={fieldErrors.title}>
           <Input
             id="title"
@@ -265,6 +275,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       </FormSection>
 
       <FormSection
+        icon={Target}
         title="Outcomes"
         errors={fieldErrors.outcomes}
         description='Shown as "You leave able to…".'
@@ -277,6 +288,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       </FormSection>
 
       <FormSection
+        icon={ListOrdered}
         title="Curriculum"
         errors={fieldErrors.curriculum}
         description='Shown as "What the day covers".'
@@ -289,6 +301,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       </FormSection>
 
       <FormSection
+        icon={PackageCheck}
         title="Inclusions"
         errors={fieldErrors.inclusions}
         description="What every attendee gets."
@@ -301,7 +314,8 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       </FormSection>
 
       <FormSection
-        title="What to expect"
+        icon={Backpack}
+        title="What to Expect"
         errors={fieldErrors.whatToExpect}
         description="Arrival, dress code and what to bring."
       >
@@ -312,7 +326,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
         />
       </FormSection>
 
-      <FormSection title="Audience and Format">
+      <FormSection icon={Users} title="Audience and Format">
         <Field label="Who it's for" htmlFor="audience" errors={fieldErrors.audience}>
           <Textarea
             id="audience"
@@ -331,7 +345,7 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
         </Field>
       </FormSection>
 
-      <FormSection title="Primer Video">
+      <FormSection icon={Video} title="Primer Video">
         <Field
           label="Video link"
           htmlFor="primerVideoUrl"
@@ -357,7 +371,8 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
       </FormSection>
 
       <FormSection
-        title="Session defaults"
+        icon={SlidersHorizontal}
+        title="Session Defaults"
         description="New sessions start with these values. Existing sessions keep their own."
       >
         <div className="grid gap-5 sm:grid-cols-2">
@@ -437,7 +452,7 @@ type UpcomingSessionsProps = {
 
 function UpcomingSessions({ workshopId, sessions }: UpcomingSessionsProps) {
   return (
-    <FormSection title="Upcoming Sessions">
+    <FormSection icon={CalendarDays} title="Upcoming Sessions">
       {sessions.length === 0 ? (
         <EmptyState icon={CalendarDays} className="py-6 shadow-none">
           No upcoming sessions.

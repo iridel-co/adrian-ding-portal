@@ -1,27 +1,19 @@
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { cn } from "cn";
+import { ArrowLeft, CircleDot, Save, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { FormErrorList } from "@/components/cms/form-section";
 import { StatusBadge, type StatusDisplay } from "@/components/cms/status-badge";
+import { DetailHeader, Fact } from "@/components/crm/detail-parts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export type StatusAction = {
   label: string;
+  icon: LucideIcon;
   onSelect: () => void;
   isDestructive?: boolean;
-};
-
-type LastEdited = {
-  name: string | null;
-  at: Date | string;
 };
 
 type EditorShellProps = {
@@ -31,8 +23,6 @@ type EditorShellProps = {
   statusActions?: StatusAction[];
   isLive?: boolean;
   liveNote?: string;
-  lastEdited?: LastEdited;
-  details?: ReactNode;
   isSaving: boolean;
   isDirty: boolean;
   errors?: string[];
@@ -51,8 +41,6 @@ export function EditorShell({
   statusActions = [],
   isLive = false,
   liveNote = DEFAULT_LIVE_NOTE,
-  lastEdited,
-  details,
   isSaving,
   isDirty,
   errors = [],
@@ -69,50 +57,35 @@ export function EditorShell({
         onSave();
       }}
     >
+      {/*
+        The same header as the other detail pages. Each status change is its own
+        button (e.g. Publish, Archive), next to an icon-only Preview and Save.
+      */}
       <div className="flex flex-col gap-4">
-        {back}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 flex-col gap-2">
-            <h1 className="font-display text-4xl break-words">{title || "Untitled"}</h1>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              {status && <StatusBadge display={status} />}
-              {details}
-              {lastEdited && (
-                <span>
-                  Last edited {lastEdited.name ? `by ${lastEdited.name} ` : ""}
-                  {new Date(lastEdited.at).toLocaleString()}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex shrink-0 gap-2">
+        <DetailHeader
+          crumb={back}
+          title={title || "Untitled"}
+          facts={status && <Fact icon={CircleDot} label="Status"><StatusBadge display={status} /></Fact>}
+          actions={<>
             {preview}
-            {statusActions.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="outline">
-                    Status
-                    <ChevronDown />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {statusActions.map((action) => (
-                    <DropdownMenuItem
-                      key={action.label}
-                      variant={action.isDestructive ? "destructive" : "default"}
-                      onSelect={action.onSelect}
-                    >
-                      {action.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            <Button type="submit" disabled={isSaving || !isDirty}>
+            {statusActions.map((action) => (
+              <Button
+                key={action.label}
+                type="button"
+                variant="outline"
+                className={cn(action.isDestructive && "text-destructive hover:bg-destructive/10 hover:text-destructive")}
+                onClick={action.onSelect}
+              >
+                <action.icon data-icon="inline-start" />
+                {action.label}
+              </Button>
+            ))}
+            <Button type="submit" variant="brand" disabled={isSaving || !isDirty}>
+              <Save data-icon="inline-start" />
               {isSaving ? "Saving…" : "Save"}
             </Button>
-          </div>
-        </div>
+          </>}
+        />
         {isLive && (
           <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
             {liveNote}

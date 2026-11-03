@@ -1,9 +1,21 @@
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  Ban,
+  BookOpen,
+  CalendarClock,
+  DoorOpen,
+  Lock,
+  MapPin,
+  Ticket,
+  Undo2,
+  type LucideIcon
+} from "lucide-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { BackLink, EditorShell, EditorSkeleton, type StatusAction } from "@/components/cms/editor-shell";
+import { EditorShell, EditorSkeleton, type StatusAction } from "@/components/cms/editor-shell";
+import { Crumb } from "@/components/crm/detail-parts";
 import { Field, FormSection } from "@/components/cms/form-section";
 import { MoneyField } from "@/components/cms/money-field";
 import { PreviewButton } from "@/components/cms/preview-dialog";
@@ -74,6 +86,14 @@ const PRICE_MISSING_ISSUE = {
 const CAPACITY_MISSING_ISSUE = {
   path: ["capacity"],
   message: "Enter a capacity."
+};
+
+/* Open shows a door, Close a lock, Cancel a stop sign, and back to draft an undo arrow. */
+const STATUS_ACTION_ICONS: Record<SessionStatus, LucideIcon> = {
+  draft: Undo2,
+  open: DoorOpen,
+  closed: Lock,
+  cancelled: Ban
 };
 
 const STATUS_ACTION_LABELS: Record<SessionStatus, string> = {
@@ -185,6 +205,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
 
   const statusActions: StatusAction[] = nextStatuses.map((status) => ({
     label: STATUS_ACTION_LABELS[status],
+    icon: STATUS_ACTION_ICONS[status],
     isDestructive: status === "cancelled",
     onSelect: () => {
       if (isDirty) {
@@ -205,14 +226,13 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
         title={`${detail.workshop.title}, ${formatDateRange(session.date, session.endDate)}`}
         back={
           <Link to="/content/sessions">
-            <BackLink>All sessions</BackLink>
+            <Crumb>Sessions</Crumb>
           </Link>
         }
         status={SESSION_STATUS_DISPLAY[session.status]}
         statusActions={statusActions}
         isLive={session.status === "open" && !detail.isPast}
         liveNote="Registration is open. Changes show on the site when you save."
-        lastEdited={{ name: detail.updatedByName, at: session.updatedAt }}
         isSaving={save.isPending}
         isDirty={isDirty && !isLocked}
         errors={generalErrors}
@@ -226,7 +246,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
                 checks={publishChecklist(sessionOpenSchema, values, SESSION_FIELD_LABELS)}
               />
             )}
-            <FormSection title="Workshop">
+            <FormSection icon={BookOpen} title="Workshop">
               <Link
                 to="/content/workshops/$id"
                 params={{ id: detail.workshop.id }}
@@ -245,7 +265,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
         }
       >
         <fieldset disabled={isLocked} className="flex flex-col gap-6">
-          <FormSection title="Date and Time" description="All times are Manila time.">
+          <FormSection icon={CalendarClock} title="Date and Time" description="All times are Manila time.">
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="First day" htmlFor="date" errors={fieldErrors.date}>
                 <Input
@@ -303,7 +323,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
             </Field>
           </FormSection>
 
-          <FormSection title="Venue">
+          <FormSection icon={MapPin} title="Venue">
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="Venue" htmlFor="venueName" errors={fieldErrors.venueName}>
                 <VenueSuggestInput
@@ -338,7 +358,7 @@ function SessionEditor({ detail }: { detail: SessionDetail }) {
             </Field>
           </FormSection>
 
-          <FormSection title="Price and Seats">
+          <FormSection icon={Ticket} title="Price and Seats">
             <div className="grid gap-5 sm:grid-cols-3">
               <Field label="Price" htmlFor="price" errors={fieldErrors.priceCentavos}>
                 <MoneyField

@@ -1,5 +1,5 @@
 import { cn } from "cn";
-import type { LucideIcon } from "lucide-react";
+import { ChevronRight, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,8 +23,18 @@ export function DetailHeader({ crumb, title, subtitle, facts, actions }: {
         {subtitle && <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground [&_svg]:size-4">{subtitle}</div>}
         {facts && <dl className="mt-4 grid grid-cols-[auto_1fr] items-center gap-x-8 gap-y-3 text-sm">{facts}</dl>}
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
     </header>
+  );
+}
+
+/* The breadcrumb above a detail page title, e.g. "Workshops ›". Wrap it in a Link. */
+export function Crumb({ children }: { children: ReactNode }) {
+  return (
+    <span className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      {children}
+      <ChevronRight className="size-4" />
+    </span>
   );
 }
 
