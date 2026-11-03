@@ -1,6 +1,7 @@
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { FormErrorList } from "@/components/cms/form-section";
 import { StatusBadge, type StatusDisplay } from "@/components/cms/status-badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,7 @@ type EditorShellProps = {
   lastEdited?: LastEdited;
   isSaving: boolean;
   isDirty: boolean;
+  errors?: string[];
   onSave: () => void;
   preview?: ReactNode;
   aside?: ReactNode;
@@ -49,6 +51,7 @@ export function EditorShell({
   lastEdited,
   isSaving,
   isDirty,
+  errors = [],
   onSave,
   preview,
   aside,
@@ -110,6 +113,7 @@ export function EditorShell({
             {liveNote}
           </p>
         )}
+        <FormErrorList messages={errors} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
