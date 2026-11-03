@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Ban, CalendarDays, DoorClosed, DoorOpen, type LucideIcon } from "lucide-react";
+import { Ban, CalendarDays, Lock, LockOpen, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
 
@@ -285,8 +285,8 @@ type SessionAction = { to: SessionStatus; label: string; short: string; done: st
 
 /* The status changes a session row offers. They match the session editor's status menu. */
 const SESSION_ACTIONS: SessionAction[] = [
-  { to: "open", label: "Open registration", short: "Open", done: "Opened", icon: DoorOpen, tone: "success" },
-  { to: "closed", label: "Close registration", short: "Close", done: "Closed", icon: DoorClosed, tone: "warning" },
+  { to: "open", label: "Open registration", short: "Open", done: "Opened", icon: LockOpen, tone: "success" },
+  { to: "closed", label: "Close registration", short: "Close", done: "Closed", icon: Lock, tone: "warning" },
   { to: "cancelled", label: "Cancel session", short: "Cancel", done: "Cancelled", icon: Ban, tone: "destructive" }
 ];
 

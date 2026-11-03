@@ -3,8 +3,8 @@ import {
   Ban,
   BookOpen,
   CalendarClock,
-  DoorOpen,
   Lock,
+  LockOpen,
   MapPin,
   Ticket,
   Undo2,
@@ -88,10 +88,10 @@ const CAPACITY_MISSING_ISSUE = {
   message: "Enter a capacity."
 };
 
-/* Open shows a door, Close a lock, Cancel a stop sign, and back to draft an undo arrow. */
+/* Open shows an open lock, Close a closed lock, Cancel a stop sign, and back to draft an undo arrow. */
 const STATUS_ACTION_ICONS: Record<SessionStatus, LucideIcon> = {
   draft: Undo2,
-  open: DoorOpen,
+  open: LockOpen,
   closed: Lock,
   cancelled: Ban
 };
