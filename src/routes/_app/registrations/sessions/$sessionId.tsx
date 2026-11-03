@@ -111,7 +111,7 @@ function RegistrationWorkspace() {
             <span className="rounded-full bg-current/15 px-1.5 text-xs tabular-nums">{run.counts.paid + run.counts.unpaid + run.counts.cancelled}</span>
           </TabsTrigger>
         </TabsList>
-        {overview ? <TabsContent value="overview" className="grid items-start gap-6 pt-4 lg:grid-cols-[3fr_2fr]">
+        {overview ? <TabsContent value="overview" className="flex flex-col gap-6 pt-4">
           <SeatsCard run={run} />
           <DetailsCard run={run} />
         </TabsContent> : <TabsContent value="registrations" className="space-y-4 pt-4">
