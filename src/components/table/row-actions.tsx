@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import { useState, type ComponentProps, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { ACTION_TONES, type ActionTone } from "@/components/quick-action";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TableCell, TableHead } from "@/components/ui/table";
@@ -72,7 +73,7 @@ export function RowActions({ children }: { children: ReactNode }) {
 export function RowAction({ icon: Icon, label, tone = "default", className, ...props }: ComponentProps<typeof Button> & {
   icon: LucideIcon;
   label: string;
-  tone?: "default" | "destructive";
+  tone?: ActionTone;
 }) {
   return (
     <Tooltip>
@@ -80,11 +81,7 @@ export function RowAction({ icon: Icon, label, tone = "default", className, ...p
         <Button
           variant="ghost"
           size="icon-sm"
-          className={cn(
-            "text-muted-foreground hover:text-foreground",
-            tone === "destructive" && "hover:bg-destructive/10 hover:text-destructive",
-            className
-          )}
+          className={cn(ACTION_TONES[tone], className)}
           {...props}
         >
           <Icon />

@@ -12,7 +12,7 @@ import {
   SESSION_STATUS_DISPLAY,
   StatusBadge
 } from "@/components/cms/status-badge";
-import { QuickAction } from "@/components/quick-action";
+import { type ActionTone, QuickAction } from "@/components/quick-action";
 import { ReadState } from "@/components/table/read-state";
 import { ActionsHead, countOf, RowAction, RowActions, runBulk, SelectAllHead, SelectCell, useRowSelection } from "@/components/table/row-actions";
 import { SelectionBar } from "@/components/table/selection-bar";
@@ -281,12 +281,12 @@ function SessionList() {
   );
 }
 
-type SessionAction = { to: SessionStatus; label: string; short: string; done: string; icon: LucideIcon; tone?: "destructive" };
+type SessionAction = { to: SessionStatus; label: string; short: string; done: string; icon: LucideIcon; tone: ActionTone };
 
 /* The status changes a session row offers. They match the session editor's status menu. */
 const SESSION_ACTIONS: SessionAction[] = [
-  { to: "open", label: "Open registration", short: "Open", done: "Opened", icon: DoorOpen },
-  { to: "closed", label: "Close registration", short: "Close", done: "Closed", icon: DoorClosed },
+  { to: "open", label: "Open registration", short: "Open", done: "Opened", icon: DoorOpen, tone: "success" },
+  { to: "closed", label: "Close registration", short: "Close", done: "Closed", icon: DoorClosed, tone: "warning" },
   { to: "cancelled", label: "Cancel session", short: "Cancel", done: "Cancelled", icon: Ban, tone: "destructive" }
 ];
 

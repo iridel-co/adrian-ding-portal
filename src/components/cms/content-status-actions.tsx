@@ -1,7 +1,7 @@
 import { Archive, ArchiveRestore, EyeOff, Globe, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 
-import { QuickAction } from "@/components/quick-action";
+import { type ActionTone, QuickAction } from "@/components/quick-action";
 import { countOf, RowAction, runBulk } from "@/components/table/row-actions";
 import type { ContentStatus } from "@/features/shared/content-status";
 
@@ -11,14 +11,14 @@ type ContentActionsProps = {
   setStatus: (id: string, status: ContentStatus) => Promise<unknown>;
   onDone: () => void;
 };
-type ContentAction = { label: string; done: string; icon: LucideIcon; from: ContentStatus[]; to: ContentStatus; tone?: "destructive" };
+type ContentAction = { label: string; done: string; icon: LucideIcon; from: ContentStatus[]; to: ContentStatus; tone: ActionTone };
 
 /* The status changes a list offers. They match the editor's status menu. */
 const CONTENT_ACTIONS: ContentAction[] = [
-  { label: "Publish", done: "Published", icon: Globe, from: ["draft"], to: "published" },
-  { label: "Unpublish", done: "Unpublished", icon: EyeOff, from: ["published"], to: "draft" },
-  { label: "Archive", done: "Archived", icon: Archive, from: ["draft", "published"], to: "archived", tone: "destructive" },
-  { label: "Restore", done: "Restored", icon: ArchiveRestore, from: ["archived"], to: "draft" }
+  { label: "Publish", done: "Published", icon: Globe, from: ["draft"], to: "published", tone: "success" },
+  { label: "Unpublish", done: "Unpublished", icon: EyeOff, from: ["published"], to: "draft", tone: "destructive" },
+  { label: "Archive", done: "Archived", icon: Archive, from: ["draft", "published"], to: "archived", tone: "warning" },
+  { label: "Restore", done: "Restored", icon: ArchiveRestore, from: ["archived"], to: "draft", tone: "info" }
 ];
 
 function useStatusChange({ noun, setStatus, onDone }: ContentActionsProps) {

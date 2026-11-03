@@ -218,7 +218,7 @@ function RegistrationRows({ items, search }: { items: RegistrationRow[]; search:
     {/* The page wraps this in a TableCard, so the bar, table and pager share one card. */}
     {chosen.length > 0 && <SelectionBar count={chosen.length} total={eligible.length}
       onSelectAll={() => setSelected(eligible.map(item => item.id))} onClear={() => setSelected([])}>
-      <QuickAction icon={CircleCheck} onClick={() => setBatch({ items: chosen, action: RegistrationAction.MarkPaid })}>Mark paid</QuickAction>
+      <QuickAction icon={CircleCheck} tone="success" onClick={() => setBatch({ items: chosen, action: RegistrationAction.MarkPaid })}>Mark paid</QuickAction>
       <QuickAction icon={Ban} tone="destructive" onClick={() => setBatch({ items: chosen, action: RegistrationAction.Cancel })}>Cancel</QuickAction>
     </SelectionBar>}
     <Table>
@@ -239,7 +239,7 @@ function RegistrationRows({ items, search }: { items: RegistrationRow[]; search:
         <TableCell><RegistrationStatus isPaid={item.isPaid} cancelledAt={item.cancelledAt} /></TableCell>
         <TableCell className="tabular-nums">{formatPesos(item.priceCentavos)}</TableCell><TableCell className="text-muted-foreground">{formatCrmTime(item.createdAt)}</TableCell>
         <RowActions>{!item.isPaid && !item.cancelledAt && <>
-          <RowAction icon={CircleCheck} label="Mark paid" aria-label={`Mark ${item.reference} Paid`}
+          <RowAction icon={CircleCheck} label="Mark paid" tone="success" aria-label={`Mark ${item.reference} Paid`}
             onClick={() => setBatch({ items: [item], action: RegistrationAction.MarkPaid })} />
           <RowAction icon={Ban} label="Cancel registration" tone="destructive" aria-label={`Cancel ${item.reference}`}
             onClick={() => setBatch({ items: [item], action: RegistrationAction.Cancel })} />

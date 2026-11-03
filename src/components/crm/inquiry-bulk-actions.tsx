@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { QuickAction } from "@/components/quick-action";
 import { countOf, runBulk } from "@/components/table/row-actions";
-import { ACTION_ICONS } from "@/components/crm/inquiry-actions";
+import { ACTION_ICONS, ACTION_TONE } from "@/components/crm/inquiry-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -49,7 +49,7 @@ export function InquiryBulkActions({ items, onDone }: { items: Row[]; onDone: ()
     {(Object.keys(BULK_ACTIONS) as BulkStatus[]).map(status => {
       const fits = items.filter(item => inquiryTransitions[item.status].includes(status));
       if (fits.length === 0) return null;
-      return <QuickAction key={status} icon={ACTION_ICONS[status]} tone={status === "LOST" || status === "SPAM" ? "destructive" : "default"}
+      return <QuickAction key={status} icon={ACTION_ICONS[status]} tone={ACTION_TONE[status]}
         disabled={run.isPending} onClick={() => setChosen({ status, rows: fits })}>
         {fits.length < items.length ? `${BULK_ACTIONS[status].short} ${fits.length}` : BULK_ACTIONS[status].short}
       </QuickAction>;

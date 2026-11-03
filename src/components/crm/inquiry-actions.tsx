@@ -4,6 +4,7 @@ import { Ban, CircleX, FileText, MailCheck, Trophy, type LucideIcon } from "luci
 import type { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 import { MoneyField } from "@/components/cms/money-field";
+import { ACTION_TONES, type ActionTone } from "@/components/quick-action";
 import { RowAction } from "@/components/table/row-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,6 +19,7 @@ import { inquiryTransitionSchema } from "@/features/crm/schemas";
 
 type ActionStatus = Exclude<InquiryStatus, "NEW">;
 export const ACTION_ICONS: Record<ActionStatus, LucideIcon> = { CONTACTED: MailCheck, PROPOSAL_SENT: FileText, WON: Trophy, LOST: CircleX, SPAM: Ban };
+export const ACTION_TONE: Record<ActionStatus, ActionTone> = { CONTACTED: "info", PROPOSAL_SENT: "info", WON: "success", LOST: "warning", SPAM: "destructive" };
 const isClosingAction = (status: InquiryStatus) => status === "LOST" || status === "SPAM";
 export type InquiryDraft = {
   selected: ActionStatus | null; expectedStatus: InquiryStatus; value: number | null; reason: string; validation: string;
@@ -50,14 +52,14 @@ export function InquiryActions({ inquiry, draft, setDraft, compact = false }: {
     {allowed.map(status => {
       const Icon = ACTION_ICONS[status as ActionStatus];
       const label = inquiryActionLabels[status] ?? status;
-      if (compact) return <RowAction key={status} icon={Icon} label={label} tone={isClosingAction(status) ? "destructive" : "default"} onClick={() => choose(status)} />;
+      if (compact) return <RowAction key={status} icon={Icon} label={label} tone={ACTION_TONE[status as ActionStatus]} onClick={() => choose(status)} />;
       if (!isClosingAction(status)) return <Button key={status} variant={status === nextStep ? "brand" : "outline"} onClick={() => choose(status)}>
         <Icon data-icon="inline-start" />{label}
       </Button>;
       /* Lost and spam are icon buttons, named by a tooltip and by hidden text for screen readers. */
       return <Tooltip key={status}>
         <TooltipTrigger asChild>
-          <Button variant="outline" size="icon" onClick={() => choose(status)}><Icon /><span className="sr-only">{label}</span></Button>
+          <Button variant="outline" size="icon" className={ACTION_TONES[ACTION_TONE[status as ActionStatus]]} onClick={() => choose(status)}><Icon /><span className="sr-only">{label}</span></Button>
         </TooltipTrigger>
         <TooltipContent>{label}</TooltipContent>
       </Tooltip>;
