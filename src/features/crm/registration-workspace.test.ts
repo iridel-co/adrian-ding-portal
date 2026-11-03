@@ -38,6 +38,7 @@ import { FilterSelect } from "@/components/cms/content-list-page";
 import { QuickAction } from "@/components/quick-action";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/tabs";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Link } from "@tanstack/react-router";
 import { registrationSessionQueryOptions, registrationsQueryOptions } from "./registration-queries";
 
@@ -50,14 +51,15 @@ const run = {
 const item = { id: sessionId, fullName: "Alice <script>unsafe</script>", email: "alice@example.invalid", phone: "+630000000000",
   reference: "AD-PSW-0001", priceCentavos: 650000, isPaid: false, cancelledAt: "2026-10-19T01:00:00Z", createdAt: "2026-10-19T00:00:00Z" };
 const Component = Route.options.component as ComponentType;
-const render = () => renderToStaticMarkup(createElement(Component));
+/* The app root provides tooltips, so the tests do too. */
+const render = () => renderToStaticMarkup(createElement(TooltipProvider, { children: createElement(Component) }));
 function tree() {
   let result: ReactElement<Record<string, unknown>>;
   function Capture() {
     result = (Component as () => ReactElement<Record<string, unknown>>)();
     return result;
   }
-  renderToStaticMarkup(createElement(Capture));
+  renderToStaticMarkup(createElement(TooltipProvider, { children: createElement(Capture) }));
   return result!;
 }
 function find(node: ReactNode, type: unknown, label?: string): ReactElement<Record<string, unknown>> | undefined {

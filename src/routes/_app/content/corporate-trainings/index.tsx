@@ -6,11 +6,15 @@ import { toast } from "sonner";
 import type { z } from "zod";
 
 import { ContentListPage, EmptyState, FilterTabs } from "@/components/cms/content-list-page";
+import { ContentBulkActions, ContentRowActions } from "@/components/cms/content-status-actions";
 import { Field, FormErrorList } from "@/components/cms/form-section";
 import { SortableTableBody } from "@/components/cms/sortable-list";
 import { CONTENT_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { useFormErrors } from "@/components/cms/use-form-errors";
 import { ReadState } from "@/components/table/read-state";
+import { ActionsHead, RowActions, SelectAllHead, SelectCell, useRowSelection } from "@/components/table/row-actions";
+import { SelectionBar } from "@/components/table/selection-bar";
+import { TableCard } from "@/components/table/table-card";
 import { TableSkeleton } from "@/components/table/table-skeleton";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,11 +37,13 @@ import {
 import {
   $createProgram,
   $reorderPrograms,
+  $setProgramStatus,
   type ProgramListItem,
   programsQueryOptions
 } from "@/features/corporate-trainings/functions";
 import type { statusFilterSchema } from "@/features/corporate-trainings/schemas";
 import { errorMessage } from "@/features/shared/error-message";
+import type { ContentStatus } from "@/features/shared/content-status";
 
 const TITLE_FIELDS = ["title"];
 
@@ -68,6 +74,13 @@ function ProgramsPage() {
   const programs = useQuery(listOptions);
   const isOrderable = status === "active";
   const columns = isOrderable ? [{ label: "", className: "w-10" }, ...COLUMNS] : COLUMNS;
+  const selection = useRowSelection(programs.data ?? []);
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: ["programs"] });
+  const statusProps = {
+    noun: "program",
+    setStatus: (id: string, status: ContentStatus) => $setProgramStatus({ data: { id, status } }),
+    onDone: refresh
+  };
 
   const reorderPrograms = useMutation({
     mutationFn: (ids: string[]) => $reorderPrograms({ data: { ids } }),
@@ -107,24 +120,43 @@ function ProgramsPage() {
             {isOrderable ? "No programs yet." : "No programs match this filter."}
           </EmptyState>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {columns.map((column) => (
-                  <TableHead key={column.label} className={column.className}>
-                    {column.label}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <SortableTableBody
-              items={programs.data}
-              getId={(program) => program.id}
-              onReorder={handleReorder}
-              disabled={!isOrderable}
-              renderRow={(program) => <ProgramCells program={program} />}
-            />
-          </Table>
+          <TableCard>
+            {selection.selected.length > 0 && (
+              <SelectionBar count={selection.selected.length} total={selection.total} onSelectAll={selection.selectAll} onClear={selection.clear}>
+                <ContentBulkActions items={selection.selected} {...statusProps} onDone={() => { selection.clear(); refresh(); }} />
+              </SelectionBar>
+            )}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {isOrderable && <TableHead className="w-10" />}
+                  <SelectAllHead selection={selection} label="Select all programs" />
+                  {COLUMNS.map((column) => (
+                    <TableHead key={column.label} className={column.className}>
+                      {column.label}
+                    </TableHead>
+                  ))}
+                  <ActionsHead />
+                </TableRow>
+              </TableHeader>
+              <SortableTableBody
+                items={programs.data}
+                getId={(program) => program.id}
+                onReorder={handleReorder}
+                disabled={!isOrderable}
+                renderRow={(program) => (
+                  <>
+                    <SelectCell checked={selection.isSelected(program.id)} onChange={(checked) => selection.toggle(program.id, checked)}
+                      label={`Select ${program.title}`} />
+                    <ProgramCells program={program} />
+                    <RowActions>
+                      <ContentRowActions item={program} {...statusProps} />
+                    </RowActions>
+                  </>
+                )}
+              />
+            </Table>
+          </TableCard>
         ))}
     </ContentListPage>
   );

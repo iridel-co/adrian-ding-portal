@@ -4,6 +4,7 @@ import { Ban, CircleX, FileText, MailCheck, Trophy, type LucideIcon } from "luci
 import type { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 import { MoneyField } from "@/components/cms/money-field";
+import { RowAction } from "@/components/table/row-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -16,13 +17,14 @@ import { inquiryQueryKey } from "@/features/crm/queries";
 import { inquiryTransitionSchema } from "@/features/crm/schemas";
 
 type ActionStatus = Exclude<InquiryStatus, "NEW">;
-const ACTION_ICONS: Record<ActionStatus, LucideIcon> = { CONTACTED: MailCheck, PROPOSAL_SENT: FileText, WON: Trophy, LOST: CircleX, SPAM: Ban };
+export const ACTION_ICONS: Record<ActionStatus, LucideIcon> = { CONTACTED: MailCheck, PROPOSAL_SENT: FileText, WON: Trophy, LOST: CircleX, SPAM: Ban };
 const isClosingAction = (status: InquiryStatus) => status === "LOST" || status === "SPAM";
 export type InquiryDraft = {
   selected: ActionStatus | null; expectedStatus: InquiryStatus; value: number | null; reason: string; validation: string;
 };
-export function InquiryActions({ inquiry, draft, setDraft }: {
-  inquiry: { id: string; status: InquiryStatus }; draft: InquiryDraft; setDraft: Dispatch<SetStateAction<InquiryDraft>>;
+/* compact shows every action as a small icon button, for a table row. */
+export function InquiryActions({ inquiry, draft, setDraft, compact = false }: {
+  inquiry: { id: string; status: InquiryStatus }; draft: InquiryDraft; setDraft: Dispatch<SetStateAction<InquiryDraft>>; compact?: boolean;
 }) {
   const queryClient = useQueryClient();
   const { selected, expectedStatus, value, reason, validation } = draft;
@@ -44,10 +46,11 @@ export function InquiryActions({ inquiry, draft, setDraft }: {
   const choose = (status: InquiryStatus) => {
     updateDraft({ selected: status as ActionStatus, expectedStatus: inquiry.status, value: null, reason: "", validation: "" }); change.reset();
   };
-  return <div role="group" aria-label="Record progress" className="flex items-center gap-2">
+  return <div role="group" aria-label="Record progress" className={compact ? "flex items-center gap-0.5" : "flex items-center gap-2"}>
     {allowed.map(status => {
       const Icon = ACTION_ICONS[status as ActionStatus];
-      const label = inquiryActionLabels[status];
+      const label = inquiryActionLabels[status] ?? status;
+      if (compact) return <RowAction key={status} icon={Icon} label={label} tone={isClosingAction(status) ? "destructive" : "default"} onClick={() => choose(status)} />;
       if (!isClosingAction(status)) return <Button key={status} variant={status === nextStep ? "brand" : "outline"} onClick={() => choose(status)}>
         <Icon data-icon="inline-start" />{label}
       </Button>;

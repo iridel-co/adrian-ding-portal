@@ -1,14 +1,17 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { BookOpen, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 
 import { ContentListPage, EmptyState, FilterTabs, SearchInput } from "@/components/cms/content-list-page";
+import { ContentBulkActions, ContentRowActions } from "@/components/cms/content-status-actions";
 import { Field, FormErrorList } from "@/components/cms/form-section";
 import { CONTENT_STATUS_DISPLAY, StatusBadge } from "@/components/cms/status-badge";
 import { useFormErrors } from "@/components/cms/use-form-errors";
 import { ReadState } from "@/components/table/read-state";
+import { ActionsHead, RowActions, SelectAllHead, SelectCell, useRowSelection } from "@/components/table/row-actions";
+import { SelectionBar } from "@/components/table/selection-bar";
 import { nextSort } from "@/components/table/sort-search";
 import { SortableTableHead } from "@/components/table/sortable-table-head";
 import { TableSkeleton } from "@/components/table/table-skeleton";
@@ -38,7 +41,8 @@ import { errorMessage } from "@/features/shared/error-message";
 import { formatDate } from "@/features/shared/format";
 import { paginationSearchSchema, sortDirection } from "@/features/shared/pagination";
 import { displayCourseCode } from "@/features/workshops/course-number";
-import { $createWorkshop, workshopsQueryOptions } from "@/features/workshops/functions";
+import { $createWorkshop, $setWorkshopStatus, workshopsQueryOptions } from "@/features/workshops/functions";
+import type { ContentStatus } from "@/features/shared/content-status";
 import { statusFilterSchema, workshopListSort } from "@/features/workshops/schemas";
 
 const TITLE_FIELDS = ["title"];
@@ -92,6 +96,14 @@ function WorkshopsPage() {
   useEffect(() => setText(search.search), [search.search]);
 
   const workshops = useQuery(workshopsQueryOptions(search));
+  const selection = useRowSelection(workshops.data?.items ?? []);
+  const queryClient = useQueryClient();
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: ["workshops"] });
+  const statusProps = {
+    noun: "workshop",
+    setStatus: (id: string, status: ContentStatus) => $setWorkshopStatus({ data: { id, status } }),
+    onDone: refresh
+  };
   const updateSearch = (changes: Partial<WorkshopSearch>) =>
     void navigate({ search: { ...search, ...changes } });
 
@@ -135,20 +147,28 @@ function WorkshopsPage() {
       />
       {workshops.data && (
         <TableCard>
+          {selection.selected.length > 0 && (
+            <SelectionBar count={selection.selected.length} total={selection.total} onSelectAll={selection.selectAll} onClear={selection.clear}>
+              <ContentBulkActions items={selection.selected} {...statusProps} onDone={() => { selection.clear(); refresh(); }} />
+            </SelectionBar>
+          )}
           {workshops.data.items.length === 0 ? (
             <EmptyState icon={BookOpen}>No workshops match these filters.</EmptyState>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
+                  <SelectAllHead selection={selection} label="Select all workshops on this page" />
                   {COLUMNS.map((column) => (
                     <WorkshopHead key={column.label} column={column} search={search} />
                   ))}
+                  <ActionsHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {workshops.data.items.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} data-state={selection.isSelected(item.id) ? "selected" : undefined}>
+                    <SelectCell checked={selection.isSelected(item.id)} onChange={(checked) => selection.toggle(item.id, checked)} label={`Select ${item.title}`} />
                     <TableCell className="whitespace-normal">
                       <Link
                         to="/content/workshops/$id"
@@ -179,6 +199,9 @@ function WorkshopsPage() {
                     <TableCell className="hidden text-muted-foreground lg:table-cell">
                       {new Date(item.updatedAt).toLocaleDateString()}
                     </TableCell>
+                    <RowActions>
+                      <ContentRowActions item={item} {...statusProps} />
+                    </RowActions>
                   </TableRow>
                 ))}
               </TableBody>

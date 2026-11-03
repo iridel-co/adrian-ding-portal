@@ -15,6 +15,7 @@ import { DetailHeader, Fact, InfoCard, InfoList, InfoRow } from "@/components/cr
 import { CrmReadState } from "@/components/crm/read-state";
 import { DetailSkeleton } from "@/components/table/detail-skeleton";
 import { SelectionBar } from "@/components/table/selection-bar";
+import { RowAction, RowActions } from "@/components/table/row-actions";
 import { TableSkeleton } from "@/components/table/table-skeleton";
 import { QuickAction } from "@/components/quick-action";
 import { RegistrationBatchDialog, type BatchAction } from "@/components/crm/registration-batch-dialog";
@@ -22,7 +23,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RegistrationAction } from "@/features/crm/registration-staff-schemas";
 import { RegistrationStatus } from "@/components/crm/registration-status";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, tableRowLinkClass } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { $getRegistrationSession, $listRegistrations } from "@/features/crm/functions";
@@ -230,7 +230,7 @@ function RegistrationRows({ items, search }: { items: RegistrationRow[]; search:
           <SortableTableHead key={key} active={search.sort === key} direction={search.direction}
             onClick={() => void navigate({ search: { ...search, tab: "registrations", sort: key,
               direction: search.sort === key && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>
-        )}<TableHead>Actions</TableHead>
+        )}<TableHead className="w-px"><span className="sr-only">Actions</span></TableHead>
       </TableRow></TableHeader>
       <TableBody>{items.map(item => <TableRow key={item.id} data-state={chosen.some(row => row.id === item.id) ? "selected" : undefined}>
         <TableCell className="relative z-10"><Checkbox aria-label={`Select ${item.reference}`} disabled={item.isPaid || !!item.cancelledAt}
@@ -238,12 +238,12 @@ function RegistrationRows({ items, search }: { items: RegistrationRow[]; search:
         <TableCell className="whitespace-normal"><Link to="/registrations/$id" params={{ id: item.id }} search={search} className={tableRowLinkClass}>{item.fullName}</Link><p className="mt-0.5 break-all text-muted-foreground">{item.email}</p><p className="text-xs text-muted-foreground">{item.phone}</p></TableCell>
         <TableCell><RegistrationStatus isPaid={item.isPaid} cancelledAt={item.cancelledAt} /></TableCell>
         <TableCell className="tabular-nums">{formatPesos(item.priceCentavos)}</TableCell><TableCell className="text-muted-foreground">{formatCrmTime(item.createdAt)}</TableCell>
-        <TableCell className="relative z-10">{!item.isPaid && !item.cancelledAt && <div className="flex gap-2">
-          <Button size="sm" variant="outline" aria-label={`Mark ${item.reference} Paid`}
-            onClick={() => setBatch({ items: [item], action: RegistrationAction.MarkPaid })}>Mark Paid</Button>
-          <Button size="sm" variant="outline" aria-label={`Cancel ${item.reference}`}
-            onClick={() => setBatch({ items: [item], action: RegistrationAction.Cancel })}>Cancel</Button>
-        </div>}</TableCell>
+        <RowActions>{!item.isPaid && !item.cancelledAt && <>
+          <RowAction icon={CircleCheck} label="Mark paid" aria-label={`Mark ${item.reference} Paid`}
+            onClick={() => setBatch({ items: [item], action: RegistrationAction.MarkPaid })} />
+          <RowAction icon={Ban} label="Cancel registration" tone="destructive" aria-label={`Cancel ${item.reference}`}
+            onClick={() => setBatch({ items: [item], action: RegistrationAction.Cancel })} />
+        </>}</RowActions>
       </TableRow>)}</TableBody>
     </Table>
     {batch && <RegistrationBatchDialog items={batch.items} action={batch.action} onCloseFocus={() => table.current?.focus()} onClose={() => { setBatch(null); setSelected([]); }} />}

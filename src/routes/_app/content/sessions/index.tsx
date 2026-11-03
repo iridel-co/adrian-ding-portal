@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CalendarDays } from "lucide-react";
+import { Ban, CalendarDays, DoorClosed, DoorOpen, type LucideIcon } from "lucide-react";
+import { useState } from "react";
 import { z } from "zod";
 
 import { ContentListPage, EmptyState, FilterSelect, FilterTabs } from "@/components/cms/content-list-page";
@@ -11,12 +12,25 @@ import {
   SESSION_STATUS_DISPLAY,
   StatusBadge
 } from "@/components/cms/status-badge";
+import { QuickAction } from "@/components/quick-action";
 import { ReadState } from "@/components/table/read-state";
+import { ActionsHead, countOf, RowAction, RowActions, runBulk, SelectAllHead, SelectCell, useRowSelection } from "@/components/table/row-actions";
+import { SelectionBar } from "@/components/table/selection-bar";
 import { nextSort } from "@/components/table/sort-search";
 import { SortableTableHead } from "@/components/table/sortable-table-head";
 import { TableSkeleton } from "@/components/table/table-skeleton";
 import { TableCard } from "@/components/table/table-card";
 import { TablePagination } from "@/components/table/table-pagination";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHeader, TableRow, tableRowLinkClass } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sessionStatus } from "@/db/schema";
@@ -25,7 +39,9 @@ import { formatDateRange, formatTimeRange } from "@/features/shared/format";
 import { formatPesos } from "@/features/shared/money";
 import { paginationSearchSchema, sortDirection } from "@/features/shared/pagination";
 import { sessionListSort } from "@/features/sessions/schemas";
-import { sessionsQueryOptions } from "@/features/sessions/functions";
+import { $setSessionStatus, type SessionListItem, sessionsQueryOptions } from "@/features/sessions/functions";
+import { allowedSessionTransitions, type SessionStatus } from "@/features/sessions/status";
+import { hasSessionStarted } from "@/features/shared/time";
 import { workshopsQueryOptions } from "@/features/workshops/functions";
 
 const searchSchema = z
@@ -125,6 +141,9 @@ function SessionList() {
     })
   );
 
+  const selection = useRowSelection(sessions.data?.items ?? []);
+  const actions = useSessionActions(selection.clear);
+
   const workshopOptions = [
     { value: ALL_WORKSHOPS, label: "All workshops" },
     ...(workshops.data?.items ?? []).map((item) => ({ value: item.id, label: item.title }))
@@ -170,12 +189,26 @@ function SessionList() {
       />
       {sessions.data && (
         <TableCard>
+          {selection.selected.length > 0 && (
+            <SelectionBar count={selection.selected.length} total={selection.total} onSelectAll={selection.selectAll} onClear={selection.clear}>
+              {SESSION_ACTIONS.map((action) => {
+                const fits = selection.selected.filter((session) => allowedFor(session).includes(action.to));
+                if (fits.length === 0) return null;
+                return (
+                  <QuickAction key={action.to} icon={action.icon} tone={action.tone} disabled={actions.isBusy} onClick={() => actions.choose(action, fits)}>
+                    {fits.length < selection.selected.length ? `${action.short} ${fits.length}` : action.short}
+                  </QuickAction>
+                );
+              })}
+            </SelectionBar>
+          )}
           {sessions.data.items.length === 0 ? (
             <EmptyState icon={CalendarDays}>No sessions match these filters.</EmptyState>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
+                  <SelectAllHead selection={selection} label="Select all sessions on this page" />
                   {COLUMNS.map((column) => (
                     <SortableTableHead
                       key={column.key}
@@ -187,11 +220,14 @@ function SessionList() {
                       {column.label}
                     </SortableTableHead>
                   ))}
+                  <ActionsHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {sessions.data.items.map((session) => (
-                  <TableRow key={session.id}>
+                  <TableRow key={session.id} data-state={selection.isSelected(session.id) ? "selected" : undefined}>
+                    <SelectCell checked={selection.isSelected(session.id)} onChange={(checked) => selection.toggle(session.id, checked)}
+                      label={`Select ${sessionName(session)}`} />
                     <TableCell className="whitespace-normal">
                       <Link
                         to="/content/sessions/$id"
@@ -219,6 +255,12 @@ function SessionList() {
                         {session.isPast && <StatusBadge display={PAST_DISPLAY} />}
                       </div>
                     </TableCell>
+                    <RowActions>
+                      {SESSION_ACTIONS.filter((action) => allowedFor(session).includes(action.to)).map((action) => (
+                        <RowAction key={action.to} icon={action.icon} label={action.label} tone={action.tone} disabled={actions.isBusy}
+                          onClick={() => actions.choose(action, [session])} />
+                      ))}
+                    </RowActions>
                   </TableRow>
                 ))}
               </TableBody>
@@ -234,6 +276,66 @@ function SessionList() {
           />
         </TableCard>
       )}
+      {actions.cancelDialog}
     </div>
   );
+}
+
+type SessionAction = { to: SessionStatus; label: string; short: string; done: string; icon: LucideIcon; tone?: "destructive" };
+
+/* The status changes a session row offers. They match the session editor's status menu. */
+const SESSION_ACTIONS: SessionAction[] = [
+  { to: "open", label: "Open registration", short: "Open", done: "Opened", icon: DoorOpen },
+  { to: "closed", label: "Close registration", short: "Close", done: "Closed", icon: DoorClosed },
+  { to: "cancelled", label: "Cancel session", short: "Cancel", done: "Cancelled", icon: Ban, tone: "destructive" }
+];
+
+const allowedFor = (session: SessionListItem) =>
+  allowedSessionTransitions(session.status, { hasStarted: hasSessionStarted(session), hasEnded: session.isPast });
+const sessionName = (session: SessionListItem) => `${session.workshopTitle}, ${formatDateRange(session.date, session.endDate)}`;
+
+/*
+  Runs status changes on session rows. Cancelling can't be undone and emails
+  everyone who registered, so it asks first, like the session editor does.
+*/
+function useSessionActions(onDone: () => void) {
+  const queryClient = useQueryClient();
+  const [isBusy, setIsBusy] = useState(false);
+  const [toCancel, setToCancel] = useState<SessionListItem[] | null>(null);
+
+  const run = async (action: SessionAction, rows: SessionListItem[]) => {
+    setIsBusy(true);
+    await runBulk(rows, (row) => $setSessionStatus({ data: { id: row.id, status: action.to } }), {
+      name: sessionName,
+      done: (count) => `${action.done} ${countOf(count, "session")}.`
+    });
+    setIsBusy(false);
+    onDone();
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+      queryClient.invalidateQueries({ queryKey: ["workshops"] })
+    ]);
+  };
+  const choose = (action: SessionAction, rows: SessionListItem[]) =>
+    action.to === "cancelled" ? setToCancel(rows) : void run(action, rows);
+
+  const cancelDialog = (
+    <AlertDialog open={toCancel !== null} onOpenChange={(open) => !open && setToCancel(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cancel {toCancel?.length === 1 ? "this session" : `${toCancel?.length ?? 0} sessions`}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Registration closes for good. The CRM notifies everyone who registered. You can't undo this.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep {toCancel?.length === 1 ? "session" : "sessions"}</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={() => toCancel && void run(SESSION_ACTIONS[2], toCancel)}>
+            Cancel {toCancel?.length === 1 ? "session" : "sessions"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+  return { isBusy, choose, cancelDialog };
 }
