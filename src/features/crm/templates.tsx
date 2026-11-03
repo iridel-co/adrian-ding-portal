@@ -21,7 +21,7 @@ export async function corporateMessages(data: CorporateInquiryInput, id: string,
   const targetDate = data.targetDateFrom
     ? `${data.targetDateFrom}${data.targetDateTo ? ` to ${data.targetDateTo}` : ""}` : data.targetDateText!;
   const summary = `Programme: ${data.program}\nAttendees: ${data.attendees}\nTarget date: ${targetDate}\nVenue: ${data.venue}`;
-  const acknowledgment = `Hello ${data.fullName},\n\nThank you for your corporate training inquiry for ${data.company}. Our team will respond within two business days, Monday to Friday, Manila time.\n\n${summary}\n\n${config.CORPORATE_CREDIBILITY_LINE ?? "[APPROVED_CREDIBILITY_LINE]"}\n\nFor questions, reply to this email or call ${config.CORPORATE_TEAM_PHONE ?? "[TEAM_PHONE]"}.\nReference: ${id}`;
+  const acknowledgment = `Hello ${data.fullName},\n\nThank you for your corporate training inquiry for ${data.company}. Our team will respond within two business days, Monday to Friday.\n\n${summary}\n\n${config.CORPORATE_CREDIBILITY_LINE ?? "[APPROVED_CREDIBILITY_LINE]"}\n\nFor questions, reply to this email or call ${config.CORPORATE_TEAM_PHONE ?? "[TEAM_PHONE]"}.\nReference: ${id}`;
   const notification = `New corporate training inquiry\nReference: ${id}\nName: ${data.fullName}\nEmail: ${data.email}\nPhone: ${data.phone}\nCompany: ${data.company}\nRole: ${data.role}\n${summary}\nContext: ${data.context ?? "None provided"}\nAlso interested in: ${data.alsoInterested.join(", ") || "None"}\n\nView inquiry (staff sign-in required): ${config.CORPORATE_PORTAL_URL ?? "http://localhost:3000"}/inquiries/${id}`;
   const [customerHtml, staffHtml] = await Promise.all([
     render(<CorporateAcknowledgmentEmail data={data} id={id} config={config} />),
@@ -45,7 +45,7 @@ Reference: ${inquiry.id}
 Name: ${inquiry.fullName}
 Company: ${inquiry.company}
 Programme: ${inquiry.program}
-Reply due: ${deadline} (Manila time)
+Reply due: ${deadline}
 
 Reply to the lead, then record the first reply in the portal.
 View inquiry (staff sign-in required): ${config.CORPORATE_PORTAL_URL ?? "http://localhost:3000"}/inquiries/${inquiry.id}`;
@@ -65,7 +65,7 @@ export function CorporateAcknowledgmentEmail({ data, id, config }: {
   const details = corporateDetails(data);
   return <EmailLayout preview="We received your training inquiry" label="CORPORATE TRAINING" title="We received your inquiry.">
       <EmailParagraph>Hello {data.fullName},</EmailParagraph>
-      <EmailParagraph>Thank you for your corporate training inquiry for {data.company}. Our team will respond within two business days, Monday to Friday, Manila time.</EmailParagraph>
+      <EmailParagraph>Thank you for your corporate training inquiry for {data.company}. Our team will respond within two business days, Monday to Friday.</EmailParagraph>
       <EmailDetails rows={details} />
       <EmailParagraph>{config.CORPORATE_CREDIBILITY_LINE ?? "[APPROVED_CREDIBILITY_LINE]"}</EmailParagraph>
       <EmailParagraph>For questions, reply to this email or call {config.CORPORATE_TEAM_PHONE ?? "[TEAM_PHONE]"}.</EmailParagraph>
@@ -95,7 +95,7 @@ export function CorporateOverdueEmail({ inquiry, config }: {
   return <EmailLayout internal preview={`Reply overdue: ${inquiry.company}`} label="CORPORATE INQUIRIES / OVERDUE" title="A first reply is overdue.">
     <EmailParagraph>The first reply to this corporate training inquiry is overdue.</EmailParagraph>
     <EmailDetails rows={[["Reference", inquiry.id], ["Name", inquiry.fullName], ["Company", inquiry.company],
-      ["Programme", inquiry.program], ["Reply due", `${deadline} (Manila time)`]]} />
+      ["Programme", inquiry.program], ["Reply due", deadline]]} />
     <EmailParagraph>Reply to the lead, then record the first reply in the portal.</EmailParagraph>
     <EmailButton internal href={`${config.CORPORATE_PORTAL_URL ?? "http://localhost:3000"}/inquiries/${inquiry.id}`}>Review overdue inquiry</EmailButton>
   </EmailLayout>;

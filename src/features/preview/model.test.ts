@@ -101,7 +101,7 @@ describe("buildSessionPreview", () => {
 
     expect(model.dateText).toMatch(/Oct 9, 2026 - .*Oct 10, 2026/);
     expect(model.shortDateText).toBe("Oct 9, 2026 - Oct 10, 2026");
-    expect(model.timeText).toMatch(/9:00\sAM - 5:00\sPM Manila time/);
+    expect(model.timeText).toMatch(/^9:00\sAM - 5:00\sPM$/);
   });
 
   it("treats an empty end date as a one-day session", () => {

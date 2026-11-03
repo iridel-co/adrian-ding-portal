@@ -20,7 +20,7 @@ describe("Corporate E3 and N3 email content", async () => {
   });
   it("acknowledges the programme, attendees, date range and venue with the response promise and placeholders", async () => {
     const { acknowledgment } = await corporateMessages(data, "inquiry-id", config);
-    for (const text of ["two business days", "Manila time", "Leadership", "16 to 30", "2027-01-12 to 2027-01-14",
+    for (const text of ["two business days", "Leadership", "16 to 30", "2027-01-12 to 2027-01-14",
       "Our office", "[TEAM_PHONE]", "[APPROVED_CREDIBILITY_LINE]"]) expect(acknowledgment.text).toContain(text);
     expect(acknowledgment.to).toEqual([data.email]);
     expect(acknowledgment.replyTo).toBe("sales@example.invalid");
@@ -49,7 +49,7 @@ it("sends N4 only to both staff with an escaped inquiry summary and Manila deadl
   const message = await corporateOverdueMessage(inquiry, config);
   expect(message.to).toEqual(config.CORPORATE_INQUIRY_RECIPIENTS);
   expect(message.to).not.toContain(data.email);
-  expect(message.text).toContain("Manila time");
+  expect(message.text).not.toContain("Manila time");
   expect(message.text).toContain("https://portal.test/inquiries/inquiry-id");
   expect(message.html).toContain("Test &lt;Lead&gt;");
   expect(message.subject).toContain("overdue");
@@ -68,6 +68,6 @@ it("uses the website theme for customers and the portal theme for internal mail"
   const reminder = await corporateOverdueMessage({ id: "theme-inquiry", fullName: data.fullName,
     company: data.company, program: data.program, slaDueAt: new Date("2026-10-20T02:00:00Z") }, config);
   expect(reminder.html).toContain("PORTAL / CRM");
-  expect(reminder.html).toContain("Manila time");
+  expect(reminder.html).not.toContain("Manila time");
   expect(reminder.html).toContain("Review overdue inquiry");
 });

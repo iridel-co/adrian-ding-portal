@@ -158,7 +158,7 @@ function dateFields(session: SessionDates | null) {
   return {
     dateText: formatDateRange(session.date, endDate),
     shortDateText: formatShortDateRange(session.date, endDate),
-    timeText: hasTimes ? `${formatTimeRange(session.startTime, session.endTime)} Manila time` : null
+    timeText: hasTimes ? formatTimeRange(session.startTime, session.endTime) : null
   };
 }
 
