@@ -8,6 +8,12 @@ import { allowedEmail, session, user } from "@/db/schema";
 import { authMiddleware } from "@/lib/auth.functions";
 import { getEnv } from "@/lib/env";
 
+/*
+  The admins set in ADMIN_EMAILS that the Access page lists. The others are
+  hidden from the list but can still sign in.
+*/
+const LISTED_ADMIN_EMAILS = ["iridelco@gmail.com"];
+
 const emailInput = z.object({
   email: z
     .string()
@@ -20,7 +26,8 @@ export const $listAllowedEmails = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async () => {
     const rows = await getDb().select().from(allowedEmail).orderBy(asc(allowedEmail.createdAt));
-    return { adminEmails: getEnv().ADMIN_EMAILS, emails: rows };
+    const adminEmails = getEnv().ADMIN_EMAILS.filter((email) => LISTED_ADMIN_EMAILS.includes(email));
+    return { adminEmails, emails: rows };
   });
 
 export const $addAllowedEmail = createServerFn({ method: "POST" })
