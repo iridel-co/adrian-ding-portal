@@ -75,7 +75,6 @@ function UploadRow({ upload, onRetry }: { upload: MediaUpload; onRetry: (id: str
           <Progress className="mt-1.5" value={Math.round(upload.progress * 100)} />
         )}
       </div>
-      {upload.status === "done" && <span className="text-xs text-muted-foreground">Done</span>}
       {upload.status === "error" && (
         <Button
           type="button"

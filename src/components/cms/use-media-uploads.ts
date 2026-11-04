@@ -9,14 +9,14 @@ type UploadedMedia = Awaited<ReturnType<typeof uploadMediaFile>>;
 export type MediaUpload = {
   id: string;
   file: File;
-  status: "uploading" | "done" | "error";
+  status: "uploading" | "error";
   progress: number;
   error: string | null;
   media: UploadedMedia | null;
 };
 
 type Options = {
-  onUploaded?: (media: UploadedMedia) => void;
+  onUploaded?: (media: UploadedMedia) => void | Promise<unknown>;
 };
 
 export function useMediaUploads({ onUploaded }: Options = {}) {
@@ -28,6 +28,10 @@ export function useMediaUploads({ onUploaded }: Options = {}) {
     );
   }, []);
 
+  const remove = useCallback((id: string) => {
+    setUploads((current) => current.filter((upload) => upload.id !== id));
+  }, []);
+
   const start = useCallback(
     async (id: string, file: File) => {
       patch(id, { status: "uploading", progress: 0, error: null });
@@ -36,14 +40,16 @@ export function useMediaUploads({ onUploaded }: Options = {}) {
         const media = await uploadMediaFile(file, {
           onProgress: (progress) => patch(id, { progress })
         });
-        patch(id, { status: "done", progress: 1, media });
-        onUploaded?.(media);
+        patch(id, { progress: 1, media });
+        // Keep the row until the new image shows, so the list never looks empty in between.
+        await onUploaded?.(media);
+        remove(id);
       } catch (error) {
         const message = errorMessage(error);
         patch(id, { status: "error", error: message });
       }
     },
-    [onUploaded, patch]
+    [onUploaded, patch, remove]
   );
 
   const addFiles = useCallback(
@@ -77,10 +83,6 @@ export function useMediaUploads({ onUploaded }: Options = {}) {
     [start, uploads]
   );
 
-  const clearFinished = useCallback(() => {
-    setUploads((current) => current.filter((upload) => upload.status !== "done"));
-  }, []);
-
-  return { uploads, addFiles, retry, clearFinished };
+  return { uploads, addFiles, retry };
 }
 
