@@ -274,77 +274,6 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
         </Field>
       </FormSection>
 
-      <FormSection
-        icon={Target}
-        title="Outcomes"
-        errors={fieldErrors.outcomes}
-        description='Shown as "You leave able to…".'
-      >
-        <StringListField
-          value={values.outcomes}
-          onChange={(list) => setField("outcomes", list)}
-          addLabel="Add outcome"
-        />
-      </FormSection>
-
-      <FormSection
-        icon={ListOrdered}
-        title="Curriculum"
-        errors={fieldErrors.curriculum}
-        description='Shown as "What the day covers".'
-      >
-        <StringListField
-          value={values.curriculum}
-          onChange={(list) => setField("curriculum", list)}
-          addLabel="Add topic"
-        />
-      </FormSection>
-
-      <FormSection
-        icon={PackageCheck}
-        title="Inclusions"
-        errors={fieldErrors.inclusions}
-        description="What every attendee gets."
-      >
-        <StringListField
-          value={values.inclusions}
-          onChange={(list) => setField("inclusions", list)}
-          addLabel="Add inclusion"
-        />
-      </FormSection>
-
-      <FormSection
-        icon={Backpack}
-        title="What to Expect"
-        errors={fieldErrors.whatToExpect}
-        description="Arrival, dress code and what to bring."
-      >
-        <StringListField
-          value={values.whatToExpect}
-          onChange={(list) => setField("whatToExpect", list)}
-          addLabel="Add item"
-        />
-      </FormSection>
-
-      <FormSection icon={Users} title="Audience and Format">
-        <Field label="Who it's for" htmlFor="audience" errors={fieldErrors.audience}>
-          <Textarea
-            id="audience"
-            rows={2}
-            value={values.audience}
-            onChange={(event) => setField("audience", event.target.value)}
-          />
-        </Field>
-        <Field label="Format" htmlFor="format" errors={fieldErrors.format}>
-          <Textarea
-            id="format"
-            rows={2}
-            value={values.format}
-            onChange={(event) => setField("format", event.target.value)}
-          />
-        </Field>
-      </FormSection>
-
       <FormSection icon={Video} title="Primer Video">
         <Field
           label="Video link"
@@ -440,6 +369,77 @@ function WorkshopEditor({ detail }: { detail: WorkshopDetail }) {
             />
           </Field>
         </div>
+      </FormSection>
+
+      <FormSection
+        icon={Target}
+        title="Outcomes"
+        errors={fieldErrors.outcomes}
+        description='Shown as "You leave able to…".'
+      >
+        <StringListField
+          value={values.outcomes}
+          onChange={(list) => setField("outcomes", list)}
+          addLabel="Add outcome"
+        />
+      </FormSection>
+
+      <FormSection
+        icon={ListOrdered}
+        title="Curriculum"
+        errors={fieldErrors.curriculum}
+        description='Shown as "What the day covers".'
+      >
+        <StringListField
+          value={values.curriculum}
+          onChange={(list) => setField("curriculum", list)}
+          addLabel="Add topic"
+        />
+      </FormSection>
+
+      <FormSection
+        icon={PackageCheck}
+        title="Inclusions"
+        errors={fieldErrors.inclusions}
+        description="What every attendee gets."
+      >
+        <StringListField
+          value={values.inclusions}
+          onChange={(list) => setField("inclusions", list)}
+          addLabel="Add inclusion"
+        />
+      </FormSection>
+
+      <FormSection
+        icon={Backpack}
+        title="What to Expect"
+        errors={fieldErrors.whatToExpect}
+        description="Arrival, dress code and what to bring."
+      >
+        <StringListField
+          value={values.whatToExpect}
+          onChange={(list) => setField("whatToExpect", list)}
+          addLabel="Add item"
+        />
+      </FormSection>
+
+      <FormSection icon={Users} title="Audience and Format">
+        <Field label="Who it's for" htmlFor="audience" errors={fieldErrors.audience}>
+          <Textarea
+            id="audience"
+            rows={2}
+            value={values.audience}
+            onChange={(event) => setField("audience", event.target.value)}
+          />
+        </Field>
+        <Field label="Format" htmlFor="format" errors={fieldErrors.format}>
+          <Textarea
+            id="format"
+            rows={2}
+            value={values.format}
+            onChange={(event) => setField("format", event.target.value)}
+          />
+        </Field>
       </FormSection>
     </EditorShell>
   );
