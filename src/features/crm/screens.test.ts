@@ -158,7 +158,7 @@ describe("Status confirmation forms", () => {
     harness.mutationError = new Error("crm_unavailable");
     const tree = InquiryActions({ inquiry: { id: inquiry.id, status: "CONTACTED" }, draft, setDraft: vi.fn() });
     const form = renderToStaticMarkup(createElement(Dialog, { open: true }, findElement(tree, "form")!));
-    expect(form).toContain("12500");
+    expect(form).toContain("12,500");
     expect(form).toContain("Unable to load or save this inquiry");
   });
 });

@@ -10,23 +10,53 @@ type MoneyFieldProps = {
   onChange: (centavos: number | null) => void;
 };
 
-/* Takes pesos in the UI and gives centavos to the form. */
+const ALLOWED_CHARACTERS = /^[\d,.]*$/;
+const NUMBERS_ONLY_MESSAGE = "Use numbers only, e.g. 6,500.";
+
+/* Adds thousands separators to the whole-peso part and keeps the typed decimals. */
+function groupThousands(text: string) {
+  const [whole = "", ...rest] = text.replace(/,/g, "").split(".");
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return rest.length > 0 ? `${grouped}.${rest.join("").slice(0, 2)}` : grouped;
+}
+
+/* Takes pesos in the UI and gives centavos to the form. Accepts digits only. */
 export function MoneyField({ id, value, onChange }: MoneyFieldProps) {
-  const [text, setText] = useState(() => centavosToPesoInput(value));
+  const [text, setText] = useState(() => groupThousands(centavosToPesoInput(value)));
+  const [error, setError] = useState<string | null>(null);
+  const errorId = id ? `${id}-format-error` : undefined;
 
   return (
-    <InputGroup>
-      <InputGroupAddon>₱</InputGroupAddon>
-      <InputGroupInput
-        id={id}
-        inputMode="decimal"
-        value={text}
-        onChange={(event) => {
-          setText(event.target.value);
-          onChange(pesoInputToCentavos(event.target.value));
-        }}
-        onBlur={() => setText(centavosToPesoInput(pesoInputToCentavos(text)))}
-      />
-    </InputGroup>
+    <div className="flex flex-col gap-1.5">
+      <InputGroup>
+        <InputGroupAddon>₱</InputGroupAddon>
+        <InputGroupInput
+          id={id}
+          inputMode="decimal"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
+          value={text}
+          onChange={(event) => {
+            const next = event.target.value;
+            if (!ALLOWED_CHARACTERS.test(next)) {
+              setError(NUMBERS_ONLY_MESSAGE);
+              return;
+            }
+            setError(null);
+            setText(groupThousands(next));
+            onChange(pesoInputToCentavos(next));
+          }}
+          onBlur={() => {
+            setError(null);
+            setText(groupThousands(centavosToPesoInput(pesoInputToCentavos(text))));
+          }}
+        />
+      </InputGroup>
+      {error && (
+        <p id={errorId} role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
