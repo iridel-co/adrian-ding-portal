@@ -47,7 +47,8 @@ export const PUBLIC_READ_OPERATIONS: ReadOperation[] = [
   {
     route: "/api/public/workshops/",
     summary: "List published workshops",
-    description: "Workshops with an upcoming session come first, sorted by that session date.",
+    description:
+      "Workshops with an upcoming session come first, sorted by that session date. With past=true, returns only workshops with at least one ended session, sorted by that session, newest first.",
     tag: OpenApiTag.Workshops,
     input: publicInputs.workshops,
     response: z.array(workshopListItemSchema)

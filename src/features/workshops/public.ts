@@ -1,13 +1,14 @@
 import "@tanstack/react-start/server-only";
-import { and, asc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, getTableColumns, inArray, lte, sql } from "drizzle-orm";
 
 import { media, registration, taxonomyTerm, workshop, workshopSession, workshopTag } from "@/db/schema";
 import type { DbOrTx } from "@/features/shared/db-types";
 import { NotFoundError } from "@/features/shared/errors";
 import { toPrice, toPublicMedia } from "@/features/shared/public-api";
-import { MANILA_TIME_ZONE } from "@/features/shared/time";
+import { hasSessionEnded, MANILA_TIME_ZONE, manilaToday } from "@/features/shared/time";
 import {
   isNotArchived,
+  PUBLIC_SESSION_STATUSES,
   isPublished,
   isRegistrationOpen,
   isUpcomingSession,
@@ -53,6 +54,25 @@ export function groupUpcomingSessions(sessions: SessionRow[], now: Date = new Da
   return byWorkshop;
 }
 
+/* The most recent ended open or closed session for each workshop. */
+export function findLastSessions(sessions: SessionRow[], now: Date = new Date()) {
+  const byWorkshop = new Map<string, PublicSession>();
+  const sorted = sessions
+    .filter(
+      (session) =>
+        (PUBLIC_SESSION_STATUSES as readonly string[]).includes(session.status) &&
+        hasSessionEnded(session, now)
+    )
+    .sort((a, b) => `${b.date}T${b.startTime}`.localeCompare(`${a.date}T${a.startTime}`));
+
+  for (const session of sorted) {
+    if (!byWorkshop.has(session.workshopId)) {
+      byWorkshop.set(session.workshopId, toPublicSession(session, now));
+    }
+  }
+  return byWorkshop;
+}
+
 export function findNextSession(sessions: PublicSession[] = []) {
   return sessions.find((session) => session.status === "open") ?? null;
 }
@@ -85,16 +105,18 @@ async function loadTags(db: DbOrTx, workshopIds: string[]) {
   return byWorkshop;
 }
 
+const sessionColumns = {
+  ...getTableColumns(workshopSession),
+  reserved: sql<number>`(select count(*) from ${registration}
+    where ${registration.workshopSessionId} = ${workshopSession.id}
+      and ${registration.cancelledAt} is null)`.mapWith(Number)
+};
+
 async function loadSessions(db: DbOrTx, workshopIds: string[], now: Date) {
   if (workshopIds.length === 0) return new Map<string, PublicSession[]>();
 
   const rows = await db
-    .select({
-      ...getTableColumns(workshopSession),
-      reserved: sql<number>`(select count(*) from ${registration}
-        where ${registration.workshopSessionId} = ${workshopSession.id}
-          and ${registration.cancelledAt} is null)`.mapWith(Number)
-    })
+    .select(sessionColumns)
     .from(workshopSession)
     .where(
       and(inArray(workshopSession.workshopId, workshopIds), upcomingPublicSessionCondition(now))
@@ -103,16 +125,38 @@ async function loadSessions(db: DbOrTx, workshopIds: string[], now: Date) {
   return groupUpcomingSessions(rows, now);
 }
 
+async function loadLastSessions(db: DbOrTx, workshopIds: string[], now: Date) {
+  if (workshopIds.length === 0) return new Map<string, PublicSession>();
+
+  const rows = await db
+    .select(sessionColumns)
+    .from(workshopSession)
+    .where(
+      and(
+        inArray(workshopSession.workshopId, workshopIds),
+        inArray(workshopSession.status, PUBLIC_SESSION_STATUSES),
+        lte(workshopSession.endDate, manilaToday(now))
+      )
+    );
+
+  return findLastSessions(rows, now);
+}
+
 type ListFilters = {
   tag?: string;
   upcoming: boolean;
+  past?: boolean;
 };
 
 export async function listPublicWorkshops(db: DbOrTx, filters: ListFilters) {
   const now = new Date();
   const rows = await loadWorkshops(db);
   const ids = rows.map((row) => row.workshop.id);
-  const [tags, sessions] = await Promise.all([loadTags(db, ids), loadSessions(db, ids, now)]);
+  const [tags, sessions, lastSessions] = await Promise.all([
+    loadTags(db, ids),
+    loadSessions(db, ids, now),
+    loadLastSessions(db, ids, now)
+  ]);
   const tagFilter = filters.tag?.toLowerCase();
 
   const items = rows.map(({ workshop: row, heroMedia }) => ({
@@ -122,19 +166,32 @@ export async function listPublicWorkshops(db: DbOrTx, filters: ListFilters) {
     heroImage: toPublicMedia(heroMedia),
     tags: tags.get(row.id) ?? [],
     defaultPrice: toPrice(row.defaultPriceCentavos, row.defaultPriceNote),
-    nextSession: findNextSession(sessions.get(row.id))
+    nextSession: findNextSession(sessions.get(row.id)),
+    lastSession: lastSessions.get(row.id) ?? null
   }));
 
-  return items
+  const filtered = items
     .filter((item) => !tagFilter || item.tags.some((tag) => tag.toLowerCase() === tagFilter))
     .filter((item) => !filters.upcoming || item.nextSession !== null)
-    .sort((a, b) => {
-      if (a.nextSession && b.nextSession)
-        return a.nextSession.date.localeCompare(b.nextSession.date);
-      if (a.nextSession) return -1;
-      if (b.nextSession) return 1;
-      return a.title.localeCompare(b.title);
-    });
+    .filter((item) => !filters.past || item.lastSession !== null);
+
+  if (filters.past) {
+    return filtered.sort((a, b) => compareSessionStart(b.lastSession, a.lastSession));
+  }
+
+  return filtered.sort((a, b) => {
+    if (a.nextSession && b.nextSession)
+      return a.nextSession.date.localeCompare(b.nextSession.date);
+    if (a.nextSession) return -1;
+    if (b.nextSession) return 1;
+    return a.title.localeCompare(b.title);
+  });
+}
+
+function compareSessionStart(a: PublicSession | null, b: PublicSession | null) {
+  return `${a?.date ?? ""}T${a?.startTime ?? ""}`.localeCompare(
+    `${b?.date ?? ""}T${b?.startTime ?? ""}`
+  );
 }
 
 export async function getPublicWorkshopBySlug(db: DbOrTx, slug: string) {

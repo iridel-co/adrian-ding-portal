@@ -14,7 +14,12 @@ const slugParam = z.string().min(1).max(200);
 /* Request params for each public GET route: query params and path params together. */
 export const publicInputs = {
   profile: z.object({ statsPage: z.enum(STAT_PAGES).optional() }),
-  workshops: z.object({ tag: z.string().trim().min(1).optional(), upcoming: booleanParam }),
+  workshops: z
+    .object({ tag: z.string().trim().min(1).optional(), upcoming: booleanParam, past: booleanParam })
+    .refine((filters) => !(filters.upcoming && filters.past), {
+      message: "Use upcoming or past, not both.",
+      path: ["past"]
+    }),
   workshop: z.object({ slug: slugParam }),
   clients: z.object({ industry: z.uuid().optional(), featured: booleanParam }),
   industries: z.object({}),
@@ -114,7 +119,10 @@ export const workshopListItemSchema = z
     heroImage: mediaSchema.nullable(),
     tags: z.array(z.string()),
     defaultPrice: priceSchema.nullable(),
-    nextSession: sessionSchema.nullable()
+    nextSession: sessionSchema.nullable(),
+    lastSession: sessionSchema
+      .nullable()
+      .describe("The most recent ended open or closed session, or null when none has ended")
   })
   .meta({ id: "WorkshopListItem" });
 

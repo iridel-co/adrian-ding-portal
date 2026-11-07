@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  findLastSessions,
   findNextSession,
   groupUpcomingSessions,
   toPublicSession
@@ -91,5 +92,33 @@ describe("findNextSession", () => {
   it("returns null when there is no open session", () => {
     expect(findNextSession([])).toBeNull();
     expect(findNextSession(undefined)).toBeNull();
+  });
+});
+
+describe("findLastSessions", () => {
+  it("picks the most recent ended open or closed session for each workshop", () => {
+    const result = findLastSessions(
+      [
+        session({ id: "older", date: "2026-08-01", endDate: "2026-08-01" }),
+        session({ id: "latest", date: "2026-09-20", endDate: "2026-09-20", status: "closed" }),
+        session({ id: "cancelled", date: "2026-09-25", endDate: "2026-09-25", status: "cancelled" }),
+        session({ id: "draft", date: "2026-09-26", endDate: "2026-09-26", status: "draft" }),
+        session({ id: "upcoming", date: "2026-10-09", endDate: "2026-10-09" }),
+        session({ id: "other", workshopId: "w2", date: "2026-07-01", endDate: "2026-07-01" })
+      ],
+      now
+    );
+
+    expect(result.get("w1")?.id).toBe("latest");
+    expect(result.get("w1")?.isRegistrationOpen).toBe(false);
+    expect(result.get("w2")?.id).toBe("other");
+  });
+
+  it("skips a session that ends later today", () => {
+    const result = findLastSessions(
+      [session({ date: "2026-10-01", endDate: "2026-10-01", endTime: "17:00:00" })],
+      now
+    );
+    expect(result.size).toBe(0);
   });
 });
