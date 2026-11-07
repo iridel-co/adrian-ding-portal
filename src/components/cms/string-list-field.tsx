@@ -1,4 +1,4 @@
-import { Check, X } from "lucide-react";
+import { Check, Plus, X } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { SortableList } from "@/components/cms/sortable-list";
@@ -24,7 +24,8 @@ function toItems(value: string[]): ListItem[] {
 /*
   An ordered list of short text items. The items show as a numbered list you
   can edit and drag, and a blank box at the bottom adds the next one: type,
-  then press Enter or the check. Blank items are dropped from the value.
+  then press Enter, press the check, or leave the box. Once the list has items,
+  the add box hides until you press "Add more". Blank items are dropped.
 */
 export function StringListField({
   value,
@@ -34,8 +35,10 @@ export function StringListField({
 }: StringListFieldProps) {
   const [items, setItems] = useState(() => toItems(value));
   const [draft, setDraft] = useState("");
+  const [isComposing, setIsComposing] = useState(false);
   const composer = useRef<HTMLInputElement>(null);
   const isFull = items.length >= maxItems;
+  const showComposer = !isFull && (items.length === 0 || isComposing);
 
   const update = (next: ListItem[]) => {
     setItems(next);
@@ -47,6 +50,10 @@ export function StringListField({
     if (!text || isFull) return;
     update([...items, { id: crypto.randomUUID(), text }]);
     setDraft("");
+  };
+
+  const openComposer = () => {
+    setIsComposing(true);
     composer.current?.focus();
   };
 
@@ -69,7 +76,7 @@ export function StringListField({
                 // Enter moves on to the add box instead of submitting the form.
                 if (event.key !== "Enter") return;
                 event.preventDefault();
-                composer.current?.focus();
+                openComposer();
               }}
               onChange={(event) =>
                 update(
@@ -92,12 +99,26 @@ export function StringListField({
           </div>
         )}
       />
-      {isFull ? (
+      {isFull && (
         <p className="pl-8 text-xs text-muted-foreground">That's the most this list can hold.</p>
-      ) : (
+      )}
+      {!showComposer && !isFull && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="self-start sm:ml-8"
+          onClick={openComposer}
+        >
+          <Plus />
+          Add more
+        </Button>
+      )}
+      {showComposer && (
         <div className="flex items-center gap-2 rounded-lg border border-dashed bg-card/60 pr-1 pl-2.5 focus-within:border-ring focus-within:border-solid sm:ml-8">
           <Input
             ref={composer}
+            autoFocus={isComposing}
             aria-label={addLabel}
             placeholder={`${addLabel}, then press Enter`}
             className="h-9 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0 dark:bg-transparent"
@@ -108,6 +129,10 @@ export function StringListField({
               event.preventDefault();
               add();
             }}
+            onBlur={() => {
+              add();
+              setIsComposing(false);
+            }}
           />
           <Button
             type="button"
@@ -116,6 +141,7 @@ export function StringListField({
             aria-label={addLabel}
             disabled={!draft.trim()}
             className="text-brand hover:bg-brand/10 hover:text-brand"
+            onMouseDown={(event) => event.preventDefault()}
             onClick={add}
           >
             <Check />
