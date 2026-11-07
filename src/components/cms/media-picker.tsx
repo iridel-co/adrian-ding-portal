@@ -33,7 +33,7 @@ type MediaPickerProps = {
   onPick: (media: PickedMedia) => void;
 };
 
-const PICKER_GRID_CLASS = "grid max-h-80 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4";
+const PICKER_GRID_CLASS = "grid max-h-80 auto-rows-max grid-cols-3 content-start gap-2 overflow-y-auto sm:grid-cols-4";
 const ALT_MISSING_MESSAGE = "Describe the image before you use it.";
 
 type PickerTab = "library" | "upload";
@@ -131,9 +131,13 @@ export function MediaPicker({ open, onOpenChange, onPick }: MediaPickerProps) {
                       type="button"
                       onClick={() => select({ id: item.id, url: item.url, alt: item.alt })}
                       data-selected={isSelected || undefined}
-                      className="relative aspect-square overflow-hidden rounded-md border bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring/50 data-selected:ring-2 data-selected:ring-primary"
+                      className="relative block aspect-square w-full overflow-hidden rounded-md border bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring/50 data-selected:ring-2 data-selected:ring-primary"
                     >
-                      <img src={item.url} alt={item.alt} className="size-full object-contain" />
+                      <img
+                        src={item.url}
+                        alt={item.alt}
+                        className="absolute inset-0 size-full object-contain"
+                      />
                       {isSelected && (
                         <Check className="absolute top-1.5 right-1.5 size-5 rounded-full bg-primary p-0.5 text-primary-foreground" />
                       )}
