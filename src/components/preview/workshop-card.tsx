@@ -43,7 +43,7 @@ export function WorkshopCard({ model }: { model: PreviewModel }) {
           </p>
           <div className="mt-5 flex items-center justify-between gap-4 border-t border-border pt-5">
             <span className="text-xl font-semibold tabular-nums">
-              {model.priceText ? `${model.priceText}*` : <Missing>Add a price</Missing>}
+              {model.priceText ? model.priceText : <Missing>Add a price</Missing>}
             </span>
             <span className="rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-brand-foreground">
               Register

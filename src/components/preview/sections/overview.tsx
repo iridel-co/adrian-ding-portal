@@ -65,10 +65,10 @@ function KeyFacts({ model }: { model: PreviewModel }) {
           </Fact>
           <Fact label="Investment">
             <span className="text-3xl font-bold tracking-tight lg:text-4xl">
-              {model.priceText ? `${model.priceText}*` : <Missing>Add a price</Missing>}
+              {model.priceText ? model.priceText : <Missing>Add a price</Missing>}
             </span>
             {model.priceNote && (
-              <span className="block text-sm text-muted-foreground">*{model.priceNote}</span>
+              <span className="block text-sm text-muted-foreground">{model.priceNote}</span>
             )}
           </Fact>
         </dl>
