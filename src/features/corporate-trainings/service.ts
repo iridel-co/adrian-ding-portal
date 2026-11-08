@@ -1,5 +1,5 @@
 import "@tanstack/react-start/server-only";
-import { asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 
 import { inhouseProgram, media, user } from "@/db/schema";
@@ -32,6 +32,7 @@ import { CmsValidationError } from "@/features/shared/errors";
 import { nextPosition, reorder } from "@/features/shared/ordering";
 import { assertPublishable } from "@/features/shared/publish";
 import { assertSlugAvailable, makeUniqueSlug } from "@/features/shared/slug";
+import { isNotArchived } from "@/features/shared/visibility";
 
 const ENTITY_TYPE = "inhouse_program";
 
@@ -83,7 +84,8 @@ async function listPublishedCards(db: DbOrTx) {
       imageAlt: media.alt
     })
     .from(inhouseProgram)
-    .leftJoin(media, eq(media.id, inhouseProgram.imageMediaId))
+    /* Same as the public site: an archived image shows as no image. */
+    .leftJoin(media, and(eq(media.id, inhouseProgram.imageMediaId), isNotArchived(media.archivedAt)))
     .where(eq(inhouseProgram.status, "published"))
     .orderBy(asc(inhouseProgram.position), asc(inhouseProgram.createdAt));
 
