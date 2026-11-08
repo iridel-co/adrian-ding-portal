@@ -142,6 +142,7 @@ const program = {
   slug: "inspirational-keynotes",
   summary: " Story-led keynotes. ",
   image: null,
+  imageFocus: { x: 30, y: 70 },
   usefulFor: [" Sales summits ", "", "Kick-offs"]
 };
 
@@ -152,6 +153,7 @@ function publishedCard(id: string) {
     slug: id,
     summary: "",
     image: { url: `https://cdn.example.com/${id}.jpg`, alt: id },
+    imageFocus: { x: 50, y: 50 },
     usefulFor: ["Teams"]
   };
 }
@@ -163,6 +165,7 @@ describe("buildProgramPreview", () => {
       slug: null,
       summary: "Story-led keynotes.",
       image: null,
+      imageFocus: { x: 30, y: 70 },
       usefulFor: ["Sales summits", "Kick-offs"]
     });
   });

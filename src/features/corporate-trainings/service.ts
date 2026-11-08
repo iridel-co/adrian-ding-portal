@@ -77,6 +77,8 @@ async function listPublishedCards(db: DbOrTx) {
       slug: inhouseProgram.slug,
       summary: inhouseProgram.summary,
       usefulFor: inhouseProgram.usefulFor,
+      imageFocusX: inhouseProgram.imageFocusX,
+      imageFocusY: inhouseProgram.imageFocusY,
       imageKey: media.key,
       imageAlt: media.alt
     })
@@ -85,9 +87,10 @@ async function listPublishedCards(db: DbOrTx) {
     .where(eq(inhouseProgram.status, "published"))
     .orderBy(asc(inhouseProgram.position), asc(inhouseProgram.createdAt));
 
-  return rows.map(({ imageKey, imageAlt, ...row }) => ({
+  return rows.map(({ imageKey, imageAlt, imageFocusX, imageFocusY, ...row }) => ({
     ...row,
-    image: imageKey ? { url: publicMediaUrl(imageKey), alt: imageAlt ?? "" } : null
+    image: imageKey ? { url: publicMediaUrl(imageKey), alt: imageAlt ?? "" } : null,
+    imageFocus: { x: imageFocusX, y: imageFocusY }
   }));
 }
 

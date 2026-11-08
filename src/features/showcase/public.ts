@@ -70,7 +70,10 @@ export async function listPublicIndustries(db: DbOrTx) {
 }
 
 type ProgramRow = {
-  program: Pick<typeof inhouseProgram.$inferSelect, "id" | "slug" | "title" | "summary" | "usefulFor">;
+  program: Pick<
+    typeof inhouseProgram.$inferSelect,
+    "id" | "slug" | "title" | "summary" | "imageFocusX" | "imageFocusY" | "usefulFor"
+  >;
   image: Pick<typeof media.$inferSelect, "key" | "alt" | "width" | "height"> | null;
 };
 
@@ -81,6 +84,7 @@ export function toPublicProgram(row: ProgramRow, toUrl?: (key: string) => string
     title: row.program.title,
     summary: row.program.summary,
     image: toPublicMedia(row.image, toUrl),
+    imageFocus: { x: row.program.imageFocusX, y: row.program.imageFocusY },
     usefulFor: row.program.usefulFor
   };
 }

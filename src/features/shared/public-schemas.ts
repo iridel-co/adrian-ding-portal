@@ -170,6 +170,11 @@ export const programSchema = z
     title: z.string(),
     summary: z.string(),
     image: mediaSchema.nullable(),
+    imageFocus: z
+      .object({ x: z.number().int(), y: z.number().int() })
+      .describe(
+        "Spot on the image, in % from the top-left (0 to 100), that must stay in view. Use as CSS object-position: `${x}% ${y}%`"
+      ),
     usefulFor: z.array(z.string())
   })
   .meta({ id: "Program" });

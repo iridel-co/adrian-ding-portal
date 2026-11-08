@@ -19,14 +19,23 @@ export function Missing({ children, className }: { children: ReactNode; classNam
 export function PreviewImage({
   image,
   missingLabel,
-  className
+  className,
+  objectPosition
 }: {
   image: { url: string; alt: string } | null;
   missingLabel: string;
   className?: string;
+  objectPosition?: string;
 }) {
   if (image) {
-    return <img src={image.url} alt={image.alt} className={cn("object-cover", className)} />;
+    return (
+      <img
+        src={image.url}
+        alt={image.alt}
+        className={cn("object-cover", className)}
+        style={{ objectPosition }}
+      />
+    );
   }
 
   return (

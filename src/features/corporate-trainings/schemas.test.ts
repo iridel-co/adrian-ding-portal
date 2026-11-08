@@ -16,6 +16,8 @@ describe("programSaveSchema", () => {
       slug: "keynotes",
       summary: "",
       imageMediaId: null,
+      imageFocusX: 50,
+      imageFocusY: 50,
       usefulFor: [" Sales summits ", "", "  "]
     });
 
@@ -29,6 +31,22 @@ describe("programSaveSchema", () => {
       slug: "",
       summary: "",
       imageMediaId: null,
+      imageFocusX: 50,
+      imageFocusY: 50,
+      usefulFor: []
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a photo focus outside the photo", () => {
+    const result = programSaveSchema.safeParse({
+      title: "Keynotes",
+      slug: "keynotes",
+      summary: "",
+      imageMediaId: null,
+      imageFocusX: 101,
+      imageFocusY: 50,
       usefulFor: []
     });
 

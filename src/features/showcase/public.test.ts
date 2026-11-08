@@ -35,6 +35,8 @@ describe("toPublicProgram", () => {
     slug: "leadership",
     title: "Leadership Training & Development",
     summary: "For new managers.",
+    imageFocusX: 30,
+    imageFocusY: 70,
     usefulFor: ["New and first-time managers"]
   };
   const image = {
@@ -57,6 +59,7 @@ describe("toPublicProgram", () => {
         width: 1400,
         height: 800
       },
+      imageFocus: { x: 30, y: 70 },
       usefulFor: ["New and first-time managers"]
     });
   });

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { formatDateRange, formatTimeRange } from "@/features/shared/format";
+import { type ImageFocus, imageFocusSchema } from "@/features/shared/image-focus";
 import { formatPesos } from "@/features/shared/money";
 
 const imageSchema = z.object({
@@ -49,6 +50,7 @@ export const programPreviewModelSchema = z.object({
   slug: z.string().nullable(),
   summary: z.string().nullable(),
   image: imageSchema.nullable(),
+  imageFocus: imageFocusSchema,
   usefulFor: z.array(z.string())
 });
 
@@ -214,6 +216,7 @@ export type ProgramPreviewSource = {
   slug: string;
   summary: string;
   image: PreviewImage | null;
+  imageFocus: ImageFocus;
   usefulFor: string[];
 };
 
@@ -223,6 +226,7 @@ export function buildProgramPreview(program: ProgramPreviewSource): ProgramPrevi
     slug: text(program.slug),
     summary: text(program.summary),
     image: program.image,
+    imageFocus: program.imageFocus,
     usefulFor: list(program.usefulFor)
   };
 }

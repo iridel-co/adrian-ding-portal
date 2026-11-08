@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { contentStatus } from "@/db/schema";
 import { nonEmptyList, stringListSchema } from "@/features/shared/field-schemas";
+import { imageFocusSchema } from "@/features/shared/image-focus";
 import type { FieldLabels } from "@/features/shared/publish";
 
 export const SUMMARY_MAX_LENGTH = 160;
@@ -13,6 +14,8 @@ export const programSaveSchema = z.object({
   slug: z.string().trim(),
   summary: z.string().trim().max(SUMMARY_MAX_LENGTH, `Keep the summary to ${SUMMARY_MAX_LENGTH} characters.`),
   imageMediaId: z.uuid().nullable(),
+  imageFocusX: imageFocusSchema.shape.x,
+  imageFocusY: imageFocusSchema.shape.y,
   usefulFor: stringListSchema.pipe(
     z.array(z.string()).max(USEFUL_FOR_MAX_ITEMS, `Add at most ${USEFUL_FOR_MAX_ITEMS} "Useful for" items.`)
   )

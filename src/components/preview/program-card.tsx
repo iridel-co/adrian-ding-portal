@@ -10,6 +10,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Missing, PreviewImage } from "@/components/preview/placeholder";
 import { PROGRAMS_SECTION } from "@/components/preview/sample-content";
 import type { ProgramPreviewModel } from "@/features/preview/model";
+import { toObjectPosition } from "@/features/shared/image-focus";
 
 const HOVER_QUERY = "(min-width: 1024px) and (pointer: fine)";
 const COLLAPSED_BASIS = "22rem";
@@ -59,6 +60,7 @@ export function ProgramCard({ model, canHover, isExpanded, onExpandedChange }: P
     >
       <PreviewImage
         image={model.image}
+        objectPosition={toObjectPosition(model.imageFocus)}
         missingLabel="Add a card image"
         className={cn(
           "absolute inset-0 size-full transition-transform duration-500 motion-reduce:transition-none",

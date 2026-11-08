@@ -32,6 +32,7 @@ import {
 import { buildProgramRowPreview, type PreviewContent } from "@/features/preview/model";
 import { CONTENT_STATUS_ACTIONS, type ContentStatus } from "@/features/shared/content-status";
 import type { FieldAliases } from "@/features/shared/error-message";
+import { CENTER_FOCUS, type ImageFocus } from "@/features/shared/image-focus";
 import { publishChecklist } from "@/features/shared/publish";
 
 export const Route = createFileRoute("/_app/content/corporate-trainings/$id")({
@@ -47,11 +48,14 @@ type ProgramForm = {
   slug: string;
   summary: string;
   image: PickedMedia | null;
+  imageFocus: ImageFocus;
   usefulFor: string[];
 };
 
 const FIELD_ALIASES: FieldAliases = {
-  imageMediaId: "image"
+  imageMediaId: "image",
+  imageFocusX: "image",
+  imageFocusY: "image"
 };
 
 function toForm(detail: ProgramDetail): ProgramForm {
@@ -61,15 +65,18 @@ function toForm(detail: ProgramDetail): ProgramForm {
     slug: program.slug,
     summary: program.summary,
     image: detail.image,
+    imageFocus: { x: program.imageFocusX, y: program.imageFocusY },
     usefulFor: program.usefulFor
   };
 }
 
 function toSaveInput(form: ProgramForm) {
-  const { image, ...values } = form;
+  const { image, imageFocus, ...values } = form;
   return {
     ...values,
-    imageMediaId: image?.id ?? null
+    imageMediaId: image?.id ?? null,
+    imageFocusX: imageFocus.x,
+    imageFocusY: imageFocus.y
   };
 }
 
@@ -161,7 +168,15 @@ function ProgramEditor({ detail }: { detail: ProgramDetail }) {
             />
           )}
           <FormSection icon={ImageIcon} title="Card Image" errors={fieldErrors.image}>
-            <MediaField value={values.image} onChange={(media) => setField("image", media)} />
+            <MediaField
+              value={values.image}
+              onChange={(media) => {
+                setField("image", media);
+                setField("imageFocus", CENTER_FOCUS);
+              }}
+              focus={values.imageFocus}
+              onFocusChange={(focus) => setField("imageFocus", focus)}
+            />
           </FormSection>
         </>
       }
