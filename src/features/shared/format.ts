@@ -15,13 +15,22 @@ export function formatTime(time: string) {
   return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
+/*
+  The ranges below use non-breaking spaces inside each date and time, so a
+  narrow table column or chip wraps only at the " - " between start and end,
+  never in the middle of "Nov 11, 2026" or "9:00 AM".
+*/
+function keepTogether(text: string) {
+  return text.replaceAll(" ", "\u00a0");
+}
+
 /* "9:00 AM - 5:00 PM". */
 export function formatTimeRange(startTime: string, endTime: string) {
-  return `${formatTime(startTime)} - ${formatTime(endTime)}`;
+  return `${keepTogether(formatTime(startTime))} - ${keepTogether(formatTime(endTime))}`;
 }
 
 /* "Fri, Oct 9, 2026", or "Fri, Oct 9, 2026 - Sun, Oct 11, 2026" for a multi-day session. */
 export function formatDateRange(date: string, endDate: string) {
-  if (endDate === date) return formatDate(date);
-  return `${formatDate(date)} - ${formatDate(endDate)}`;
+  if (endDate === date) return keepTogether(formatDate(date));
+  return `${keepTogether(formatDate(date))} - ${keepTogether(formatDate(endDate))}`;
 }

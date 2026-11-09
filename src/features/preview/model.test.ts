@@ -99,7 +99,7 @@ describe("buildSessionPreview", () => {
   it("shows the full range for a multi-day session", () => {
     const model = buildSessionPreview(workshop, session);
 
-    expect(model.dateText).toMatch(/Oct 9, 2026 - .*Oct 10, 2026/);
+    expect(model.dateText).toMatch(/Oct\s9,\s2026 - .*Oct\s10,\s2026/);
     expect(model.shortDateText).toBe("Oct 9, 2026 - Oct 10, 2026");
     expect(model.timeText).toMatch(/^9:00\sAM - 5:00\sPM$/);
   });

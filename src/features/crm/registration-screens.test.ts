@@ -118,7 +118,8 @@ describe("Workshop run list", () => {
   });
 
   it("shows run context, independent seat/payment counts and safely escaped titles", () => {
-    const html = render();
+    /* Dates use non-breaking spaces so they never wrap mid-date. */
+    const html = render().replaceAll("\u00a0", " ");
     for (const value of ["Scheduled workshops", "PSW", "Jan 12, 2027", "Jan 13, 2027", "Training Room", "Cebu",
       "Open", "Upcoming workshops", "18 / 20", "10 paid", "8 unpaid", "Page 1"])
       expect(html).toContain(value);

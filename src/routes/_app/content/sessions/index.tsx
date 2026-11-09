@@ -241,8 +241,8 @@ function SessionList() {
                       </div>
                       <div className="text-sm sm:hidden">{session.workshopTitle}</div>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">{session.workshopTitle}</TableCell>
-                    <TableCell className="hidden text-muted-foreground md:table-cell">
+                    <TableCell className="hidden min-w-48 whitespace-normal sm:table-cell">{session.workshopTitle}</TableCell>
+                    <TableCell className="hidden min-w-40 whitespace-normal text-muted-foreground md:table-cell">
                       {[session.venueName, session.city].filter(Boolean).join(", ") || "-"}
                     </TableCell>
                     <TableCell className="hidden tabular-nums lg:table-cell">
