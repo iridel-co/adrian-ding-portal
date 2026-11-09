@@ -236,13 +236,13 @@ function SessionList() {
                       >
                         {formatDateRange(session.date, session.endDate)}
                       </Link>
-                      <div className="mt-0.5 text-muted-foreground">
+                      <div className="mt-0.5 whitespace-nowrap text-muted-foreground">
                         {formatTimeRange(session.startTime, session.endTime)}
                       </div>
                       <div className="text-sm sm:hidden">{session.workshopTitle}</div>
                     </TableCell>
-                    <TableCell className="hidden min-w-48 whitespace-normal sm:table-cell">{session.workshopTitle}</TableCell>
-                    <TableCell className="hidden min-w-40 whitespace-normal text-muted-foreground md:table-cell">
+                    <TableCell className="hidden min-w-44 whitespace-normal sm:table-cell">{session.workshopTitle}</TableCell>
+                    <TableCell className="hidden min-w-36 whitespace-normal text-muted-foreground md:table-cell">
                       {[session.venueName, session.city].filter(Boolean).join(", ") || "-"}
                     </TableCell>
                     <TableCell className="hidden tabular-nums lg:table-cell">
