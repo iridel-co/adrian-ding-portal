@@ -45,7 +45,7 @@ export function PublishChecklist({ title, checks }: PublishChecklistProps) {
         ))}
       </ul>
       {checks.length > 0 && doneCount === checks.length && (
-        <p className="rounded-lg bg-brand/10 px-3 py-2 text-sm font-medium text-brand">
+        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
           All set. You can go live from the buttons at the top.
         </p>
       )}
