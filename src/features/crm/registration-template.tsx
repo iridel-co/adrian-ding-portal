@@ -26,7 +26,7 @@ export async function registrationPaymentMessage(
 ): Promise<CrmEmailPayload> {
   const text = `Hello ${registrant.fullName},
 
-Your workshop registration is saved. Please complete payment to reserve your seat.
+Your workshop registration is saved and your seat is reserved. Payment is still pending. Please follow the payment instructions below. Your reservation may be cancelled if payment is not received.
 Reference: ${registrant.reference}
 Workshop: ${course.title}
 Dates: ${session.date} to ${session.endDate}
@@ -76,9 +76,9 @@ For questions, reply to this email and include your registration reference.`;
 export function RegistrationPaymentEmail({ registrant, course, session, account, qrUrl }: {
   registrant: Parameters<typeof registrationPaymentMessage>[1]; course: Parameters<typeof registrationPaymentMessage>[2]; session: Parameters<typeof registrationPaymentMessage>[3]; account: Parameters<typeof registrationPaymentMessage>[4]; qrUrl: Parameters<typeof registrationPaymentMessage>[5];
 }) {
-  return <EmailLayout preview={`Payment information for ${course.title}`} label="WORKSHOP REGISTRATION" title="Complete payment to reserve your seat.">
+  return <EmailLayout preview={`Payment information for ${course.title}`} label="WORKSHOP REGISTRATION" title="Your seat is reserved. Payment is pending.">
       <EmailParagraph>Hello {registrant.fullName},</EmailParagraph>
-      <EmailParagraph>Your workshop registration is saved. Please complete payment to reserve your seat.</EmailParagraph>
+      <EmailParagraph>Your workshop registration is saved and your seat is reserved. Payment is still pending. Please follow the payment instructions below. Your reservation may be cancelled if payment is not received.</EmailParagraph>
       <EmailDetails rows={[["Reference", registrant.reference], ["Workshop", course.title],
         ["Dates", `${session.date} to ${session.endDate}`], ["Time", `${session.startTime.slice(0, 5)} to ${session.endTime.slice(0, 5)} (Asia/Manila)`],
         ["Venue", `${session.venueName}, ${session.city}`]]} />

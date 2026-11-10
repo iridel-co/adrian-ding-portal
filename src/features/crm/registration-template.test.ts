@@ -45,11 +45,13 @@ it("acknowledges the verified amount with reference and schedule, escapes HTML a
 
 it("renders the website theme with actionable payment details and the unchanged attachment", async () => {
   const message = await make();
-  for (const value of ["#980f09", "ADRIAN DING", "Complete payment to reserve your seat.", "AD-PSW-0042", "123456", "₱6,500.5"])
+  for (const value of ["#980f09", "ADRIAN DING", "Your seat is reserved. Payment is pending.", "AD-PSW-0042", "123456", "₱6,500.5"])
     expect(message.html).toContain(value);
   for (const content of [message.html, message.text]) {
-    expect(content).toContain("Please complete payment to reserve your seat.");
-    expect(content).not.toContain("your seat is reserved");
+    expect(content).toContain("Your workshop registration is saved and your seat is reserved.");
+    expect(content).toContain("Payment is still pending.");
+    expect(content).toContain("Your reservation may be cancelled if payment is not received.");
+    expect(content).not.toContain("payment to reserve your seat");
   }
   expect(message.html).toContain('src="https://media.company.test/qr.png"');
   expect(message.html).toContain('href="https://video.company.test/primer"');
