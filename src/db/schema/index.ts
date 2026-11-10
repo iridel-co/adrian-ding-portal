@@ -10,5 +10,6 @@ export * from "./showcase";
 export * from "./taxonomy";
 export * from "./workshops";
 export * from "./crm";
+export * from "./crm-contact-settings";
 export * from "./crm-email-state";
 export * from "./crm-email-kind";

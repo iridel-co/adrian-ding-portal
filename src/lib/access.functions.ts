@@ -27,3 +27,11 @@ export const staffMiddleware = createMiddleware().middleware([authMiddleware]).s
   }
   return next({ context: { actor } });
 });
+
+export const adminMiddleware = createMiddleware().middleware([staffMiddleware]).server(async ({ context, next }) => {
+  if (context.actor.role !== "admin") {
+    setResponseStatus(403);
+    throw new Error(AccessErrorCode.AdminAccessRequired);
+  }
+  return next();
+});
