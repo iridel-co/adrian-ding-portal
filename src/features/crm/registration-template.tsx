@@ -3,6 +3,14 @@ import { EmailAmount, EmailButton, EmailDetails, EmailLayout, EmailParagraph } f
 import type { CrmEmailPayload } from "@/db/schema";
 import { formatPesos } from "@/features/shared/money";
 
+const emailDateFormat = new Intl.DateTimeFormat("en-US", {
+  month: "long", day: "numeric", year: "numeric", timeZone: "UTC"
+});
+
+function formatSessionDates(date: string, endDate: string) {
+  return emailDateFormat.formatRange(new Date(`${date}T00:00:00Z`), new Date(`${endDate}T00:00:00Z`));
+}
+
 export type RegistrationMailConfig = {
   EMAIL_FROM: string;
   EMAIL_REPLY_TO: string;
@@ -29,7 +37,7 @@ export async function registrationPaymentMessage(
 Your workshop registration is saved and your seat is reserved. Payment is still pending. Please follow the payment instructions below. Your reservation may be cancelled if payment is not received.
 Reference: ${registrant.reference}
 Workshop: ${course.title}
-Dates: ${session.date} to ${session.endDate}
+Dates: ${formatSessionDates(session.date, session.endDate)}
 Time: ${session.startTime.slice(0, 5)} to ${session.endTime.slice(0, 5)} (Asia/Manila)
 Venue: ${session.venueName}, ${session.city}
 Amount to pay: ${formatPesos(registrant.priceCentavos)}
@@ -63,7 +71,7 @@ Our staff have verified your payment. Your workshop registration is now Paid and
 Reference: ${registrant.reference}
 Amount verified: ${formatPesos(registrant.paidAmountCentavos)}
 Workshop: ${course.title}
-Dates: ${session.date} to ${session.endDate}
+Dates: ${formatSessionDates(session.date, session.endDate)}
 Time: ${session.startTime.slice(0, 5)} to ${session.endTime.slice(0, 5)} (Asia/Manila)
 Venue: ${session.venueName}, ${session.city}
 
@@ -80,7 +88,7 @@ export function RegistrationPaymentEmail({ registrant, course, session, account,
       <EmailParagraph>Hello {registrant.fullName},</EmailParagraph>
       <EmailParagraph>Your workshop registration is saved and your seat is reserved. Payment is still pending. Please follow the payment instructions below. Your reservation may be cancelled if payment is not received.</EmailParagraph>
       <EmailDetails rows={[["Reference", registrant.reference], ["Workshop", course.title],
-        ["Dates", `${session.date} to ${session.endDate}`], ["Time", `${session.startTime.slice(0, 5)} to ${session.endTime.slice(0, 5)} (Asia/Manila)`],
+        ["Dates", formatSessionDates(session.date, session.endDate)], ["Time", `${session.startTime.slice(0, 5)} to ${session.endTime.slice(0, 5)} (Asia/Manila)`],
         ["Venue", `${session.venueName}, ${session.city}`]]} />
       <EmailAmount label="Amount to pay" amount={formatPesos(registrant.priceCentavos)} />
       <EmailDetails rows={[["Pay to", account.providerName], ["Account name", account.accountName],
@@ -101,7 +109,7 @@ export function RegistrationAcknowledgmentEmail({ registrant, course, session }:
       <EmailParagraph>Our staff have verified your payment. Your workshop registration is now Paid and your seat is confirmed.</EmailParagraph>
       <EmailAmount label="Amount verified" amount={formatPesos(registrant.paidAmountCentavos)} />
       <EmailDetails rows={[["Reference", registrant.reference], ["Workshop", course.title],
-        ["Dates", `${session.date} to ${session.endDate}`], ["Time", `${session.startTime.slice(0, 5)} to ${session.endTime.slice(0, 5)} (Asia/Manila)`],
+        ["Dates", formatSessionDates(session.date, session.endDate)], ["Time", `${session.startTime.slice(0, 5)} to ${session.endTime.slice(0, 5)} (Asia/Manila)`],
         ["Venue", `${session.venueName}, ${session.city}`]]} />
       <EmailParagraph>For questions, reply to this email and include your registration reference.</EmailParagraph>
     </EmailLayout>;

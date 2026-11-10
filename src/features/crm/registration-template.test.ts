@@ -2,10 +2,10 @@ import { expect, it } from "vitest";
 import { registrationAcknowledgmentMessage, registrationPaymentMessage, registrationMessageHasPlaceholders } from "./registration-template";
 const config = { EMAIL_FROM: "Team <team@company.test>", EMAIL_REPLY_TO: "registrations@company.test",
   REGISTRATION_PAYMENT_ACCOUNT_ID: "synthetic", REGISTRATION_EMAIL_ENABLED: false, RESEND_API_KEY: "" };
-const make = () => registrationPaymentMessage(config,
+const make = (date = "2027-01-12", endDate = "2027-01-13") => registrationPaymentMessage(config,
   { fullName: '<script>alert("x")</script>', email: "registrant@company.test", reference: "AD-PSW-0042", priceCentavos: 650050 },
   { title: "Sales & Leadership", primerVideoUrl: "https://video.company.test/primer", primerBlurb: "Before the workshop" },
-  { date: "2027-01-12", endDate: "2027-01-13", startTime: "09:00:00", endTime: "17:00:00", venueName: "Training Room", city: "Cebu" },
+  { date, endDate, startTime: "09:00:00", endTime: "17:00:00", venueName: "Training Room", city: "Cebu" },
   { providerName: "Bank", accountName: "Team", accountNumber: "123456" }, "https://media.company.test/qr.png",
   { filename: "payment-qr.png", content: "saved-base64", contentType: "image/png" });
 it("includes the saved amount, reference, schedule, destination, QR and primer with proof-by-reply", async () => {
@@ -34,13 +34,32 @@ it("acknowledges the verified amount with reference and schedule, escapes HTML a
   expect(payload.to).toEqual(["customer@company.test"]);
   expect(payload.replyTo).toBe(config.EMAIL_REPLY_TO);
   expect(payload.subject).not.toMatch(/[\r\n]/);
-  for (const text of ["AD-PSW-0042", "₱1,234.5", "now Paid", "2027-01-12", "09:00 to 17:00", "Asia/Manila", "Training Room, Cebu"])
+  for (const text of ["AD-PSW-0042", "₱1,234.5", "now Paid", "January", "09:00 to 17:00", "Asia/Manila", "Training Room, Cebu"])
     expect(payload.text).toContain(text);
   expect(payload.html).toContain("&lt;script&gt;customer&lt;/script&gt;");
   expect(payload.html).not.toContain("<script>");
   expect(payload.attachments).toBeUndefined();
   expect(payload.text).not.toMatch(/pay to|payment proof|refund|48.hour|expir|waiting list/i);
   expect(registrationMessageHasPlaceholders(payload)).toBe(false);
+});
+
+it.each([
+  ["2026-11-28", "2026-11-28", "November 28, 2026"],
+  ["2026-11-28", "2026-11-30", "November 28 – 30, 2026"],
+  ["2026-11-30", "2026-12-02", "November 30 – December 2, 2026"],
+  ["2026-12-31", "2027-01-02", "December 31, 2026 – January 2, 2027"]
+])("formats %s through %s in both email formats", async (date, endDate, expected) => {
+  const payment = await make(date, endDate);
+  const acknowledgment = await registrationAcknowledgmentMessage(config,
+    { fullName: "Maria Santos", email: "customer@company.test", reference: "AD-PSW-0042", paidAmountCentavos: 650050 },
+    { title: "Sales & Leadership" },
+    { date, endDate, startTime: "09:00:00", endTime: "17:00:00", venueName: "Training Room", city: "Cebu" });
+  for (const message of [payment, acknowledgment]) {
+    expect(message.text?.replace(/\s+/g, " ")).toContain(`Dates: ${expected}`);
+    expect(message.html.replace(/\s+/g, " ")).toContain(expected);
+    expect(message.text).not.toContain(date);
+    expect(message.html).not.toContain(date);
+  }
 });
 
 it("renders the website theme with actionable payment details and the unchanged attachment", async () => {
