@@ -11,6 +11,7 @@ import { StatusBadge, type StatusDisplay } from "@/components/cms/status-badge";
 import { CrmReadState } from "@/components/crm/read-state";
 import { SortableTableHead } from "@/components/table/sortable-table-head";
 import { TablePagination } from "@/components/table/table-pagination";
+import { TableCard } from "@/components/table/table-card";
 import { ActionsHead, RowAction, RowActions } from "@/components/table/row-actions";
 import {
   AlertDialog,
@@ -134,7 +135,7 @@ function PaymentAccountsPage() {
     description="The account details and QR code sent in new workshop payment instructions."
     action={<div className="flex gap-2">
       <Button variant="outline" onClick={() => void accounts.refetch()} disabled={accounts.isFetching}>Refresh</Button>
-      {isAdmin && <Button onClick={() => setEditing(null)}><Plus /> Add account</Button>}
+      {isAdmin && <Button variant="brand" onClick={() => setEditing(null)}><Plus /> Add account</Button>}
     </div>}
     filters={<div className="flex items-center gap-2">
       <Checkbox id="payment-account-archived" checked={search.includeArchived} onCheckedChange={(checked) => void navigate({ search: { ...search, includeArchived: checked === true, offset: 0 } })} />
@@ -143,8 +144,8 @@ function PaymentAccountsPage() {
   >
     <CrmReadState pending={accounts.isPending} error={accounts.error} retry={() => void accounts.refetch()}
       loadingMessage="Loading payment accounts…" accessTitle="Payment-account access unavailable" errorMessage={errorMessage} />
-    {!accounts.isError && accounts.data && (accounts.data.items.length === 0 ? <EmptyState>No payment accounts yet.</EmptyState> : <>
-      <Table>
+    {!accounts.isError && accounts.data && <TableCard>
+      {accounts.data.items.length === 0 ? <EmptyState>No payment accounts yet.</EmptyState> : <Table>
       <TableHeader><TableRow>{([['method', 'Channel'], ['providerName', 'Pay to'], ['accountName', 'Account']] as const).map(([key, label]) =>
         <SortableTableHead key={key} active={search.sort === key} direction={search.direction}
           onClick={() => void navigate({ search: { ...search, sort: key, direction: search.sort === key && search.direction === "asc" ? "desc" : "asc", offset: 0 } })}>{label}</SortableTableHead>
@@ -166,11 +167,11 @@ function PaymentAccountsPage() {
             {isAdmin && account.archivedAt && <RowAction icon={ArchiveRestore} label="Restore account" onClick={() => action(restore, account.id)} />}
           </RowActions>
         </TableRow>)}
-      </TableBody></Table>
+      </TableBody></Table>}
       <TablePagination limit={search.limit} offset={search.offset} count={accounts.data.items.length}
         hasMore={accounts.data.hasMore} fetching={accounts.isFetching}
         onChange={(page) => void navigate({ search: { ...search, ...page } })} />
-    </>)}
+    </TableCard>}
 
     {editing !== undefined && <PaymentAccountDialog account={editing} onClose={() => setEditing(undefined)} onSaved={refresh} />}
     <AlertDialog open={confirming !== null} onOpenChange={(open) => { if (!open) setConfirming(null); }}>
