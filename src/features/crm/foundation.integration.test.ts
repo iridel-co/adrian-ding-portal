@@ -953,9 +953,9 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     expect((await sql`select price_centavos from registration where idempotency_key = ${key}`)[0].price_centavos).toBe(234500);
     const [job] = await sql`select payload from crm_email_job where id = ${result.jobs[0]}`;
     expect(job.payload.text).toContain("₱2,345");
-    expect(job.payload.text).toContain("2027-01-13");
+    expect(job.payload.text).toContain("January 13, 2027");
     expect(job.payload.text).toContain("Updated Room");
-    expect(job.payload.text).not.toContain("2027-01-12");
+    expect(job.payload.text).not.toContain("January 12, 2027");
   });
 
   it("keeps the course code through a CMS edit that runs during intake", async () => {
