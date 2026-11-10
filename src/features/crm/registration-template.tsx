@@ -34,7 +34,10 @@ export async function registrationPaymentMessage(
 ): Promise<CrmEmailPayload> {
   const text = `Hello ${registrant.fullName},
 
-Your workshop registration is saved and your seat is reserved. Payment is still pending. Please follow the payment instructions below. Your reservation may be cancelled if payment is not received.
+Your workshop registration is saved and your seat is reserved. Payment is still pending. Please follow the payment instructions below.
+
+Please complete payment within 48 hours of registering. If payment is not received within that time, our staff will cancel your registration and release your seat.
+
 Reference: ${registrant.reference}
 Workshop: ${course.title}
 Dates: ${formatSessionDates(session.date, session.endDate)}
@@ -86,7 +89,8 @@ export function RegistrationPaymentEmail({ registrant, course, session, account,
 }) {
   return <EmailLayout preview={`Payment information for ${course.title}`} label="WORKSHOP REGISTRATION" title="Your seat is reserved. Payment is pending.">
       <EmailParagraph>Hello {registrant.fullName},</EmailParagraph>
-      <EmailParagraph>Your workshop registration is saved and your seat is reserved. Payment is still pending. Please follow the payment instructions below. Your reservation may be cancelled if payment is not received.</EmailParagraph>
+      <EmailParagraph>Your workshop registration is saved and your seat is reserved. Payment is still pending. Please follow the payment instructions below.</EmailParagraph>
+      <EmailParagraph>Please complete payment within 48 hours of registering. If payment is not received within that time, our staff will cancel your registration and release your seat.</EmailParagraph>
       <EmailDetails rows={[["Reference", registrant.reference], ["Workshop", course.title],
         ["Dates", formatSessionDates(session.date, session.endDate)], ["Time", `${session.startTime.slice(0, 5)} to ${session.endTime.slice(0, 5)} (Asia/Manila)`],
         ["Venue", `${session.venueName}, ${session.city}`]]} />
