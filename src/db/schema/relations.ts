@@ -3,6 +3,7 @@ import { defineRelations } from "drizzle-orm";
 import { activityLog } from "./activity-log";
 import { account, session, user, verification } from "./auth";
 import { corporateInquiry, crmEmailJob, crmSubmissionKey, registration } from "./crm";
+import { crmContactSettings } from "./crm-contact-settings";
 import { faq } from "./faq";
 import { media } from "./media";
 import { siteProfile } from "./profile";
@@ -30,6 +31,7 @@ export const relations = defineRelations(
     faq,
     activityLog,
     corporateInquiry,
+    crmContactSettings,
     crmEmailJob,
     crmSubmissionKey,
     registration

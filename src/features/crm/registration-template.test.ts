@@ -15,7 +15,7 @@ it("includes the saved amount, reference, schedule, destination, QR and primer w
   for (const value of ["₱6,500.5", "AD-PSW-0042", "09:00 to 17:00", "Asia/Manila", "123456", "https://video.company.test/primer", "Reply to this email"])
     expect(payload.text).toContain(value);
   expect(payload.attachments?.[0].content).toBe("saved-base64");
-  expect(payload.text).not.toMatch(/48.hour|expir|waiting list/i);
+  expect(payload.text).not.toMatch(/expir|waiting list/i);
   expect(registrationMessageHasPlaceholders(payload)).toBe(false);
 });
 it("escapes customer content in HTML and identifies local placeholders", async () => {
@@ -69,7 +69,9 @@ it("renders the website theme with actionable payment details and the unchanged 
   for (const content of [message.html, message.text]) {
     expect(content).toContain("Your workshop registration is saved and your seat is reserved.");
     expect(content).toContain("Payment is still pending.");
-    expect(content).toContain("Your reservation may be cancelled if payment is not received.");
+    expect(content).toContain("Please complete payment within 48 hours of registering.");
+    expect(content).toContain("our staff will cancel your registration and release your seat.");
+    expect(content).not.toMatch(/reminder|automatically|24 hours/i);
     expect(content).not.toContain("payment to reserve your seat");
   }
   expect(message.html).toContain('src="https://media.company.test/qr.png"');

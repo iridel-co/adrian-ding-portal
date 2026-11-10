@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@tanstack/react-start/server-only", () => ({}));
+vi.mock("./contact-settings", () => ({ readCrmContactOverrides: vi.fn(async () => ({})) }));
 vi.mock("@/db", () => ({ getDb: vi.fn(() => "database") }));
-vi.mock("./config", () => ({ getIntakeOrigins: vi.fn(() => ["https://website.test"]),
-  getRegistrationConfig: vi.fn(() => ({ TURNSTILE_SECRET_KEY: "secret" })) }));
+vi.mock("./config", () => {
+  const config = vi.fn(() => ({ TURNSTILE_SECRET_KEY: "secret" }));
+  return { getIntakeOrigins: vi.fn(() => ["https://website.test"]), getRegistrationConfig: config,
+    getRegistrationVerificationConfig: config, getRegistrationMailConfig: config };
+});
 vi.mock("./email", () => ({ sendEmailJob: vi.fn() }));
 vi.mock("./turnstile", () => ({ verifyTurnstile: vi.fn() }));
 vi.mock("./registration-service", () => ({ acceptRegistration: vi.fn() }));

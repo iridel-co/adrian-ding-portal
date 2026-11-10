@@ -38,6 +38,8 @@ import { changeRegistration as saveRegistrationChange, listRegistrations, listRe
   registrationSessionDetail, retryRegistrationEmail } from "./registration-staff";
 import { RegistrationAction, registrationActionSchema, registrationDetailSchema, registrationListSchema, registrationSessionListSchema } from "./registration-staff-schemas";
 import { authorizePortalUser, type PortalActor } from "@/lib/access";
+import { getCrmContactSettings, readCrmContactOverrides, saveCrmContactSettings } from "./contact-settings";
+import { getCorporateMailConfig, getRegistrationMailConfig } from "./config";
 
 // Explicit opt-in only. Never use DATABASE_URL or the application's DB client.
 const isolatedUrl = process.env.CRM_INTEGRATION_DATABASE_URL;
@@ -953,9 +955,9 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     expect((await sql`select price_centavos from registration where idempotency_key = ${key}`)[0].price_centavos).toBe(234500);
     const [job] = await sql`select payload from crm_email_job where id = ${result.jobs[0]}`;
     expect(job.payload.text).toContain("₱2,345");
-    expect(job.payload.text).toContain("2027-01-13");
+    expect(job.payload.text).toContain("January 13, 2027");
     expect(job.payload.text).toContain("Updated Room");
-    expect(job.payload.text).not.toContain("2027-01-12");
+    expect(job.payload.text).not.toContain("January 12, 2027");
   });
 
   it("keeps the course code through a CMS edit that runs during intake", async () => {
@@ -1582,6 +1584,70 @@ describe.skipIf(!isolatedUrl)("CRM database foundation", () => {
     const linked = await db.query.registration.findFirst({ where: { id: row.id }, with: { workshopSession: true, emailJobs: true } });
     expect(linked?.workshopSession?.id).toBe(fixture.sessions[0]);
     expect(linked?.emailJobs).toHaveLength(2);
+  });
+
+  it("persists admin contact settings, audits them and uses new values only for new email snapshots", async () => {
+    const adminActor = { ...actor, role: "admin" as const };
+    const first = { corporatePhone: "+639171234567", corporateReplyTo: "sales@company.test", registrationReplyTo: "workshops@company.test" };
+    const second = { corporatePhone: "+639181234567", corporateReplyTo: "new-sales@company.test", registrationReplyTo: "new-workshops@company.test" };
+    vi.stubEnv("CORPORATE_TEAM_PHONE", "+639001234567");
+    vi.stubEnv("CORPORATE_REPLY_TO", "default-sales@company.test");
+    vi.stubEnv("REGISTRATION_REPLY_TO", "default-workshops@company.test");
+    vi.stubEnv("CORPORATE_EMAIL_ENABLED", "false");
+    vi.stubEnv("CORPORATE_EMAIL_FROM", "Team <team@company.test>");
+    vi.stubEnv("CORPORATE_INQUIRY_RECIPIENTS", "primary@company.test,secondary@company.test");
+    vi.stubEnv("CORPORATE_PORTAL_URL", "https://portal.company.test");
+    vi.stubEnv("REGISTRATION_EMAIL_ENABLED", "false");
+    vi.stubEnv("REGISTRATION_EMAIL_FROM", "Team <team@company.test>");
+    vi.stubEnv("REGISTRATION_PAYMENT_ACCOUNT_ID", registrationConfig.REGISTRATION_PAYMENT_ACCOUNT_ID);
+    try {
+      expect(await readCrmContactOverrides(db)).toEqual({});
+      expect(await getCrmContactSettings(db, adminActor)).toMatchObject({ isSaved: false, values: { corporateReplyTo: "default-sales@company.test" } });
+      await expect(getCrmContactSettings(db, actor)).rejects.toThrow("admin_access_required");
+      await expect(saveCrmContactSettings(db, actor, first)).rejects.toThrow("admin_access_required");
+      await saveCrmContactSettings(db, adminActor, first);
+      expect(await getCrmContactSettings(db, adminActor)).toEqual({ values: first, isSaved: true });
+      const inquiryJobs = await acceptCorporateInquiry(db, input(), randomUUID(), getCorporateMailConfig(await readCrmContactOverrides(db)));
+      const fixture = await intakeFixture(2);
+      const accepted = await saveRegistrationIntake(db, fixture.answers, randomUUID(), getRegistrationMailConfig(await readCrmContactOverrides(db)));
+      const [savedRegistration] = await sql`select * from registration where reference = ${accepted.response.reference!} and workshop_session_id = ${fixture.sessions[0]}`;
+      await saveCrmContactSettings(db, adminActor, second);
+      const updated = await readCrmContactOverrides(db);
+      expect(updated).toEqual(second);
+      const newInquiryJobs = await acceptCorporateInquiry(db, input(), randomUUID(), getCorporateMailConfig(updated));
+      await saveRegistrationChange(db, adminActor, staffInput(savedRegistration, RegistrationAction.MarkPaid), getRegistrationMailConfig(updated));
+      const [oldInquiry] = await sql`select payload from crm_email_job where id = ${inquiryJobs[0]}`;
+      const [newInquiry] = await sql`select payload from crm_email_job where id = ${newInquiryJobs[0]}`;
+      expect(oldInquiry.payload.replyTo).toBe(first.corporateReplyTo);
+      expect(oldInquiry.payload.text).toContain(first.corporatePhone);
+      expect(newInquiry.payload.replyTo).toBe(second.corporateReplyTo);
+      expect(newInquiry.payload.text).toContain(second.corporatePhone);
+      const mail = await sql`select kind, payload from crm_email_job where registration_id = ${savedRegistration.id}`;
+      expect(mail.find(job => job.kind === "payment_instructions")!.payload.replyTo).toBe(first.registrationReplyTo);
+      expect(mail.find(job => job.kind === "payment_acknowledgment")!.payload.replyTo).toBe(second.registrationReplyTo);
+      const changes = await sql`select user_id, changes from activity_log where entity_type = 'crm_contact_settings' order by created_at`;
+      expect(changes).toHaveLength(2);
+      expect(changes[1]).toMatchObject({ user_id: actor.id, changes: { corporateReplyTo: { from: first.corporateReplyTo, to: second.corporateReplyTo } } });
+    } finally {
+      await sql`delete from crm_contact_settings`;
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("rolls back contact changes when their audit entry cannot be saved", async () => {
+    const adminActor = { ...actor, role: "admin" as const };
+    const values = { corporatePhone: "+639171234567", corporateReplyTo: "sales@company.test", registrationReplyTo: "workshops@company.test" };
+    await sql`create function reject_contact_audit() returns trigger language plpgsql as $$ begin
+      if NEW.entity_type = 'crm_contact_settings' then raise exception 'synthetic audit failure'; end if;
+      return NEW; end $$`;
+    await sql`create trigger reject_contact_audit before insert on activity_log for each row execute function reject_contact_audit()`;
+    try {
+      await expect(saveCrmContactSettings(db, adminActor, values)).rejects.toThrow();
+      expect(await readCrmContactOverrides(db)).toEqual({});
+    } finally {
+      await sql`drop trigger reject_contact_audit on activity_log`;
+      await sql`drop function reject_contact_audit()`;
+    }
   });
 
 });

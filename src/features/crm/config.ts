@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { z } from "zod";
 import { IntakeError, IntakeErrorCode } from "./errors";
+import type { CrmContactValues } from "./contact-settings-schemas";
 
 function configurationError(fields: string[], reason: string, code = IntakeErrorCode.IntakeUnavailable): never {
   console.error(JSON.stringify({ event: "crm_intake_config_invalid", reason, fields: [...new Set(fields)] }));
@@ -46,14 +47,19 @@ function getTurnstileSecret() {
   return secret.data;
 }
 
-export function getCorporateConfig() {
+export function getCorporateVerificationConfig() {
   if (process.env.CORPORATE_INTAKE_ENABLED !== "true") configurationError(["CORPORATE_INTAKE_ENABLED"], "intake_disabled");
-  const secret = getTurnstileSecret();
-  return { ...getCorporateMailConfig(), TURNSTILE_SECRET_KEY: secret };
+  return { TURNSTILE_SECRET_KEY: getTurnstileSecret() };
 }
 
-export function getCorporateMailConfig() {
-  const result = configSchema.safeParse(process.env);
+export function getCorporateConfig(contacts: Partial<CrmContactValues> = {}) {
+  return { ...getCorporateVerificationConfig(), ...getCorporateMailConfig(contacts) };
+}
+
+export function getCorporateMailConfig(contacts: Partial<CrmContactValues> = {}) {
+  const result = configSchema.safeParse({ ...process.env,
+    CORPORATE_TEAM_PHONE: contacts.corporatePhone ?? process.env.CORPORATE_TEAM_PHONE,
+    CORPORATE_REPLY_TO: contacts.corporateReplyTo ?? process.env.CORPORATE_REPLY_TO });
   if (!result.success) configurationError(result.error.issues.map(issue => String(issue.path[0])), "invalid_format");
   const config = result.data;
   if (config.CORPORATE_EMAIL_ENABLED) {
@@ -71,12 +77,15 @@ export function getCorporateMailConfig() {
 // Preserve the corporate intake contract while sharing the exact origin allowlist.
 export const getCorporateOrigins = getIntakeOrigins;
 
-export function getRegistrationConfig() {
+export function getRegistrationVerificationConfig() {
   if (process.env.REGISTRATION_INTAKE_ENABLED !== "true") {
     configurationError(["REGISTRATION_INTAKE_ENABLED"], "intake_disabled");
   }
-  const secret = getTurnstileSecret();
-  return { ...getRegistrationMailConfig(), TURNSTILE_SECRET_KEY: secret };
+  return { TURNSTILE_SECRET_KEY: getTurnstileSecret() };
+}
+
+export function getRegistrationConfig(contacts: Partial<CrmContactValues> = {}) {
+  return { ...getRegistrationVerificationConfig(), ...getRegistrationMailConfig(contacts) };
 }
 
 const registrationMailSchema = z.object({
@@ -90,8 +99,9 @@ const registrationMailSchema = z.object({
   RESEND_API_KEY: z.string().default("")
 });
 
-export function getRegistrationMailConfig() {
-  const result = registrationMailSchema.safeParse(process.env);
+export function getRegistrationMailConfig(contacts: Partial<CrmContactValues> = {}) {
+  const result = registrationMailSchema.safeParse({ ...process.env,
+    REGISTRATION_REPLY_TO: contacts.registrationReplyTo ?? process.env.REGISTRATION_REPLY_TO });
   if (!result.success) configurationError(result.error.issues.map(issue => String(issue.path[0])), "invalid_format");
   const config = result.data;
   if (config.REGISTRATION_EMAIL_ENABLED) {

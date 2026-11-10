@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@tanstack/react-start/server-only", () => ({}));
+vi.mock("./contact-settings", () => ({ readCrmContactOverrides: vi.fn(async () => ({})) }));
 const mocks = vi.hoisted(() => ({ getDb: vi.fn(), getCorporateMailConfig: vi.fn() }));
 vi.mock("@/db", () => ({ getDb: mocks.getDb }));
 vi.mock("./config", () => ({ getCorporateMailConfig: mocks.getCorporateMailConfig }));

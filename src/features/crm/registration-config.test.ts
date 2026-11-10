@@ -11,6 +11,10 @@ beforeEach(() => {
   vi.stubEnv("RESEND_API_KEY", "");
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
+it("uses a saved registration reply-to before validating environment defaults", () => {
+  vi.stubEnv("REGISTRATION_REPLY_TO", "invalid old default");
+  expect(getRegistrationMailConfig({ registrationReplyTo: "workshops@company.test" }).EMAIL_REPLY_TO).toBe("workshops@company.test");
+});
 it("enables registration without corporate or mail settings", () => {
   vi.stubEnv("REGISTRATION_INTAKE_ENABLED", "true");
   vi.stubEnv("TURNSTILE_SECRET_KEY", "secret");

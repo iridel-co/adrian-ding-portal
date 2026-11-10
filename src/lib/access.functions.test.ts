@@ -8,6 +8,7 @@ const harness = vi.hoisted(() => ({
   crmCall: vi.fn(), registrationCall: vi.fn(), sendCall: vi.fn(), dbCall: vi.fn(), responseStatus: vi.fn()
 }));
 vi.mock("@tanstack/react-start/server-only", () => ({}));
+vi.mock("@/features/crm/contact-settings", () => ({ readCrmContactOverrides: vi.fn(async () => ({})), getCrmContactSettings: vi.fn(), saveCrmContactSettings: vi.fn() }));
 vi.mock("@tanstack/react-start/server", () => ({ getRequest: () => harness.request!, setResponseHeader: vi.fn(), setResponseStatus: harness.responseStatus }));
 vi.mock("@tanstack/react-start", () => {
   type Context = Record<string, unknown>;
@@ -21,9 +22,9 @@ vi.mock("@tanstack/react-start", () => {
       let parents: Middleware[] = [];
       const builder = {
         middleware(list: Middleware[]) { parents = list; return builder; },
-        server(handler: (input: { context: Context; next(input: { context: Context }): unknown }) => unknown) {
+        server(handler: (input: { context: Context; next(input?: { context: Context }): unknown }) => unknown) {
           return { execute: (context: Context, next: (context: Context) => unknown) => run(parents, context,
-            context => handler({ context, next: input => next({ ...context, ...input.context }) })) };
+            context => handler({ context, next: input => next({ ...context, ...input?.context }) })) };
         }
       };
       return builder;
@@ -67,6 +68,8 @@ vi.mock("@/lib/env", () => ({ getEnv: () => ({ BETTER_AUTH_URL: "https://portal.
 import { RegistrationAction, registrationActionSchema } from "@/features/crm/registration-staff-schemas";
 import { $changeInquiry, $crmAccess, $listInquiries, $listRegistrationSessions, $getRegistrationSession,
   $listRegistrations, $getRegistration, $changeRegistration, $retryRegistrationEmail } from "@/features/crm/functions";
+import { $getCrmContactSettings, $saveCrmContactSettings } from "@/features/crm/contact-settings-functions";
+import { getCrmContactSettings, saveCrmContactSettings } from "@/features/crm/contact-settings";
 
 afterEach(() => vi.unstubAllEnvs());
 beforeEach(() => {
@@ -87,6 +90,29 @@ beforeEach(() => {
 });
 
 describe("Registered CRM permissions", () => {
+  const contactValues = { corporatePhone: "+639171234567", corporateReplyTo: "sales@company.test", registrationReplyTo: "workshops@company.test" };
+  it("denies contact settings reads and writes to staff, signed-out and CMS-only users", async () => {
+    await expect($getCrmContactSettings()).rejects.toThrow("admin_access_required");
+    harness.request = new Request("https://portal.test/_server/action", { method: "POST", headers: { Origin: "https://portal.test" } });
+    await expect($saveCrmContactSettings({ data: contactValues })).rejects.toThrow("admin_access_required");
+    harness.identity!.email = "cms@company.test";
+    await expect($getCrmContactSettings()).rejects.toThrow("staff_access_required");
+    harness.sessionUser = null;
+    await expect($getCrmContactSettings()).rejects.toThrow("Unauthorized");
+    expect(getCrmContactSettings).not.toHaveBeenCalled();
+    expect(saveCrmContactSettings).not.toHaveBeenCalled();
+  });
+  it("allows verified admins and rejects cross-site settings writes", async () => {
+    harness.identity!.email = "admin@company.test";
+    await $getCrmContactSettings();
+    expect(getCrmContactSettings).toHaveBeenCalledOnce();
+    harness.request = new Request("https://portal.test/_server/action", { method: "POST", headers: { Origin: "https://attacker.test" } });
+    await expect($saveCrmContactSettings({ data: contactValues })).rejects.toThrow("origin_not_allowed");
+    expect(saveCrmContactSettings).not.toHaveBeenCalled();
+    harness.request = new Request("https://portal.test/_server/action", { method: "POST", headers: { Origin: "https://portal.test" } });
+    await $saveCrmContactSettings({ data: contactValues });
+    expect(saveCrmContactSettings).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ role: "admin", email: "admin@company.test" }), contactValues);
+  });
   it("returns only the current role for navigation and rejects removed assignments", async () => {
     await expect($crmAccess()).resolves.toEqual({ role: "staff" });
     harness.identity!.email = "admin@company.test";

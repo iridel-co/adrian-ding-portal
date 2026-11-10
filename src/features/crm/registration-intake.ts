@@ -1,7 +1,8 @@
 import "@tanstack/react-start/server-only";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { getIntakeOrigins, getRegistrationConfig } from "./config";
+import { getIntakeOrigins, getRegistrationVerificationConfig, getRegistrationMailConfig } from "./config";
+import { readCrmContactOverrides } from "./contact-settings";
 import { sendEmailJob } from "./email";
 import { IntakeError, IntakeErrorCode } from "./errors";
 import { handleOptions, readJson } from "./http";
@@ -27,11 +28,11 @@ export async function handleRegistration(request: Request) {
     if (request.method === "OPTIONS") return handleOptions(request, headers);
     if (request.method !== "POST") throw new IntakeError(405, IntakeErrorCode.MethodNotAllowed);
     stage = "config";
-    const config = getRegistrationConfig();
+    const verification = getRegistrationVerificationConfig();
     stage = "validation";
     const key = idempotencyKeySchema.safeParse(request.headers.get("idempotency-key"));
     if (!key.success) throw new IntakeError(400, IntakeErrorCode.InvalidIdempotencyKey);
-    const schema = config.TURNSTILE_SECRET_KEY ? submissionSchema
+    const schema = verification.TURNSTILE_SECRET_KEY ? submissionSchema
       : submissionSchema.safeExtend({ turnstileToken: z.string().max(2048) });
     const parsed = schema.safeParse(await readJson(request));
     if (!parsed.success) throw new IntakeError(400, IntakeErrorCode.InvalidSubmission);
@@ -39,9 +40,11 @@ export async function handleRegistration(request: Request) {
     if (website) throw new IntakeError(400, IntakeErrorCode.SubmissionRejected);
     stage = "verification";
     // Every retry needs a fresh token; only accepted answers enter the payload hash.
-    if (config.TURNSTILE_SECRET_KEY) await verifyTurnstile(turnstileToken, config.TURNSTILE_SECRET_KEY, origins, "workshop-registration");
+    if (verification.TURNSTILE_SECRET_KEY) await verifyTurnstile(turnstileToken, verification.TURNSTILE_SECRET_KEY, origins, "workshop-registration");
     stage = "database";
     const db = getDb();
+    stage = "config";
+    const config = getRegistrationMailConfig(await readCrmContactOverrides(db));
     stage = "save";
     const { response, jobs } = await acceptRegistration(db, answers, key.data, config);
     stage = "email";

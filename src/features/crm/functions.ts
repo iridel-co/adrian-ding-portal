@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { staffMiddleware } from "@/lib/access.functions";
 import { getCorporateMailConfig, getRegistrationMailConfig } from "./config";
+import { readCrmContactOverrides } from "./contact-settings";
 import { sendEmailJob } from "./email";
 import { CrmErrorCode, IntakeError, IntakeErrorCode } from "./errors";
 import { inquiryListSchema, inquiryPageSchema, inquiryTransitionSchema } from "./schemas";
@@ -38,7 +39,7 @@ export const $changeInquiry = createServerFn({ method: "POST" }).middleware([sta
 export const $retryInquiryEmail = createServerFn({ method: "POST" }).middleware([staffMiddleware])
   .validator(z.strictObject({ inquiryId: z.uuid(), jobId: z.uuid() }))
   .handler(({ data, context }) => staffAction(async () => {
-    const config = getCorporateMailConfig();
+    const config = getCorporateMailConfig(await readCrmContactOverrides(getDb()));
     if (!config.CORPORATE_EMAIL_ENABLED) throw new IntakeError(503, IntakeErrorCode.EmailUnavailable);
     return retryInquiryEmail(getDb(), data.inquiryId, data.jobId, context.actor, config.RESEND_API_KEY);
   }));
@@ -57,8 +58,8 @@ export const $getRegistration = createServerFn({ method: "GET" }).middleware([st
 
 export const $changeRegistration = createServerFn({ method: "POST" }).middleware([staffMiddleware])
   .validator(registrationActionSchema).handler(({ data, context }) => staffAction(async () => {
-    const config = data.action === RegistrationAction.MarkPaid ? getRegistrationMailConfig() : undefined;
     const db = getDb();
+    const config = data.action === RegistrationAction.MarkPaid ? getRegistrationMailConfig(await readCrmContactOverrides(db)) : undefined;
     const { jobs, ...response } = await changeRegistration(db, context.actor, data, config);
     // A delivery failure cannot undo the committed payment verification and saved message.
     if (config?.REGISTRATION_EMAIL_ENABLED) {
@@ -69,7 +70,7 @@ export const $changeRegistration = createServerFn({ method: "POST" }).middleware
 
 export const $retryRegistrationEmail = createServerFn({ method: "POST" }).middleware([staffMiddleware])
   .validator(registrationEmailRetrySchema).handler(({ data, context }) => staffAction(async () => {
-    const config = getRegistrationMailConfig();
+    const config = getRegistrationMailConfig(await readCrmContactOverrides(getDb()));
     if (!config.REGISTRATION_EMAIL_ENABLED) throw new IntakeError(503, IntakeErrorCode.EmailUnavailable);
     return retryRegistrationEmail(getDb(), data.registrationId, data.jobId, context.actor, config.RESEND_API_KEY);
   }));

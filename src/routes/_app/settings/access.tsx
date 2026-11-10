@@ -36,6 +36,7 @@ import {
   allowedEmailsQueryOptions
 } from "@/lib/allowed-emails.functions";
 import { errorMessage } from "@/features/shared/error-message";
+import { SettingsNav } from "@/components/settings-nav";
 
 export const Route = createFileRoute("/_app/settings/access")({
   head: () => ({ meta: [{ title: "Access" }] }),
@@ -58,8 +59,10 @@ export const Route = createFileRoute("/_app/settings/access")({
 });
 
 function SettingsPage({ children }: { children: ReactNode }) {
+  const { crmAccess } = Route.useRouteContext();
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-8">
+      <SettingsNav isAdmin={crmAccess?.role === "admin"} />
       <div>
         <h1 className="font-display text-4xl">Access</h1>
         <p className="mt-1 text-sm text-muted-foreground">Manage who can access this dashboard.</p>
@@ -72,7 +75,7 @@ function SettingsPage({ children }: { children: ReactNode }) {
 function UsersCardHeader() {
   return (
     <CardHeader>
-      <CardTitle>Users</CardTitle>
+      <CardTitle><h2 className="text-xl font-semibold">Users</h2></CardTitle>
       <CardDescription>Only these Google accounts can sign in.</CardDescription>
     </CardHeader>
   );

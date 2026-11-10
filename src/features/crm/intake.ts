@@ -1,7 +1,8 @@
 import "@tanstack/react-start/server-only";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { getCorporateConfig, getCorporateOrigins } from "./config";
+import { getCorporateVerificationConfig, getCorporateMailConfig, getCorporateOrigins } from "./config";
+import { readCrmContactOverrides } from "./contact-settings";
 import { sendEmailJob } from "./email";
 import { IntakeError, IntakeErrorCode } from "./errors";
 import { handleOptions, readJson } from "./http";
@@ -33,11 +34,11 @@ export async function handleCorporateInquiry(request: Request) {
 
 async function handlePost(request: Request, headers: Headers, origins: string[], context: { stage: string }) {
   context.stage = "config";
-  const config = getCorporateConfig();
+  const verification = getCorporateVerificationConfig();
   context.stage = "validation";
   const key = idempotencyKeySchema.safeParse(request.headers.get("idempotency-key"));
   if (!key.success) throw new IntakeError(400, IntakeErrorCode.InvalidIdempotencyKey);
-  const schema = config.TURNSTILE_SECRET_KEY ? corporateInquirySubmissionSchema
+  const schema = verification.TURNSTILE_SECRET_KEY ? corporateInquirySubmissionSchema
     : corporateInquirySubmissionSchema.safeExtend({ turnstileToken: z.string().max(2048) });
   const parsed = schema.safeParse(await readJson(request));
   if (!parsed.success) throw new IntakeError(400, IntakeErrorCode.InvalidSubmission);
@@ -45,9 +46,11 @@ async function handlePost(request: Request, headers: Headers, origins: string[],
   if (website) throw new IntakeError(400, IntakeErrorCode.SubmissionRejected);
   context.stage = "verification";
   // Verify every attempt; a retry needs a fresh token, which is excluded from the saved hash.
-  if (config.TURNSTILE_SECRET_KEY) await verifyCorporateTurnstile(turnstileToken, config.TURNSTILE_SECRET_KEY, origins);
+  if (verification.TURNSTILE_SECRET_KEY) await verifyCorporateTurnstile(turnstileToken, verification.TURNSTILE_SECRET_KEY, origins);
   context.stage = "database";
   const db = getDb();
+  context.stage = "config";
+  const config = getCorporateMailConfig(await readCrmContactOverrides(db));
   context.stage = "save";
   const jobs = await acceptCorporateInquiry(db, answers, key.data, config);
   context.stage = "email";
