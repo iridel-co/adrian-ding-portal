@@ -101,6 +101,27 @@ does not send emails. The QR image is a preview placeholder.
 
 ## Corporate inquiries
 
+### Admin-managed contact details
+
+After applying the `crm_contact_settings` migration, admins can open
+**Settings → CRM contact details** at `/settings/contact` to save one inquiry
+phone number, one inquiry reply-to address and one registration reply-to address.
+Both reading and saving require a verified Google identity assigned through
+`ADMIN_EMAILS`; the sign-in allowlist and Staff role do not grant access.
+
+Until the first save, the page and email generation use `CORPORATE_TEAM_PHONE`,
+`CORPORATE_REPLY_TO` and `REGISTRATION_REPLY_TO` as defaults. Saved values take
+precedence on subsequent requests without a restart or redeploy. All three values
+save together with an audit entry; a failed audit rolls the settings change back.
+The contact number is used in corporate emails, not the public website's contact
+section. Reply-to addresses receive customer replies, not the original form
+submission emails. Sender identities, notification recipients, provider credentials
+and delivery switches remain deployment configuration.
+
+New inquiry, registration, payment acknowledgment and reminder snapshots use the
+current settings. Queued/sent messages and retries retain their saved contents.
+Apply database migrations before deploying code that reads these settings.
+
 `POST /api/corporate-inquiries` accepts a JSON inquiry, a UUID v4
 `Idempotency-Key` header, an approved `Origin`, an empty `website` honeypot,
 and a `turnstileToken` verified server-side for action `corporate-inquiry`.

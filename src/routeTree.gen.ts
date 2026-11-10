@@ -29,6 +29,7 @@ import { Route as AppRegistrationsIndexRouteImport } from './routes/_app/registr
 import { Route as AppRegistrationsIdRouteImport } from './routes/_app/registrations/$id'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAccessRouteImport } from './routes/_app/settings/access'
+import { Route as AppSettingsContactRouteImport } from './routes/_app/settings/contact'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiInternalCorporateSchedulerRouteImport } from './routes/api/internal/corporate-scheduler'
 import { Route as ApiPublicClientsRouteImport } from './routes/api/public/clients'
@@ -146,6 +147,11 @@ const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
 const AppSettingsAccessRoute = AppSettingsAccessRouteImport.update({
   id: '/settings/access',
   path: '/settings/access',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsContactRoute = AppSettingsContactRouteImport.update({
+  id: '/settings/contact',
+  path: '/settings/contact',
   getParentRoute: () => AppRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -266,6 +272,7 @@ export interface FileRoutesByFullPath {
   '/inquiries/$id': typeof AppInquiriesIdRoute
   '/registrations/$id': typeof AppRegistrationsIdRoute
   '/settings/access': typeof AppSettingsAccessRoute
+  '/settings/contact': typeof AppSettingsContactRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/internal/corporate-scheduler': typeof ApiInternalCorporateSchedulerRoute
   '/api/public/clients': typeof ApiPublicClientsRoute
@@ -304,6 +311,7 @@ export interface FileRoutesByTo {
   '/inquiries/$id': typeof AppInquiriesIdRoute
   '/registrations/$id': typeof AppRegistrationsIdRoute
   '/settings/access': typeof AppSettingsAccessRoute
+  '/settings/contact': typeof AppSettingsContactRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/internal/corporate-scheduler': typeof ApiInternalCorporateSchedulerRoute
   '/api/public/clients': typeof ApiPublicClientsRoute
@@ -346,6 +354,7 @@ export interface FileRoutesById {
   '/_app/inquiries/$id': typeof AppInquiriesIdRoute
   '/_app/registrations/$id': typeof AppRegistrationsIdRoute
   '/_app/settings/access': typeof AppSettingsAccessRoute
+  '/_app/settings/contact': typeof AppSettingsContactRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/internal/corporate-scheduler': typeof ApiInternalCorporateSchedulerRoute
   '/api/public/clients': typeof ApiPublicClientsRoute
@@ -388,6 +397,7 @@ export interface FileRouteTypes {
     | '/inquiries/$id'
     | '/registrations/$id'
     | '/settings/access'
+    | '/settings/contact'
     | '/api/auth/$'
     | '/api/internal/corporate-scheduler'
     | '/api/public/clients'
@@ -426,6 +436,7 @@ export interface FileRouteTypes {
     | '/inquiries/$id'
     | '/registrations/$id'
     | '/settings/access'
+    | '/settings/contact'
     | '/api/auth/$'
     | '/api/internal/corporate-scheduler'
     | '/api/public/clients'
@@ -467,6 +478,7 @@ export interface FileRouteTypes {
     | '/_app/inquiries/$id'
     | '/_app/registrations/$id'
     | '/_app/settings/access'
+    | '/_app/settings/contact'
     | '/api/auth/$'
     | '/api/internal/corporate-scheduler'
     | '/api/public/clients'
@@ -653,6 +665,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsAccessRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/settings/contact': {
+      id: '/_app/settings/contact'
+      path: '/settings/contact'
+      fullPath: '/settings/contact'
+      preLoaderRoute: typeof AppSettingsContactRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -828,6 +847,7 @@ interface AppRouteChildren {
   AppContentMediaRoute: typeof AppContentMediaRoute
   AppContentTagsRoute: typeof AppContentTagsRoute
   AppSettingsAccessRoute: typeof AppSettingsAccessRoute
+  AppSettingsContactRoute: typeof AppSettingsContactRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
   AppContentCorporateTrainingsIdRoute: typeof AppContentCorporateTrainingsIdRoute
   AppContentSessionsIdRoute: typeof AppContentSessionsIdRoute
@@ -846,6 +866,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppContentMediaRoute: AppContentMediaRoute,
   AppContentTagsRoute: AppContentTagsRoute,
   AppSettingsAccessRoute: AppSettingsAccessRoute,
+  AppSettingsContactRoute: AppSettingsContactRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
   AppContentCorporateTrainingsIdRoute: AppContentCorporateTrainingsIdRoute,
   AppContentSessionsIdRoute: AppContentSessionsIdRoute,
