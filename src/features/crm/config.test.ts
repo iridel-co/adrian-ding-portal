@@ -51,6 +51,12 @@ describe("Corporate intake configuration", () => {
     vi.stubEnv("TURNSTILE_SECRET_KEY", "");
     expect(getCorporateMailConfig().EMAIL_REPLY_TO).toBe("sales@example.invalid");
   });
+  it("uses saved contact details before validating environment defaults", () => {
+    vi.stubEnv("CORPORATE_REPLY_TO", "invalid old default");
+    const config = getCorporateMailConfig({ corporateReplyTo: "sales@company.test", corporatePhone: "+63 917 1234567" });
+    expect(config.EMAIL_REPLY_TO).toBe("sales@company.test");
+    expect(config.CORPORATE_TEAM_PHONE).toBe("+63 917 1234567");
+  });
   it.each(["*", "https://website.test/path", "https://website.test/", "ftp://website.test"])('rejects unsafe origin configuration %s', origin => {
     vi.stubEnv("SITE_ORIGINS", origin);
     expect(getCorporateOrigins).toThrow("intake_unavailable");

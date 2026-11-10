@@ -4,6 +4,7 @@ import { getDb } from "@/db";
 import { CrmEmailKind, CrmEmailState, corporateInquiry, crmEmailJob } from "@/db/schema";
 import type { DbOrTx } from "@/features/shared/db-types";
 import { getCorporateMailConfig } from "./config";
+import { readCrmContactOverrides } from "./contact-settings";
 import { sendEmailJob, type EmailTransport } from "./email";
 import { IntakeError, IntakeErrorCode } from "./errors";
 import { corporateOverdueMessage, type CorporateMailConfig } from "./templates";
@@ -77,7 +78,8 @@ export async function handleCorporateScheduler(request: Request) {
     if (request.method !== "POST") throw new IntakeError(405, IntakeErrorCode.MethodNotAllowed);
     await authenticateScheduler(request);
     if (process.env.CORPORATE_SCHEDULER_ENABLED !== "true") throw new IntakeError(503, IntakeErrorCode.SchedulerDisabled);
-    const result = await runCorporateScheduler(getDb(), getCorporateMailConfig());
+    const db = getDb();
+    const result = await runCorporateScheduler(db, getCorporateMailConfig(await readCrmContactOverrides(db)));
     return Response.json(result, { headers });
   } catch (error) {
     const failure = error instanceof IntakeError ? error : new IntakeError(503, IntakeErrorCode.SchedulerUnavailable);

@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@tanstack/react-start/server-only", () => ({}));
+vi.mock("./contact-settings", () => ({ readCrmContactOverrides: vi.fn(async () => ({})) }));
 vi.mock("@/db", () => ({ getDb: vi.fn(() => "database") }));
-vi.mock("./config", () => ({ getCorporateOrigins: vi.fn(() => ["https://website.test"]), getCorporateConfig: vi.fn() }));
+vi.mock("./config", () => {
+  const config = vi.fn();
+  return { getCorporateOrigins: vi.fn(() => ["https://website.test"]), getCorporateConfig: config,
+    getCorporateVerificationConfig: config, getCorporateMailConfig: config };
+});
 vi.mock("./turnstile", () => ({ verifyCorporateTurnstile: vi.fn() }));
 vi.mock("./service", () => ({ acceptCorporateInquiry: vi.fn() }));
 vi.mock("./email", () => ({ sendEmailJob: vi.fn() }));
